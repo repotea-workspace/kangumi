@@ -9,6 +9,8 @@ jobs:
   release-helm-chart:
     name: Release helm chart
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
     strategy:
       matrix:
         include:
