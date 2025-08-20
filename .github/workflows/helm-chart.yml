@@ -25,7 +25,7 @@ jobs:
           tag: 0.1.11
           path: helm-charts/any-cors
           registry: ghcr.io
-          # registry_username: ${{ secrets.REGISTRY_USERNAME }}
-          # registry_password: ${{ secrets.REGISTRY_PASSWORD }}
+          registry_username: 0xfe10
+          registry_password: ${{ secrets.GT_0XFE10 }}
           update_dependencies: "true" # Defaults to false
 
