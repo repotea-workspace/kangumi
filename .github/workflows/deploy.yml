@@ -38,10 +38,10 @@ jobs:
               KUSTOMIZE_VERSION=v5.7.1
               HELM_VERSION=v3.18.0
               HELM_DIFF_VERSION=v3.1.3
-          - package: fat-android-sdk
-            context: docker-image/fat-android-sdk
-            build-args: ""
 
+          # - package: fat-android-sdk
+          #   context: docker-image/fat-android-sdk
+          #   build-args: ""
           # - package: artelad
           #   context: docker-image/artelad
           #   build-args: ""
@@ -97,7 +97,7 @@ jobs:
           - package: dev-toolchain
             context: docker-image/dev-toolchain
             build-args: |
-              FLUTTER_VERSION=3.29.3
+              FLUTTER_VERSION=3.35.1
               NVM_VERSION=0.40.3
               NODE_VERSION=22.15.1
               DOCKER_COMPOSE_VERSION=2.39.2
