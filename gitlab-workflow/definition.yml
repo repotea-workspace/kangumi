@@ -1,0 +1,38 @@
+
+.manual:      &manual
+  when: manual
+
+.only-main:   &only-main
+  only:
+    refs:
+      - main
+      - master
+
+.except-main: &except-main
+  except:
+    - main
+    - master
+
+.trigger-dev: &trigger-dev
+  only:
+    - main
+    - master
+    - merge_requests
+
+.trigger-prd: &trigger-prd
+  only:
+    - tags
+
+.trigger-stg: &trigger-stg
+  only:
+    refs:
+      - main
+      - master
+
+.trigger-mix: &trigger-mix
+  only:
+    - main
+    - master
+    # - merge_requests
+    - tags
+

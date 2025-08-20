@@ -1,0 +1,29 @@
+
+.deploy-helm: &deploy-helm
+  image: alpine/k8s:1.21.2
+  variables:
+    BUILD_PATH: .
+  script:
+    - |
+      if [ -z "$CHART_NAME" ]; then
+        echo 'Not have helm chart name'
+        exit 1
+      fi
+
+      cd $CI_PROJECT_DIR/$BUILD_PATH
+
+      pushd $CHART_NAME
+        helm dependency update || true
+      popd
+
+      helm package $CHART_NAME
+
+      for PKGS in $(ls -1p | grep 'tgz$' | grep "${CHART_NAME}"); do
+        PKG_NAME=$(echo $PKGS | sed -e "s/\///g")
+        curl --request POST \
+          --user gitlab-ci-token:$CI_JOB_TOKEN \
+          --form "chart=@${PKG_NAME}" \
+          "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/helm/api/stable/charts"
+      done
+
+      echo ''

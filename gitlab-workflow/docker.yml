@@ -1,0 +1,83 @@
+
+
+.docker: &docker
+  image: docker:26.1-cli
+  services:
+    - docker:26.1-dind
+  variables:
+    DOCKER_REGISTRY: $CI_REGISTRY
+    REGISTRY_VENDOR: gitlab
+    #DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_DRIVER: overlay2
+  before_script:
+    - docker info
+    - |
+      if [[ "$REGISTRY_VENDOR" = "ali" ]]; then
+        echo "$REGISTRY_ALI_PASSWORD" | \
+          docker login \
+            -u "${REGISTRY_ALI_USERNAME:-REGISTRY_ALI_USER}" \
+            --password-stdin \
+            "$DOCKER_REGISTRY"
+      elif [[ "$REGISTRY_VENDOR" = "gitlab" ]]; then
+        echo "$CI_REGISTRY_PASSWORD" | \
+          docker login \
+            -u "$CI_REGISTRY_USER" \
+            --password-stdin \
+            "$DOCKER_REGISTRY"
+      fi
+
+.build-image: &build-image
+  # extends: [.docker]
+  <<: *docker
+  variables:
+    #DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_DRIVER: overlay2
+    BUILD_PATH: .
+    DOCKERFILE_PATH: docker/Dockerfile
+    IMAGE_NAME: $CI_PROJECT_NAME
+    BUILD_BRANCH: "no"
+    BUILD_LATEST: "no"
+    IMAGE_BASE_NAME: ''
+    TAG_SLUG: ''
+  script:
+    - |
+      if [[ ! "$IMAGE_NAME" ]]; then
+        echo 'The variable IMAGE_NAME is required.'
+        exit 1
+      fi
+      if [[ ! "$DOCKERFILE_PATH" ]]; then
+         echo 'The variable DOCKERFILE_PATH is required.'
+         exit 1
+      fi
+
+      BASE_NAME=${IMAGE_BASE_NAME}
+      if [[ "$REGISTRY_VENDOR" = "gitlab" ]]; then
+        BASE_NAME=${BASE_NAME:-"/${CI_PROJECT_PATH}"}
+      else
+        BASE_NAME=${BASE_NAME:+"/${BASE_NAME}"}
+      fi
+
+      IMAGE_TAG_SHA="${DOCKER_REGISTRY}${BASE_NAME}/${IMAGE_NAME}:${TAG_SLUG:+$TAG_SLUG-}sha-$CI_COMMIT_SHORT_SHA"
+      docker build \
+        -t $IMAGE_TAG_SHA \
+        -f $CI_PROJECT_DIR/$DOCKERFILE_PATH \
+        $CI_PROJECT_DIR/$BUILD_PATH/
+      docker push $IMAGE_TAG_SHA
+
+      if [[ "$BUILD_BRANCH" = "yes" ]]; then
+        IMAGE_TAG_BRANCH="${DOCKER_REGISTRY}${BASE_NAME}/${IMAGE_NAME}:${TAG_SLUG:+$TAG_SLUG-}$CI_COMMIT_REF_SLUG"
+        docker tag $IMAGE_TAG_SHA $IMAGE_TAG_BRANCH
+        docker push $IMAGE_TAG_BRANCH
+        docker rmi $IMAGE_TAG_BRANCH
+      fi
+
+      if [[ "$BUILD_LATEST" = "yes" ]]; then
+        IMAGE_TAG_LATEST=${DOCKER_REGISTRY}${BASE_NAME}/${IMAGE_NAME}:${TAG_SLUG:+$TAG_SLUG-}latest
+        docker tag $IMAGE_TAG_SHA $IMAGE_TAG_LATEST
+        docker push $IMAGE_TAG_LATEST
+        docker rmi $IMAGE_TAG_LATEST
+      fi
+
+      docker rmi $IMAGE_TAG_SHA

@@ -1,0 +1,43 @@
+
+.maven: &maven
+  variables:
+    MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  cache:
+    paths:
+      - .m2/repository
+
+.deploy-maven: &deploy-maven
+  variables:
+    MAVEN_HOME: .
+    PROFILE: release
+    USER: Job-Token
+    TOKEN: ''
+  script:
+    - |
+      echo '<?xml version="1.0" encoding="UTF-8"?>
+      <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+        <servers>
+          <server>
+           <id>gitlab-maven</id>
+           <configuration>
+             <httpHeaders>
+               <property>
+                 <name>'${USER}'</name>
+                 <value>'${TOKEN:-$CI_JOB_TOKEN}'</value>
+               </property>
+             </httpHeaders>
+           </configuration>
+          </server>
+        </servers>
+      </settings>
+      ' > ${MAVEN_HOME}/ci_settings.xml
+
+      mvn clean deploy \
+        -P ${PROFILE} \
+        -D maven.test.skip=true \
+        -s ${MAVEN_HOME}/ci_settings.xml
+
+.deploy-maven-gitlab: &deploy-maven-gitlab
+  <<: *deploy-maven

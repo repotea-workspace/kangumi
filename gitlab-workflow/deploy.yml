@@ -1,0 +1,71 @@
+
+.deploy-k8s: &deploy-k8s
+  stage: deploy
+  image: curlimages/curl:7.78.0
+  variables:
+    DEPLOY_PHASE: staging
+    DEPLOY_IMAGE_TAG: sha-$CI_COMMIT_SHORT_SHA
+  script:
+    - echo "Deploy $DEPLOY_PROJECT"
+    - |
+      export DESCRIPTION="Actions Context:
+      * Actor: ${GITLAB_USER_NAME}
+      * Git Ref: ${CI_COMMIT_REF_SLUG}
+      * Build started at: ${CI_JOB_STARTED_AT}
+      * Source: ${CI_PIPELINE_SOURCE}
+      * Job: ${CI_JOB_URL}
+      * Pipeline: ${CI_PIPELINE_URL}
+      "
+      echo "$DESCRIPTION"
+      curl -fsSL -o /dev/null -X POST \
+        --retry 5 --retry-connrefused --retry-delay 10 \
+        -F "token=$CI_TRIGGER_TOKEN" \
+        -F "ref=main" \
+        -F "variables[DEPLOY_MODE]=k8s" \
+        -F "variables[DEPLOY_REGION]=$DEPLOY_REGION" \
+        -F "variables[DEPLOY_PHASE]=$DEPLOY_PHASE" \
+        -F "variables[DEPLOY_PROJECT]=$DEPLOY_PROJECT" \
+        -F "variables[DEPLOY_IMAGE_TAG]=$DEPLOY_IMAGE_TAG" \
+        -F "variables[DEPLOY_DESCRIPTION]=$DESCRIPTION" \
+        "$CI_TRIGGER_ENDPOINT"
+
+
+.deploy-ansible: &deploy-ansible
+  stage: deploy
+  image: curlimages/curl:7.78.0
+  variables:
+    TRIGGER_CHANGES: ''
+    # COMMIT_MSG: 'Update workflows'
+  script:
+    - |
+      PROJECT_NAME=${PROJECT_NAME:-$CI_PROJECT_NAME}
+      COMMIT_MSG=${COMMIT_MSG:-${CI_COMMIT_MESSAGE}}
+
+      export DESCRIPTION="Actions Context:
+      * Actor: ${GITLAB_USER_NAME}
+      * Git Ref: ${CI_COMMIT_REF_SLUG}
+      * Build started at: ${CI_JOB_STARTED_AT}
+      * Source: ${CI_PIPELINE_SOURCE}
+      * Workflow: ${CI_JOB_URL}
+      * All workflows: ${CI_PIPELINE_URL}
+      "
+      echo "$DESCRIPTION"
+
+      if [ -f "${TRIGGER_CHANGES}" ]; then
+        TRIGGER_CHANGES=$(cat ${TRIGGER_CHANGES})
+      fi
+      curl -fsSL -o /dev/null -X POST \
+        --retry 5 --retry-connrefused --retry-delay 10 \
+        -F "token=$CI_TRIGGER_TOKEN" \
+        -F "ref=main" \
+        -F "variables[DEPLOY_MODE]=ansible" \
+        -F "variables[DEPLOY_PROJECT]=$CI_PROJECT_NAMESPACE/$PROJECT_NAME" \
+        -F "variables[TRIGGER_CHANGES]=$TRIGGER_CHANGES" \
+        -F "variables[DEPLOY_DESCRIPTION]=$DESCRIPTION" \
+        -F "variables[TRIGGER_MESSAGE]=$COMMIT_MSG" \
+        "$CI_TRIGGER_ENDPOINT"
+
+
+.deploy-app: &deploy-app
+  <<: *deploy-k8s
+  # extends: [ .deploy-k8s ]

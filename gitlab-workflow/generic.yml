@@ -1,0 +1,10 @@
+
+include:
+  - /workflow/definition.yml
+  - /workflow/deploy.yml
+  - /workflow/docker.yml
+  - /workflow/maven.yml
+  - /workflow/github.yml
+  - /workflow/helm.yml
+  - /workflow/vercel.yml
+
