@@ -21,11 +21,12 @@ jobs:
         uses: appany/helm-oci-chart-releaser@v0.5.0
         with:
           name: any-cors
-          repository: repotea-workspace/kangumi
+          repository: ${{ github.repository }}/charts/any-cors
           tag: 0.1.11
           path: helm-charts/any-cors
           registry: ghcr.io
-          registry_username: 0xfe10
-          registry_password: ${{ secrets.GT_0XFE10 }}
+          registry_username: '0xfe10'
+          registry_password: ${{ github.token }}
+          # registry_password: ${{ secrets.GT_0XFE10 }}
           update_dependencies: "true" # Defaults to false
 
