@@ -5,8 +5,8 @@ on:
     branches: [main]
   # workflow_dispatch:
 
-env:
-  DOCKER_REGISTRY: ghcr.io
+# env:
+#   DOCKER_REGISTRY: ghcr.io
 
 jobs:
   release-helm-chart:
@@ -21,7 +21,7 @@ jobs:
         uses: appany/helm-oci-chart-releaser@v0.5.0
         with:
           name: any-cors
-          repository: repotea-workspace
+          repository: repotea-workspace/kangumi
           tag: 0.1.11
           path: helm-charts/any-cors
           registry: ghcr.io
