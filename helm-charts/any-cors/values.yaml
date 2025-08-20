@@ -40,7 +40,7 @@ securityContext:
 
 service:
   type: ClusterIP
-  port: 80
+  port: 3333
 
 ingress:
   enabled: false
@@ -84,3 +84,16 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+# corsanywhere configuration
+corsanywhere:
+  # Port for the server to listen on
+  port: 8080
+  # Require Origin header on requests
+  requireOrigin: true
+  # Auto follow 307/308 redirects
+  enableRedirect: false
+  # Maximum number of redirects to follow
+  maxRedirects: 3
+  # Timeout (seconds) for HTTP client and transport
+  timeout: 30
