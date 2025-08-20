@@ -1,16 +1,16 @@
-name: Publish Docker Image
+name: Release helm chart
 
 on:
-  # push:
-  #   branches: [main]
-  workflow_dispatch:
+  push:
+    branches: [main]
+  # workflow_dispatch:
 
 env:
   DOCKER_REGISTRY: ghcr.io
 
 jobs:
-  build-stage-one:
-    name: Build Stage One
+  release-helm-chart:
+    name: Release helm chart
     runs-on: ubuntu-latest
     permissions:
       packages: write
