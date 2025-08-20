@@ -5,28 +5,28 @@ on:
     branches: [main]
   # workflow_dispatch:
 
-# env:
-#   DOCKER_REGISTRY: ghcr.io
-
 jobs:
   release-helm-chart:
     name: Release helm chart
     runs-on: ubuntu-latest
-    permissions:
-      packages: write
+    strategy:
+      matrix:
+        include:
+          - package: any-cors
+            tag: 0.1.11
+            path: helm-charts/any-cors
     steps:
       - uses: actions/checkout@v4
 
       - name: Chart | Push
         uses: appany/helm-oci-chart-releaser@v0.5.0
         with:
-          name: any-cors
+          name: ${{ matrix.package }}
           repository: ${{ github.repository }}
-          tag: 0.1.11
-          path: helm-charts/any-cors
+          tag: ${{ matrix.tag }}
+          path: ${{ matrix.path }}
           registry: ghcr.io
-          registry_username: '0xfe10'
+          registry_username: "0xfe10"
           registry_password: ${{ github.token }}
-          # registry_password: ${{ secrets.GT_0XFE10 }}
           update_dependencies: "true" # Defaults to false
 
