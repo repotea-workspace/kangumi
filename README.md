@@ -42,7 +42,7 @@ Optimized container images for various use cases:
 | [fat-android-sdk](docker-image/fat-android-sdk)             | Android SDK with additional tools             |
 | [fuel](docker-image/fuel)                                   | Fuel blockchain components                    |
 | [gotenberg](docker-image/gotenberg)                         | Document conversion service                   |
-| [harmonytools](docker-image/harmonytools)                   | Open Harmony tools                       |
+| [harmonytools](docker-image/harmonytools)                   | Open Harmony tools                            |
 | [k8ops](docker-image/k8ops)                                 | Kubernetes operations utilities               |
 | [node-liveness-probe](docker-image/node-liveness-probe)     | Node health monitoring probe                  |
 | [nubit](docker-image/nubit)                                 | Nubit blockchain node                         |
