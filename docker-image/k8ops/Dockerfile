@@ -33,8 +33,9 @@ FROM chatwork/helmfile:${HELMFILE_VERSION} AS helmfile
 # ArgoCD
 ##
 FROM alpine:3 AS argocd
+ARG ARGOCD_VERSION
 RUN apk add --no-cache curl \
-  && curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64 \
+  && curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-amd64 \
   && install -m 555 argocd-linux-amd64 /usr/local/bin/argocd 
 
 ##

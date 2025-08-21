@@ -25,6 +25,8 @@ COPY --from=k8ops /usr/local/bin/kustomize /usr/local/bin/
 COPY --from=k8ops /usr/local/bin/helm /usr/local/bin/
 # Helmfile
 COPY --from=k8ops /usr/local/bin/helmfile /usr/local/bin/
+# # Argocd
+# COPY --from=k8ops /usr/local/bin/argocd /usr/local/bin/
 
 ## unminimize
 RUN yes | unminimize
