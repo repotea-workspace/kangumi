@@ -30,6 +30,14 @@ RUN tar zxvf ./${HELM_FILENAME}
 FROM chatwork/helmfile:${HELMFILE_VERSION} AS helmfile
 
 ##
+# ArgoCD
+##
+FROM alpine:3 AS argocd
+RUN apk add --no-cache curl \
+  && curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64 \
+  && install -m 555 argocd-linux-amd64 /usr/local/bin/argocd 
+
+##
 # MAIN STAGE
 ##
 FROM alpine:3
@@ -43,6 +51,8 @@ COPY --from=kustomize ./kustomize /usr/local/bin/
 COPY --from=helm ./linux-amd64/helm /usr/local/bin/
 # Helmfile
 COPY --from=helmfile /usr/local/bin/helmfile /usr/local/bin/
+# ArgoCD
+COPY --from=argocd /usr/local/bin/argocd /usr/local/bin/
 
 # Other deps
 RUN apk add --no-cache ca-certificates curl make colordiff moreutils bash git \
