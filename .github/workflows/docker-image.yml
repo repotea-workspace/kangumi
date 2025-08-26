@@ -39,6 +39,7 @@ jobs:
               HELM_VERSION=v3.18.0
               HELM_DIFF_VERSION=v3.1.3
               ARGOCD_VERSION=v3.1.0
+              KUBESEAL_VERSION=0.31.0
 
           # - package: fat-android-sdk
           #   context: docker-image/fat-android-sdk

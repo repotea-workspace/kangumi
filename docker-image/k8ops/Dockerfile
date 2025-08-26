@@ -39,6 +39,16 @@ RUN apk add --no-cache curl \
   && install -m 555 argocd-linux-amd64 /usr/local/bin/argocd 
 
 ##
+# Kubeseal
+##
+FROM alpine:3 AS kubeseal
+ARG KUBESEAL_VERSION
+RUN apk add --no-cache curl \
+  && curl -LO "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION}-linux-amd64.tar.gz" \
+  && tar -zxf kubeseal-${KUBESEAL_VERSION}-linux-amd64.tar.gz \
+  && install -m 555 kubeseal /usr/local/bin/kubeseal
+
+##
 # MAIN STAGE
 ##
 FROM alpine:3
@@ -54,6 +64,8 @@ COPY --from=helm ./linux-amd64/helm /usr/local/bin/
 COPY --from=helmfile /usr/local/bin/helmfile /usr/local/bin/
 # ArgoCD
 COPY --from=argocd /usr/local/bin/argocd /usr/local/bin/
+# Kubeseal
+COPY --from=kubeseal /usr/local/bin/kubeseal /usr/local/bin/
 
 # Other deps
 RUN apk add --no-cache ca-certificates curl make colordiff moreutils bash git \

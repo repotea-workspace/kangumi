@@ -27,6 +27,8 @@ COPY --from=k8ops /usr/local/bin/helm /usr/local/bin/
 COPY --from=k8ops /usr/local/bin/helmfile /usr/local/bin/
 # Argocd
 COPY --from=k8ops /usr/local/bin/argocd /usr/local/bin/
+# Kubeseal
+COPY --from=k8ops /usr/local/bin/kubeseal /usr/local/bin/
 
 ## unminimize
 RUN yes | unminimize
