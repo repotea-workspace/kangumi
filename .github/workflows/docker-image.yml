@@ -57,7 +57,7 @@ jobs:
             context: docker-image/harmonytools
             build-args: ""
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: benjlevesque/short-sha@v3.0
 
@@ -107,7 +107,7 @@ jobs:
               GCM_VERSION=2.6.1
               HELM_DIFF_VERSION=v3.1.3
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: benjlevesque/short-sha@v3.0
 
