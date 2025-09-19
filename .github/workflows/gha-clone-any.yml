@@ -16,7 +16,7 @@ jobs:
 #        uses: ./clone-any
 #        with:
 #          platform: github
-#          repository: fewensa/actions
+#          repository: repotea-workspace/kangumi
 #          target: actions-group
 #
 #      - name: Access cloned repository content

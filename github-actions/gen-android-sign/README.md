@@ -47,10 +47,10 @@ The path of sign key file
 steps:
   - uses: actions/checkout@v5
     with:
-      repository: fewensa/actions
+      repository: repotea-workspace/kangumi
       path: .github/actions
 
-  - uses: ./.github/actions/gen-android-sign
+  - uses: ./.github/actions/github-actions/gen-android-sign
     name: Generate sign file
     # ID used to access action output
     id: gen-sign

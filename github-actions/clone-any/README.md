@@ -6,11 +6,11 @@ Clone Any
 ```
 - uses: actions/checkout@v5
   with:
-    repository: fewensa/actions
+    repository: repotea-workspace/kangumi
     path: .github/actions
 
 - name: Clone repository
-  uses: ./.github/actions/clone-any
+  uses: ./.github/actions/github-actions/clone-any
   with:
     repository: 'https://github.com/org/repo'
 ```
@@ -20,11 +20,11 @@ Clone Any
 ```
 - uses: actions/checkout@v5
   with:
-    repository: fewensa/actions
+    repository: repotea-workspace/kangumi
     path: .github/actions
 
 - name: Clone repository
-  uses: ./.github/actions/clone-any
+  uses: ./.github/actions/github-actions/clone-any
   with:
     repository: 'git@github.com:org/repo.git'
     ssh-key: |
