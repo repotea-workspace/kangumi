@@ -78,7 +78,7 @@ runs:
       id: branch-names
       uses: tj-actions/branch-names@v8
 
-    - uses: fewensa/actions/read-files@main
+    - uses: repotea-workspace/kangumi/github-actions/read-files@main
       id: read-files
       with:
         paths: ${{ inputs.metapath }}
@@ -117,7 +117,7 @@ runs:
         vars_path: _____tepusher_____/vars.yml
 
     - name: Push message
-      uses: fewensa/actions/weplusbot@main
+      uses: repotea-workspace/kangumi/github-actions/weplusbot@main
       if: ${{ inputs.provider == 'weplusbot' }}
       with:
         token: ${{ inputs.token }}
@@ -127,7 +127,7 @@ runs:
         aters: ${{ inputs.aters }}
 
     - name: Pat message
-      uses: fewensa/actions/weplusbot@main
+      uses: repotea-workspace/kangumi/github-actions/weplusbot@main
       if: ${{ inputs.provider == 'weplusbot' && inputs.pattos != '' }}
       with:
         token: ${{ inputs.token }}
