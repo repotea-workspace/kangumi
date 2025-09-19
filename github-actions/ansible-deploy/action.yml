@@ -1,0 +1,109 @@
+name: 'Ansible deploy'
+
+description: 'Ansible deploy'
+
+
+inputs:
+  trigger_url:
+    description: 'trigger url'
+    required: true
+  trigger_token:
+    description: 'trigger token'
+    required: true
+  changes:
+    description: 'trigger changes'
+    required: true
+  project_name:
+    description: 'project name'
+    required: false
+  commit_message:
+    description: 'commit message'
+    required: false
+  ac_git_ref:
+    description: 'action context: git ref'
+    required: false
+  provider:
+    description: 'provider'
+    default: 'github'
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Get repository name
+      id: repo-name
+      uses: MariachiBear/get-repo-name-action@v1.1.0
+
+    - name: Get branch names
+      id: branch-names
+      uses: tj-actions/branch-names@v8
+
+    - name: Deploy
+      shell: bash
+      env:
+        DEFAULT_PROJECT_NAME: ${{ steps.repo-name.outputs.repository-name }}
+        DEFAULT_BRANCH_NAME: ${{ steps.branch-names.outputs.current_branch }}
+      run: |
+        set -xe
+        INPUT_PROJECT_NAME=${{ inputs.project_name }}
+        INPUT_COMMIT_MESSAGE="${{ inputs.commit_message }}"
+        INPUT_AC_GIT_REF=${{ inputs.ac_git_ref }}
+        INPUT_TRIGGER_URL=${{ inputs.trigger_url }}
+        INPUT_TRIGGER_TOKEN=${{ inputs.trigger_token }}
+        INPUT_CHANGES=${{ inputs.changes }}
+        INPUT_PROVIDER=${{ inputs.provider }}
+        DEFAULT_COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
+
+        if [ -f "${INPUT_COMMIT_MESSAGE}" ]; then
+          INPUT_COMMIT_MESSAGE=$(cat ${INPUT_COMMIT_MESSAGE})
+        fi
+
+        if [ -f "${INPUT_AC_GIT_REF}" ]; then
+          INPUT_AC_GIT_REF=$(cat ${INPUT_AC_GIT_REF})
+        fi
+
+        PROJECT_NAME=${INPUT_PROJECT_NAME:-$DEFAULT_PROJECT_NAME}
+        TRIGGER_CHANGES=${INPUT_CHANGES}
+        COMMIT_MSG=${INPUT_COMMIT_MESSAGE:-$DEFAULT_COMMIT_MESSAGE}
+        AC_GIT_REF=${INPUT_AC_GIT_REF:-$DEFAULT_BRANCH_NAME}
+
+        export DESCRIPTION="Actions Context:
+        * Actor: ${{ github.actor }}
+        * Git Ref: ${AC_GIT_REF}
+        * Build started at: ${{ github.event.head_commit.timestamp }}
+        * Source: ${{ github.event_name }}
+        * Workflows: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        "
+        echo "$DESCRIPTION"
+
+        if [ -f "${TRIGGER_CHANGES}" ]; then
+          TRIGGER_CHANGES=$(cat ${TRIGGER_CHANGES})
+        fi
+
+        if [ "${INPUT_PROVIDER}" == "gitlab" ]; then
+          curl -fsSL -o /dev/null -X POST \
+            --retry 5 --retry-connrefused --retry-delay 10 \
+            -F "token=$INPUT_TRIGGER_TOKEN" \
+            -F "ref=main" \
+            -F "variables[DEPLOY_MODE]=ansible" \
+            -F "variables[DEPLOY_PROJECT]=${PROJECT_NAME}" \
+            -F "variables[TRIGGER_CHANGES]=$TRIGGER_CHANGES" \
+            -F "variables[DEPLOY_DESCRIPTION]=$DESCRIPTION" \
+            -F "variables[TRIGGER_MESSAGE]=$COMMIT_MSG" \
+            "$INPUT_TRIGGER_URL"
+        fi
+
+        if [ "${INPUT_PROVIDER}" == "github" ]; then
+          MESSAGE="[${PROJECT_NAME}]: ${DESCRIPTION} ${COMMIT_MSG}"
+          #echo "${TRIGGER_CHANGES}" > ____changes.json
+          #MULTI_CHANGES=$(jq -crs '.' < ____changes.json)
+          gh workflow run \
+            trigger.yml \
+            --ref=main \
+            --repo=repotea-workflow/ansible-mine \
+            --raw-field="changes=${TRIGGER_CHANGES}" \
+            --raw-field="message=${MESSAGE}"
+        fi
+
+

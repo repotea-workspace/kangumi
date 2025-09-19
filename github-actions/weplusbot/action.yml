@@ -1,0 +1,122 @@
+name: 'Weplusbot'
+
+description: 'Weplusbot send message'
+
+inputs:
+  token:
+    description: 'weplusbot token'
+    required: true
+  receiver:
+    description: 'receiver'
+    required: false
+  version:
+    description: 'version'
+    required: true
+    default: 'pro'
+  content:
+    description: 'content'
+    required: true
+  title:
+    description: 'title'
+    required: false
+  template:
+    description: 'template {txt(default), html, json, image, file, video, news, link, music, pat, card, material}'
+    required: true
+    default: 'txt'
+  aters:
+    description: 'aters'
+    required: false
+  timestamp:
+    description: 'timestamp'
+    required: false
+  cover:
+    description: 'cover'
+    required: false
+  url:
+    description: 'url'
+    required: false
+
+outputs:
+  RESPONSE:
+    description: "Weplusbot send message response"
+    value: ${{ steps.send_message.outputs.RESPONSE }}
+
+
+runs:
+  using: "composite"
+  steps:
+    - name: Send message
+      shell: bash
+      id: send_message
+      run: |
+        INPUT_TOKEN='${{ inputs.token }}'
+        INPUT_RECEIVER='${{ inputs.receiver }}'
+        INPUT_VERSION='${{ inputs.version }}'
+        INPUT_CONTENT=$(cat << EOF
+        ${{ inputs.content }}
+        EOF
+        )
+        INPUT_TITLE=$(cat << EOF
+        ${{ inputs.title }}
+        EOF
+        )
+        INPUT_TEMPLATE=${{ inputs.template }}
+        INPUT_ATERS='${{ inputs.aters }}'
+        INPUT_TIMESTAMP='${{ inputs.timestamp }}'
+        INPUT_COVER='${{ inputs.cover }}'
+        INPUT_URL='${{ inputs.url }}'
+
+        ATERS=$(echo "${INPUT_ATERS}" | sed ":a;$!N;s/\n/ /g;ba" | sed "s/ /,/g")
+        TITLE=${INPUT_TITLE}
+        CONTENT=${INPUT_CONTENT}
+
+        if [[ -f "${CONTENT}" ]]; then
+          CONTENT=$(cat ${CONTENT});
+        fi
+        if [[ -f "${TITLE}" ]]; then
+          TITLE=$(cat ${TITLE});
+        fi
+
+        BODY=$(
+        jq -n --arg token "$INPUT_TOKEN" \
+              --arg receiver "$INPUT_RECEIVER" \
+              --arg version "$INPUT_VERSION" \
+              --arg content "$CONTENT" \
+              --arg title "$TITLE" \
+              --arg template "$INPUT_TEMPLATE" \
+              --arg aters "$ATERS" \
+              --arg cover "$INPUT_COVER" \
+              --arg timestamp "$INPUT_TIMESTAMP" \
+              --arg url "$INPUT_URL" \
+        '{
+          token: $token,
+          version: $version,
+          content: $content,
+          template: $template,
+        }
+        + (if $receiver != "" then {receiver: $receiver} else {} end)
+        + (if $title != "" then {title: $title} else {} end)
+        + (if $aters != "" then {aters: $aters} else {} end)
+        + (if $cover != "" then {cover: $cover} else {} end)
+        + (if $timestamp != "" then {timestamp: $timestamp} else {} end)
+        + (if $url != "" then {url: $url} else {} end)'
+        )
+
+        # https://www.weplusbot.com/send
+        RESPONSE=$(
+          curl -X POST \
+            -H 'Content-Type: application/json' \
+            https://cors.kahub.in/www.weplusbot.com/send \
+            -d "${BODY}"
+        )
+
+        R_CODE=$(echo $RESPONSE | jq '.code')
+        if [[ "200" == "${R_CODE}" ]]; then
+          echo "RESPONSE=${RESPONSE}" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        echo ${RESPONSE} | jq
+        exit 1
+
+

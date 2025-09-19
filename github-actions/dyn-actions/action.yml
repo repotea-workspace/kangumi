@@ -1,0 +1,117 @@
+name: 'Trigger Dynamic Actions'
+description: 'Trigger dynamic actions to run you CI'
+inputs:
+  dot_github:
+    description: 'The path for .github'
+    required: false
+    default: '.github'
+  project_name:
+    description: 'Project name'
+    required: false
+  git_email:
+    description: 'Git email'
+    required: false
+    default: 'github-actions[bot]@users.noreply.github.com'
+  git_name:
+    description: 'Git name'
+    required: false
+    default: 'github-actions[bot]'
+  ssh_key:
+    description: 'SSH private key'
+    required: true
+  dyn_owner:
+    description: 'dynamic actions repo owner'
+    required: false
+    default: '0xfe10'
+runs:
+  using: "composite"
+  steps:
+    - name: Tag
+      uses: olegtarasov/get-tag@v2.1
+    - name: Sha
+      uses: benjlevesque/short-sha@v3.0
+    - name: Extract branch name
+      shell: bash
+      run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+      id: extract_branch
+    - uses: kielabokkie/ssh-key-and-known-hosts-action@v1
+      with:
+        ssh-private-key: ${{ inputs.ssh_key }}
+        ssh-host: github.com
+    - name: Expose git commit data
+      uses: jcputney/git-commit-data-action@v2
+    - name: Trigger dynamic actions
+      shell: bash
+      run: |
+        INPUT_PROJECT_NAME=${{ inputs.project_name }}
+        INPUT_DOT_GITHUB=${{ inputs.dot_github }}
+        INPUT_GIT_EMAIL=${{ inputs.git_email }}
+        INPUT_GIT_NAME=${{ inputs.git_name }}
+
+        DEFAULT_PROJECT_NAME=${{ github.repository }}
+        PROJECT_NAME=${INPUT_PROJECT_NAME:-$DEFAULT_PROJECT_NAME}
+
+        T_BRANCH=${{ github.repository }}
+
+        git clone git@github.com:${{ inputs.dyn_owner }}/dynamic-actions.git
+        cd dynamic-actions
+        git fetch
+        git checkout -b $T_BRANCH origin/$T_BRANCH || (git branch $T_BRANCH && git checkout $T_BRANCH)
+        git pull || true
+
+        # prepare changes
+
+        rm -rf .github
+        mv ../$INPUT_DOT_GITHUB .github
+
+        if [ ! -d ".github" ]; then
+          echo 'not found .github dir'
+          exit 1
+        fi
+        if [ -d ".github/dyn-workflows" ]; then
+          rm -rf .github/workflows
+          mv .github/dyn-workflows .github/workflows
+        fi
+        date > .github/date.txt
+
+        REPO_BRANCH=${{ steps.extract_branch.outputs.branch }}
+        REPO_TAG=${{ env.GIT_TAG_NAME }}
+        COMMIT_SHA=${{ env.SHA }}
+
+        if [ -n "${REPO_TAG}" ]; then
+          echo ${REPO_TAG} > .github/tag.txt
+          echo ${REPO_TAG} > .github/ref.txt
+          rm -rf .github/branch.txt || true
+        else
+          echo ${REPO_BRANCH} > .github/branch.txt
+          echo ${REPO_BRANCH} > .github/ref.txt
+          rm -rf .github/tag.txt || true
+        fi
+
+        LATEST_COMMIT_LOG="${{ github.event.head_commit.message }}"
+        COMMIT_MSG=${COMMIT_MSG:-${LATEST_COMMIT_LOG}}
+        COMMIT_MSG=${COMMIT_MSG:-${GIT_COMMIT_MESSAGE}}
+
+        echo "${COMMIT_MSG}" > .github/message.txt
+        echo "${COMMIT_SHA}" > .github/commit.txt
+
+        # push
+        git config user.name "${INPUT_GIT_NAME}"
+        git config user.email "${INPUT_GIT_EMAIL}"
+
+        git status
+        git add .
+        git commit -m "[${T_BRANCH}]: ${COMMIT_MSG}"
+        git push origin $T_BRANCH
+
+        if [ -z "${REPO_TAG}" ]; then
+          echo "This is pushed a branch (${REPO_BRANCH}). completed to push Github Actions."
+          exit 0
+        fi
+
+        TAG_NAME=${REPO_TAG}-${PROJECT_NAME}
+        git tag -d ${TAG_NAME} || true
+        git push origin :${TAG_NAME} || true
+  
+        git tag ${TAG_NAME}
+        git push origin ${TAG_NAME}

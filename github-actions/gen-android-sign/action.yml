@@ -1,0 +1,28 @@
+name: 'Generate android sign file'
+description: 'An action to generate android sign key properties file'
+author: 'fewensa'
+branding:
+  icon: 'edit'
+  color: 'orange'
+inputs:
+  path:
+    description: 'The path you want to write'
+    required: true
+  signingKeyBase64:
+    description: 'The key used to sign your release in base64 encoded format'
+    required: true
+  alias:
+    description: 'The key alias'
+    required: true
+  keyStorePassword:
+    description: 'The password to the keystore'
+    required: true
+  keyPassword:
+    description: 'The password for the key'
+    required: false
+outputs:
+  path:
+    description: 'The generated file path'
+runs:
+  using: 'node16'
+  main: 'dist/index.js'

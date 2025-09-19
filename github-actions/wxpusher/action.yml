@@ -1,0 +1,115 @@
+name: 'Wxpusher'
+
+description: 'Wxpusher send message'
+
+inputs:
+  token:
+    description: 'wxpusher token'
+    required: true
+  content:
+    description: 'content'
+    required: false
+  summary:
+    description: 'summary'
+    required: false
+  content_type:
+    description: 'content type, 1. text, 2. html, 3. markdown(default)'
+    default: 3
+  topic:
+    description: 'topics'
+    required: false
+  uid:
+    description: 'uids'
+    required: false
+  url:
+    description: 'wxpusher api'
+    required: false
+  verify_pay:
+    description: 'verify pay'
+    default: 'false'
+  verify_pay_type:
+    description: 'verify pay type'
+    default: '0'
+
+outputs:
+  RESPONSE:
+    description: "Wxpusher send message response"
+    value: ${{ steps.send_message.outputs.RESPONSE }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Send message
+      shell: bash
+      id: send_message
+      run: |
+
+        INPUT_TOKEN='${{ inputs.token }}'
+        INPUT_CONTENT='${{ inputs.content }}'
+        INPUT_CONTENT_TYPE='${{ inputs.content_type }}'
+        INPUT_SUMMARY='${{ inputs.summary }}'
+        INPUT_TOPIC='${{ inputs.topic }}'
+        INPUT_UID='${{ inputs.uid }}'
+        INPUT_URL='${{ inputs.url }}'
+        INPUT_VERIFY_PAY='${{ inputs.verify_pay }}'
+        INPUT_VERIFY_PAY_TYPE='${{ inputs.verify_pay_type }}'
+
+        DEFAULT_URL='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+        DEFAULT_SUMMARY='wxpusher action'
+        DEFAULT_CONTENT="
+        Summary:
+
+        ${INPUT_SUMMARY}
+
+        ${INPUT_CONTENT}
+
+        ---
+
+        trigger by action [${{ github.repository }}#${{ github.run_id }}](${DEFAULT_URL})
+        "
+
+        TOPICS=$(echo "${INPUT_TOPIC}" | sed ":a;$!N;s/\n/ /g;ba" | sed "s/ /,/g")
+        UIDS=$(echo "${INPUT_UID}" | sed ":a;$!N;s/\n/ /g;ba" | sed "s/ /,/g")
+        URL=${INPUT_URL:-$DEFAULT_URL}
+        SUMMARY=${INPUT_SUMMARY:-$DEFAULT_SUMMARY}
+        #CONTENT=${INPUT_CONTENT:-$DEFAULT_CONTENT}
+        CONTENT=${DEFAULT_CONTENT}
+
+        BODY=$(
+        jq -n --arg appToken "$INPUT_TOKEN" \
+              --arg content "$CONTENT" \
+              --arg summary "$SUMMARY" \
+              --argjson contentType "$INPUT_CONTENT_TYPE" \
+              --arg url "$URL" \
+              --argjson verifyPay "$INPUT_VERIFY_PAY" \
+              --argjson verifyPayType "$INPUT_VERIFY_PAY_TYPE" \
+              --arg topicIds "$TOPICS" \
+              --arg uids "$UIDS" \
+        '{
+          appToken: $appToken,
+          content: $content,
+          summary: $summary,
+          contentType: $contentType,
+          url: $url,
+          verifyPay: $verifyPay,
+          verifyPayType: $verifyPayType
+        }
+        + (if $topicIds | length > 0 then { topicIds: ($topicIds | split(",") | map(tonumber)) } else {} end)
+        + (if $uids | length > 0 then { uids: ($uids | split(",")) } else {} end)'
+        )
+
+        RESPONSE=$(
+          curl -X POST \
+            -H 'Content-Type: application/json' \
+            https://wxpusher.zjiecode.com/api/send/message \
+            -d "${BODY}"
+        )
+
+        R_SUCCESS=$(echo $RESPONSE | jq '.success')
+        if [[ "true" == "${R_SUCCESS}" ]]; then
+          echo "RESPONSE=${RESPONSE}" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        echo ${RESPONSE} | jq
+        exit 1

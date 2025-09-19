@@ -1,0 +1,37 @@
+name: 'Railway Redeploy'
+description: 'Simple Action to Redeploy Railway App using Railway Public API'
+inputs:
+  railway_token:  # railway token
+    description: 'Railway public api token'
+    required: true
+  environment_id: # environment id
+    description: 'Environment id'
+    required: true
+  service_id: # service id
+    description: 'Service id'
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Redeploy service
+      shell: bash
+      run: |
+        INPUT_ENVIRONMENT_ID=${{ inputs.environment_id }}
+        INPUT_SERVICE_ID=${{ inputs.service_id }}
+        WRITE_FILE_PATH=__railway_redeploy__.json 
+        
+        curl -X POST \
+          -H "Authorization: Bearer ${{ inputs.railway_token }}" \
+          -H 'Content-Type: application/json' \
+          'https://backboard.railway.app/graphql/v2' \
+          -d '{"query":"mutation serviceInstanceDeploy($environmentId: String!, $serviceId: String!) {\n  serviceInstanceDeploy(environmentId: $environmentId, serviceId: $serviceId)\n}","variables":{"environmentId":"'${INPUT_ENVIRONMENT_ID}'","serviceId":"'${INPUT_SERVICE_ID}'"}}' \
+          | tee ${WRITE_FILE_PATH}
+
+        MESSAGE=$(cat ${WRITE_FILE_PATH} | jq '.errors[]?.message')
+        rm -rf ${WRITE_FILE_PATH}
+
+        echo $MESSAGE
+
+        if [ -n "${MESSAGE}" ]; then
+          exit 1
+        fi

@@ -1,0 +1,80 @@
+name: 'Fast Substrate'
+
+description: 'Fast Substrate Build Action'
+
+
+inputs:
+  rust_toolchain:
+    description: 'rust toolchain'
+    required: false
+    default: 'nightly'
+  package:
+    description: 'cargo build package'
+    required: false
+    default: 'darwinia'
+  features:
+    description: 'build features'
+    required: false
+    default: ''
+  suffix:
+    description: 'output file suffix'
+    required: false
+    default: ''
+
+outputs:
+  PACKAGE_BINARY_BZ2:
+    description: 'Build package binary path (tar bz2)'
+    value: ${{ steps.cargo_build.outputs.PACKAGE_BINARY_BZ2 }}
+  PACKAGE_BINARY_ZST:
+    description: 'Build package binary path (tar zst)'
+    value: ${{ steps.cargo_build.outputs.PACKAGE_BINARY_ZST }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup build environment
+      shell: bash
+      run: |
+        apt update -y
+        apt install --no-install-recommends -y \
+          ca-certificates curl git python3-pip zstd \
+          clang make gcc g++ libssl-dev pkg-config protobuf-compiler
+        pip3 install --upgrade pip
+        pip3 install cmake --upgrade
+
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ inputs.rust_toolchain }}
+
+    - name: Build
+      shell: bash
+      id: cargo_build
+      run: |
+        PACKAGE=${{ inputs.package }}
+        FEATURES=${{ inputs.features }}
+        SUFFIX=${{ inputs.suffix }}
+
+        cargo build --release --locked \
+          ${PACKAGE:+--package=$PACKAGE} \
+          ${FEATURES:+--features=$FEATURES}
+
+        if [ -z "${PACKAGE}" ]; then
+          exit 0
+        fi
+
+        DIST_PATH=build
+        mkdir -p ${DIST_PATH}
+
+        PACKAGE_BINARY_BZ2=${DIST_PATH}/${PACKAGE}${SUFFIX:+-$SUFFIX}.tar.bz2
+        PACKAGE_BINARY_ZST=${DIST_PATH}/${PACKAGE}${SUFFIX:+-$SUFFIX}.tar.zst
+
+        tar cjSf ${PACKAGE_BINARY_BZ2} -C target/release ${PACKAGE}
+        tar cf ${PACKAGE_BINARY_ZST} -C target/release ${PACKAGE} -I zstd
+        cp target/release/${PACKAGE} ${DIST_PATH}/
+
+        echo ''
+        echo "PACKAGE_BINARY_BZ2=$PACKAGE_BINARY_BZ2" >> $GITHUB_OUTPUT
+        echo "PACKAGE_BINARY_ZST=$PACKAGE_BINARY_ZST" >> $GITHUB_OUTPUT
+
+

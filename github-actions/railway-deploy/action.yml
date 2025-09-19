@@ -1,0 +1,50 @@
+name: 'Railway Deploy'
+description: 'Simple Action to Deploy Railway App using Railway CLI'
+inputs:
+  railway_token:  # railway token
+    description: 'Railway Token for Deployment'
+    required: false
+  service: # the specific service target
+    description: 'The specific service target'
+    required: true
+  detach: # detatch option
+    description: 'Detach option in the railway cli option'
+    required: false
+  path:
+    description: 'Project path'
+    required: false
+outputs:
+  status: # status output
+    description: ''
+runs:
+  using: "composite"
+  steps:
+    - name: Setup NodeJS
+      uses: actions/setup-node@v4
+
+    - name: Install railway
+      shell: bash
+      run: npm i -g @railway/cli
+
+    - name: Deploy project
+      shell: bash
+      run: |
+        ERROR_CODE=0
+        INPUT_SERVICE=${{ inputs.service }}
+        INPUT_DETACH=${{ inputs.detach }}
+        INPUT_PATH=${{ inputs.path }}
+
+        export RAILWAY_TOKEN=${{ inputs.railway_token }}
+
+        if [ -n ${INPUT_PATH} ]; then
+          cd ${INPUT_PATH}
+        fi
+
+        RAILWAY_CMD="railway up --service=${INPUT_SERVICE} ${INPUT_DETACH:+--detach}"
+        eval $RAILWAY_CMD || ERROR_CODE=$?
+
+        if [ "${ERROR_CODE}" -ne 0 ]; then
+          exit $ERROR_CODE
+        else
+          echo "status=Success" >> $GITHUB_OUTPUT
+        fi

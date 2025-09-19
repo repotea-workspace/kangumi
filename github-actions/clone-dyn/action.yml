@@ -1,0 +1,74 @@
+name: 'Clone Dynmatic Git Repo Action'
+
+description: "Clone any git repository in Github Actions for dyn-actions"
+
+inputs:
+  repository:
+    description: 'Repository'
+    required: true
+  token:
+    description: 'Github token'
+    required: false
+  target:
+    description: 'Clone target dir name'
+    required: false
+  ref:
+    description: 'Git ref'
+    required: false
+  ref_file:
+    description: 'Read ref from a file'
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Prepare Options
+      shell: bash
+      id: prepare_options
+      run: |
+        set -xe
+        GIT_REF=${{ inputs.ref }}
+        GIT_REF_FILE=${{ inputs.ref_file }}
+        TARGET_NAME=${{ inputs.target }}
+
+        if [ -z "${GIT_REF}" ]; then
+          GIT_REF=$(cat ${GIT_REF_FILE})
+        fi
+
+        TARGET_NAME=${TARGET_NAME:-repo}
+
+        echo "GIT_REF=$GIT_REF" >> $GITHUB_OUTPUT
+        echo "TARGET_NAME=$TARGET_NAME" >> $GITHUB_OUTPUT
+
+    - name: Prepare Git Repository
+      shell: bash
+      run: |
+        rm -rf .git
+        echo '/*' > .gitignore
+        mkdir __origin__
+        find . -maxdepth 1 ! -path './__origin__' ! -path '.' -exec mv {} __origin__/ \;
+
+    - uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.repository }}
+        ref: ${{ steps.prepare_options.outputs.GIT_REF }}
+        token: ${{ inputs.token }}
+        path: ${{ steps.prepare_options.outputs.TARGET_NAME }}
+        fetch-depth: 0
+
+    - name: Reorganize Git Repo
+      shell: bash
+      run: |
+        TARGET_NAME='${{ steps.prepare_options.outputs.TARGET_NAME }}'
+
+        find ${TARGET_NAME} -mindepth 1 -maxdepth 1 -exec mv {} . \;
+        rm -rf ${TARGET_NAME}
+
+        git config --global --add safe.directory ${{ github.workspace }}
+        git config --global --add safe.directory ${{ github.action_path }}
+        git config --global --add safe.directory ${GITHUB_ACTION_PATH}
+        if [ -d "/__w" ]; then
+          PROJECT_NAME=${GITHUB_REPOSITORY#*/}
+          git config --global --add safe.directory /__w/${PROJECT_NAME}/${PROJECT_NAME}
+        fi

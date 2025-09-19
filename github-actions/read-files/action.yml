@@ -1,0 +1,44 @@
+name: Read files action
+author: fewensa
+description: 'Read files content'
+branding:
+  icon: 'file'
+  color: yellow
+inputs:
+  paths:
+    description: 'File paths'
+    required: true
+#  pattern:
+#    description: 'File pattern to match using RegEx'
+#    required: false
+#    default: '*'
+  suffixes:
+    description: 'Allow suffixes'
+    required: false
+  alias:
+    description: 'File name alias; `license.txt: LICENSE`'
+    required: false
+  enable-segment:
+    description: 'enable segment'
+    required: false
+    default: 'false'
+  segment-format:
+    description: 'segment format, {vertical, horizontal}'
+    required: false
+    default: 'vertical'
+  shrink-line:
+    description: 'shrink line, replace \n to space default is false'
+    required: false
+    default: 'false'
+  enable-list-dir:
+    description: 'enable list dir'
+    required: false
+    default: 'true'
+outputs:
+  content:
+    description: 'Concatenated content of the files'
+  content_escape:
+    description: 'Escape concatenated content of the files'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
