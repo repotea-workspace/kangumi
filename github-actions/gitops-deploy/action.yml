@@ -1,0 +1,132 @@
+name: 'Gitops deploy action'
+description: "Update YAML in gitops repo using fjogeleit/yaml-update-action"
+
+inputs:
+  repository:
+    description: 'GitOps repository to update'
+    required: false
+    default: 'repotea-workflow/gitops'
+  deploy_key:
+    description: 'SSH deploy key for repository'
+    required: true
+  valueFile:
+    description: 'Path to YAML file to update (relative to repo root)'
+    required: false
+  propertyPath:
+    description: 'Property path to update'
+    required: false
+  value:
+    description: 'Value to set'
+    required: false
+  changes:
+    description: 'JSON for multi-file/multi-value changes'
+    required: false
+  commitChange:
+    description: 'Whether to commit the change'
+    required: false
+    default: 'true'
+  message:
+    description: 'Commit message'
+    required: false
+  labels:
+    description: 'Labels for PR'
+    required: false
+  createPR:
+    description: 'Whether to create a PR'
+    required: false
+    default: 'false'
+  title:
+    description: 'PR title'
+    required: false
+  description:
+    description: 'PR description'
+    required: false
+  masterBranchName:
+    description: 'Master branch name'
+    required: false
+  targetBranch:
+    description: 'Target branch for PR'
+    required: false
+  branch:
+    description: 'Branch to commit to'
+    required: false
+  force:
+    description: 'Force push'
+    required: false
+  githubAPI:
+    description: 'GitHub API base URL'
+    required: false
+  token:
+    description: 'GitHub token for PR'
+    required: false
+  commitUserName:
+    description: 'Commit user name'
+    required: false
+  commitUserEmail:
+    description: 'Commit user email'
+    required: false
+
+  format:
+    description: 'File format (YAML/JSON)'
+    required: false
+  method:
+    description: 'CreateOrUpdate/Update/Create'
+    required: false
+  noCompatMode:
+    description: 'Remove quotes from reserved words'
+    required: false
+  quotingType:
+    description: 'Quotes for string values'
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check if gitops repo already exists
+      id: check-repo
+      shell: bash
+      run: |
+        if [ -d "gitops-repo" ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "GitOps repo directory already exists, skipping checkout"
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+          echo "GitOps repo directory does not exist, will checkout"
+        fi
+
+    - name: Checkout gitops repo
+      if: steps.check-repo.outputs.exists == 'false'
+      uses: actions/checkout@v5
+      with:
+        repository: ${{ inputs.repository }}
+        ssh-key: ${{ inputs.deploy_key }}
+        path: gitops-repo
+        fetch-depth: 0
+
+    - name: Update YAML using fjogeleit/yaml-update-action
+      uses: fjogeleit/yaml-update-action@main
+      with:
+        valueFile: ${{ inputs.valueFile }}
+        propertyPath: ${{ inputs.propertyPath }}
+        value: ${{ inputs.value }}
+        changes: ${{ inputs.changes }}
+        commitChange: ${{ inputs.commitChange }}
+        message: ${{ inputs.message }}
+        labels: ${{ inputs.labels }}
+        createPR: ${{ inputs.createPR }}
+        title: ${{ inputs.title }}
+        description: ${{ inputs.description }}
+        masterBranchName: ${{ inputs.masterBranchName }}
+        targetBranch: ${{ inputs.targetBranch }}
+        branch: ${{ inputs.branch }}
+        force: ${{ inputs.force }}
+        githubAPI: ${{ inputs.githubAPI }}
+        token: ${{ inputs.token }}
+        commitUserName: ${{ inputs.commitUserName }}
+        commitUserEmail: ${{ inputs.commitUserEmail }}
+        workDir: gitops-repo
+        repository: ${{ inputs.repository }}
+        format: ${{ inputs.format }}
+        method: ${{ inputs.method }}
+        noCompatMode: ${{ inputs.noCompatMode }}
+        quotingType: ${{ inputs.quotingType }}
