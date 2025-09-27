@@ -83,7 +83,7 @@ runs:
   using: "composite"
   steps:
     - name: Check if gitops repo already exists
-      id: check-repo
+      id: check-gitops-repo
       shell: bash
       run: |
         if [ -d "gitops-repo" ]; then
@@ -95,7 +95,7 @@ runs:
         fi
 
     - name: Checkout gitops repo
-      if: steps.check-repo.outputs.exists == 'false'
+      if: steps.check-gitops-repo.outputs.exists == 'false'
       uses: actions/checkout@v5
       with:
         repository: ${{ inputs.repository }}
