@@ -97,7 +97,7 @@ runs:
 
         {
           echo "message<<EOF"
-          echo "[${PROJECT_NAME}]: Actions Context:"
+          echo "[${PROJECT_NAME}] :: Actions Context:"
           echo "* Git Ref: ${AC_GIT_REF}"
           echo "* Build started at: ${{ github.event.head_commit.timestamp }}"
           echo "* Source: ${{ github.event_name }}"
