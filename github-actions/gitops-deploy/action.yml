@@ -101,6 +101,7 @@ runs:
           echo "* Git Ref: ${AC_GIT_REF}"
           echo "* Build started at: ${{ github.event.head_commit.timestamp }}"
           echo "* Source: ${{ github.event_name }}"
+          echo "* Repository: https://github.com/${PROJECT_NAME}"
           echo "* Workflows: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           echo ""
           echo "${COMMIT_MSG}"
