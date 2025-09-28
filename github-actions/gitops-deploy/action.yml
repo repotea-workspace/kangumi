@@ -131,7 +131,7 @@ runs:
         # updateFile: false
 
         workDir: gitops-repo
-        # commitChange: 'true'
+        commitChange: 'false'
         # masterBranchName: 'main'
         # createPR: 'true'
         changes: ${{ inputs.changes }}
