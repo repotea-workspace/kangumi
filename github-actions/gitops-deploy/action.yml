@@ -131,8 +131,6 @@ runs:
         # updateFile: false
 
         workDir: gitops-repo
-        description: Test GitHub Action
-        message: 'Update Images'
-        title: 'Version Updates '
         commitChange: 'true'
+        masterBranchName: 'main'
         changes: ${{ inputs.changes }}
