@@ -24,7 +24,6 @@ inputs:
   commitChange:
     description: 'Whether to commit the change'
     required: false
-    default: 'true'
   message:
     description: 'Commit message'
     required: false
@@ -34,7 +33,6 @@ inputs:
   createPR:
     description: 'Whether to create a PR'
     required: false
-    default: 'false'
   title:
     description: 'PR title'
     required: false
