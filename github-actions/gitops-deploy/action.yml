@@ -70,9 +70,9 @@ inputs:
   method:
     description: 'CreateOrUpdate/Update/Create'
     required: false
-  # noCompatMode:
-  #   description: 'Remove quotes from reserved words'
-  #   required: false
+  noCompatMode:
+    description: 'Remove quotes from reserved words'
+    required: false
   quotingType:
     description: 'Quotes for string values'
     required: false
@@ -104,8 +104,6 @@ runs:
     - name: Update YAML using fjogeleit/yaml-update-action
       uses: fjogeleit/yaml-update-action@main
       with:
-        noCompatMode: 'true'
-
         valueFile: ${{ inputs.valueFile }}
         propertyPath: ${{ inputs.propertyPath }}
         value: ${{ inputs.value }}
@@ -128,4 +126,7 @@ runs:
         repository: ${{ inputs.repository }}
         format: ${{ inputs.format }}
         method: ${{ inputs.method }}
+        noCompatMode: ${{ inputs.noCompatMode }}
         quotingType: ${{ inputs.quotingType }}
+
+        updateFile: false
