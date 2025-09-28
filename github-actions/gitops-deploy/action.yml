@@ -133,4 +133,5 @@ runs:
         workDir: gitops-repo
         commitChange: 'true'
         masterBranchName: 'main'
+        createPR: 'true'
         changes: ${{ inputs.changes }}
