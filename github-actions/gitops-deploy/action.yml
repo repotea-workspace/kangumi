@@ -9,6 +9,9 @@ inputs:
   deploy_key:
     description: 'SSH deploy key for repository'
     required: true
+  changes:
+    description: 'JSON for multi-file/multi-value changes'
+    required: false
   valueFile:
     description: 'Path to YAML file to update (relative to repo root)'
     required: false
@@ -18,63 +21,15 @@ inputs:
   value:
     description: 'Value to set'
     required: false
-  changes:
-    description: 'JSON for multi-file/multi-value changes'
-    required: false
-  commitChange:
-    description: 'Whether to commit the change'
-    required: false
-  message:
-    description: 'Commit message'
-    required: false
-  labels:
-    description: 'Labels for PR'
-    required: false
-  createPR:
-    description: 'Whether to create a PR'
-    required: false
-  title:
-    description: 'PR title'
-    required: false
-  description:
-    description: 'PR description'
-    required: false
-  masterBranchName:
-    description: 'Master branch name'
-    required: false
-  targetBranch:
-    description: 'Target branch for PR'
-    required: false
-  branch:
-    description: 'Branch to commit to'
-    required: false
-  force:
-    description: 'Force push'
-    required: false
-  githubAPI:
-    description: 'GitHub API base URL'
-    required: false
-  token:
-    description: 'GitHub token for PR'
-    required: false
-  commitUserName:
-    description: 'Commit user name'
-    required: false
-  commitUserEmail:
-    description: 'Commit user email'
-    required: false
 
-  format:
-    description: 'File format (YAML/JSON)'
+  project_name:
+    description: 'project name'
     required: false
-  method:
-    description: 'CreateOrUpdate/Update/Create'
+  commit_message:
+    description: 'commit message'
     required: false
-  noCompatMode:
-    description: 'Remove quotes from reserved words'
-    required: false
-  quotingType:
-    description: 'Quotes for string values'
+  ac_git_ref:
+    description: 'action context: git ref'
     required: false
 
 runs:
@@ -111,18 +66,39 @@ runs:
         propertyPath: ${{ inputs.propertyPath }}
         value: ${{ inputs.value }}
 
-    # - name: Setup SSH
-    #   run: |
-    #     mkdir -p ~/.ssh
-    #     echo "${{ inputs.deploy_key }}" > ~/.ssh/id_rsa
-    #     chmod 600 ~/.ssh/id_rsa
-    #     ssh-keyscan github.com >> ~/.ssh/known_hosts
+    - name: Generate message
+      id: generate-commit-message
+      shell: bash
+      run: |
+        INPUT_PROJECT_NAME=${{ inputs.project_name }}
+        INPUT_COMMIT_MESSAGE="${{ inputs.commit_message }}"
+        INPUT_AC_GIT_REF=${{ inputs.ac_git_ref }}
+
+        if [ -f "${INPUT_COMMIT_MESSAGE}" ]; then
+          INPUT_COMMIT_MESSAGE=$(cat ${INPUT_COMMIT_MESSAGE})
+        fi
+
+        if [ -f "${INPUT_AC_GIT_REF}" ]; then
+          INPUT_AC_GIT_REF=$(cat ${INPUT_AC_GIT_REF})
+        fi
+
+        PROJECT_NAME=${INPUT_PROJECT_NAME:-$DEFAULT_PROJECT_NAME}
+        COMMIT_MSG=${INPUT_COMMIT_MESSAGE:-$DEFAULT_COMMIT_MESSAGE}
+        AC_GIT_REF=${INPUT_AC_GIT_REF:-$DEFAULT_BRANCH_NAME}
+
+        DESCRIPTION="Actions Context:
+        * Git Ref: ${AC_GIT_REF}
+        * Build started at: ${{ github.event.head_commit.timestamp }}
+        * Source: ${{ github.event_name }}
+        * Workflows: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        "
+        MESSAGE="[${PROJECT_NAME}]: ${DESCRIPTION} ${COMMIT_MSG}"
+
+
 
     - uses: EndBug/add-and-commit@v9
       with:
         add: '.'
-        # author_email: mail@example.com
-        # author_name: Author Name
         committer_name: GitHub Actions
         committer_email: 41898282+github-actions[bot]@users.noreply.github.com
         commit: --signoff
