@@ -94,7 +94,7 @@ runs:
         "
         MESSAGE="[${PROJECT_NAME}]: ${DESCRIPTION} ${COMMIT_MSG}"
 
-
+        echo "message=${MESSAGE}" >> $GITHUB_OUTPUT
 
     - uses: EndBug/add-and-commit@v9
       with:
@@ -103,7 +103,7 @@ runs:
         committer_email: 41898282+github-actions[bot]@users.noreply.github.com
         commit: --signoff
         cwd: './gitops-repo'
-        message: 'Your commit message'
+        message: ${{ steps.generate-commit-message.outputs.message }}
         push: true
 
     # - name: Commit and push
