@@ -135,3 +135,31 @@ runs:
         # masterBranchName: 'main'
         # createPR: 'true'
         changes: ${{ inputs.changes }}
+
+    # - name: Setup SSH
+    #   run: |
+    #     mkdir -p ~/.ssh
+    #     echo "${{ inputs.deploy_key }}" > ~/.ssh/id_rsa
+    #     chmod 600 ~/.ssh/id_rsa
+    #     ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+    # - uses: EndBug/add-and-commit@v9
+    #   with:
+    #     add: '.'
+    #     # author_email: mail@example.com
+    #     # author_name: Author Name
+    #     committer_name: GitHub Actions
+    #     committer_email: 41898282+github-actions[bot]@users.noreply.github.com
+    #     commit: --signoff
+    #     cwd: './gitops-repo'
+    #     message: 'Your commit message'
+    #     push: true
+
+    - name: Commit and push
+      working-directory: gitops-repo
+      run: |
+        git config user.name github-actions
+        git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+        git add .
+        git commit -m "Test"
+        git push
