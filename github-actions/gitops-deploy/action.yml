@@ -129,4 +129,4 @@ runs:
         noCompatMode: ${{ inputs.noCompatMode }}
         quotingType: ${{ inputs.quotingType }}
 
-        updateFile: false
+        updateFile: 'false'
