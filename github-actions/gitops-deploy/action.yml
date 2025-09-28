@@ -104,37 +104,12 @@ runs:
     - name: Update YAML using fjogeleit/yaml-update-action
       uses: fjogeleit/yaml-update-action@main
       with:
-        # valueFile: ${{ inputs.valueFile }}
-        # propertyPath: ${{ inputs.propertyPath }}
-        # value: ${{ inputs.value }}
-        # changes: ${{ inputs.changes }}
-        # commitChange: ${{ inputs.commitChange }}
-        # message: ${{ inputs.message }}
-        # labels: ${{ inputs.labels }}
-        # createPR: ${{ inputs.createPR }}
-        # title: ${{ inputs.title }}
-        # description: ${{ inputs.description }}
-        # masterBranchName: ${{ inputs.masterBranchName }}
-        # targetBranch: ${{ inputs.targetBranch }}
-        # branch: ${{ inputs.branch }}
-        # force: ${{ inputs.force }}
-        # githubAPI: ${{ inputs.githubAPI }}
-        # token: ${{ inputs.token }}
-        # commitUserName: ${{ inputs.commitUserName }}
-        # commitUserEmail: ${{ inputs.commitUserEmail }}
-        # repository: ${{ inputs.repository }}
-        # format: ${{ inputs.format }}
-        # method: ${{ inputs.method }}
-        # noCompatMode: ${{ inputs.noCompatMode }}
-        # quotingType: ${{ inputs.quotingType }}
-
-        # updateFile: false
-
         workDir: gitops-repo
         commitChange: 'false'
-        # masterBranchName: 'main'
-        # createPR: 'true'
         changes: ${{ inputs.changes }}
+        valueFile: ${{ inputs.valueFile }}
+        propertyPath: ${{ inputs.propertyPath }}
+        value: ${{ inputs.value }}
 
     # - name: Setup SSH
     #   run: |
@@ -143,24 +118,24 @@ runs:
     #     chmod 600 ~/.ssh/id_rsa
     #     ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-    # - uses: EndBug/add-and-commit@v9
-    #   with:
-    #     add: '.'
-    #     # author_email: mail@example.com
-    #     # author_name: Author Name
-    #     committer_name: GitHub Actions
-    #     committer_email: 41898282+github-actions[bot]@users.noreply.github.com
-    #     commit: --signoff
-    #     cwd: './gitops-repo'
-    #     message: 'Your commit message'
-    #     push: true
+    - uses: EndBug/add-and-commit@v9
+      with:
+        add: '.'
+        # author_email: mail@example.com
+        # author_name: Author Name
+        committer_name: GitHub Actions
+        committer_email: 41898282+github-actions[bot]@users.noreply.github.com
+        commit: --signoff
+        cwd: './gitops-repo'
+        message: 'Your commit message'
+        push: true
 
-    - name: Commit and push
-      working-directory: gitops-repo
-      shell: bash
-      run: |
-        git config user.name github-actions
-        git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-        git add .
-        git commit -m "Test"
-        git push
+    # - name: Commit and push
+    #   working-directory: gitops-repo
+    #   shell: bash
+    #   run: |
+    #     git config user.name github-actions
+    #     git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+    #     git add .
+    #     git commit -m "Test"
+    #     git push
