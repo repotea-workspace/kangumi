@@ -157,11 +157,11 @@ runs:
         ARGOCD_AUTH_TOKEN: ${{ inputs.argocd_api_token }}
       run: |
         echo "Syncing ArgoCD application: ${{ inputs.app_name }}"
-        argocd app sync ${{ inputs.app_name }}
+        argocd --server=${{ inputs.argocd_server }} app sync ${{ inputs.app_name }}
 
         if [ "${{ inputs.wait_health }}" = "true" ]; then
           echo "Waiting for application to be healthy..."
-          argocd app wait ${{ inputs.app_name }} --health --timeout 300
+          argocd --server=${{ inputs.argocd_server }} app wait ${{ inputs.app_name }} --health --timeout 300
         else
           echo "Skipping health check (wait_health is disabled)"
         fi
