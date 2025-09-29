@@ -127,28 +127,9 @@ runs:
         message: ${{ steps.generate-commit-message.outputs.message }}
         push: true
 
-    # - name: Commit and push
-    #   working-directory: gitops-repo
-    #   shell: bash
-    #   run: |
-    #     git config user.name github-actions
-    #     git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-    #     git add .
-    #     git commit -m "Test"
-    #     git push
-
     - name: Setup ArgoCD CLI
       if: inputs.argocd_server != '' && inputs.argocd_api_token != '' && inputs.app_name != ''
       uses: imajeetyadav/argocd-cli@v1
-
-    # - name: ArgoCD Login
-    #   if: inputs.argocd_server != '' && inputs.argocd_api_token != '' && inputs.app_name != ''
-    #   shell: bash
-    #   run: |
-    #     argocd login ${{ inputs.argocd_server }} \
-    #       --username ${{ inputs.argocd_username }} \
-    #       --auth-token ${{ inputs.argocd_api_token }} \
-    #       --insecure
 
     - name: Sync ArgoCD Application
       if: inputs.argocd_server != '' && inputs.argocd_api_token != '' && inputs.app_name != ''
