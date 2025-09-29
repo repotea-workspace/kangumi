@@ -32,6 +32,20 @@ inputs:
     description: 'action context: git ref'
     required: false
 
+  argocd_server:
+    description: 'ArgoCD server URL'
+    required: false
+  argocd_api_token:
+    description: 'ArgoCD API token'
+    required: false
+  app_name:
+    description: 'ArgoCD application name to sync after commit'
+    required: false
+  wait_health:
+    description: 'Wait for application to be healthy after sync'
+    required: false
+    default: 'false'
+
 runs:
   using: "composite"
   steps:
@@ -86,15 +100,6 @@ runs:
         COMMIT_MSG=${INPUT_COMMIT_MESSAGE:-$DEFAULT_COMMIT_MESSAGE}
         AC_GIT_REF=${INPUT_AC_GIT_REF:-$DEFAULT_BRANCH_NAME}
 
-        # DESCRIPTION="Actions Context:
-        # * Git Ref: ${AC_GIT_REF}
-        # * Build started at: ${{ github.event.head_commit.timestamp }}
-        # * Source: ${{ github.event_name }}
-        # * Workflows: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        # "
-        # MESSAGE="[${PROJECT_NAME}]: ${DESCRIPTION} ${COMMIT_MSG}"
-        # echo "message=${MESSAGE}" >> $GITHUB_OUTPUT
-
         {
           echo "message<<EOF"
           echo "[${PROJECT_NAME}] :: Actions Context:"
@@ -128,3 +133,29 @@ runs:
     #     git add .
     #     git commit -m "Test"
     #     git push
+
+    - name: Setup ArgoCD CLI
+      if: inputs.argocd_server != '' && inputs.argocd_api_token != '' && inputs.app_name != ''
+      uses: imajeetyadav/argocd-cli@v1
+
+    - name: ArgoCD Login
+      if: inputs.argocd_server != '' && inputs.argocd_api_token != '' && inputs.app_name != ''
+      shell: bash
+      run: |
+        argocd login ${{ inputs.argocd_server }} \
+          --auth-token ${{ inputs.argocd_api_token }} \
+          --insecure
+
+    - name: Sync ArgoCD Application
+      if: inputs.argocd_server != '' && inputs.argocd_api_token != '' && inputs.app_name != ''
+      shell: bash
+      run: |
+        echo "Syncing ArgoCD application: ${{ inputs.app_name }}"
+        argocd app sync ${{ inputs.app_name }}
+
+        if [ "${{ inputs.wait_health }}" = "true" ]; then
+          echo "Waiting for application to be healthy..."
+          argocd app wait ${{ inputs.app_name }} --health --timeout 300
+        else
+          echo "Skipping health check (wait_health is disabled)"
+        fi
