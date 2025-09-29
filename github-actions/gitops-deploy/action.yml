@@ -35,6 +35,9 @@ inputs:
   argocd_server:
     description: 'ArgoCD server URL'
     required: false
+  argocd_username:
+    description: 'ArgoCD username'
+    required: false
   argocd_api_token:
     description: 'ArgoCD API token'
     required: false
@@ -138,17 +141,20 @@ runs:
       if: inputs.argocd_server != '' && inputs.argocd_api_token != '' && inputs.app_name != ''
       uses: imajeetyadav/argocd-cli@v1
 
-    - name: ArgoCD Login
-      if: inputs.argocd_server != '' && inputs.argocd_api_token != '' && inputs.app_name != ''
-      shell: bash
-      run: |
-        argocd login ${{ inputs.argocd_server }} \
-          --auth-token ${{ inputs.argocd_api_token }} \
-          --insecure
+    # - name: ArgoCD Login
+    #   if: inputs.argocd_server != '' && inputs.argocd_api_token != '' && inputs.app_name != ''
+    #   shell: bash
+    #   run: |
+    #     argocd login ${{ inputs.argocd_server }} \
+    #       --username ${{ inputs.argocd_username }} \
+    #       --auth-token ${{ inputs.argocd_api_token }} \
+    #       --insecure
 
     - name: Sync ArgoCD Application
       if: inputs.argocd_server != '' && inputs.argocd_api_token != '' && inputs.app_name != ''
       shell: bash
+      env:
+        ARGOCD_AUTH_TOKEN: ${{ inputs.argocd_api_token }}
       run: |
         echo "Syncing ArgoCD application: ${{ inputs.app_name }}"
         argocd app sync ${{ inputs.app_name }}
