@@ -33,23 +33,26 @@ ALI_ECS_NAME=github-runner
 
 ### 2. Terraform变量配置
 
-如果你遇到权限问题无法创建安全组，可以在 `terraform.tfvars` 中设置：
+复制示例配置文件：
 
-```hcl
-use_default_security_group = true
+```bash
+cp terraform.tfvars.example terraform.tfvars
 ```
 
-其他可选配置：
+编辑 `terraform.tfvars` 文件，填入必需的资源ID：
 
 ```hcl
-# 使用密钥对（推荐）
-key_pair_name = "your-key-pair"
+# 必填项
+VPC_ID = "vpc-wz9hx87d99bvtrixq99f4"           # 你的VPC ID
+VSWITCH_ID = "vsw-wz9abc123def456ghi"          # 你的VSwitch ID
+AVAILABILITY_ZONE = "cn-shenzhen-a"            # VSwitch所在可用区
+SECURITY_GROUP_ID = "sg-wz9xyz789abc012def"    # 你的安全组ID
+IMAGE_ID = "ubuntu_20_04_x64_20G_alibase_20231221.vhd"  # Ubuntu镜像ID
 
-# 或者使用密码
-instance_password = "YourSecurePassword123!"
-
-# 系统盘大小
-system_disk_size = 40
+# 可选配置
+KEY_PAIR_NAME = "your-key-pair"                # 密钥对名称（推荐）
+# INSTANCE_PASSWORD = "YourSecurePassword123!"  # 或者使用密码
+SYSTEM_DISK_SIZE = 40                          # 系统盘大小
 ```
 
 ### 3. 执行部署
@@ -65,28 +68,45 @@ terraform plan
 terraform apply
 ```
 
-### 4. 权限问题解决方案
+### 4. 获取必需的资源ID
 
-如果遇到以下错误：
+由于权限限制，所有资源ID都需要手动指定。请按以下步骤获取：
 
-```
-Error: [ERROR] terraform-provider-alicloud/alicloud/resource_alicloud_vpc.go:255: Resource alicloud_vpc CreateVpc Failed!!!
-Code: Forbidden.RAM
-```
+**方法1：通过阿里云控制台获取**
 
-请确保：
+1. **VPC ID**：
+   - 登录阿里云控制台 → VPC → 专有网络
+   - 选择正确地域，复制VPC ID（格式：vpc-xxxxxxxxx）
 
-1. 使用现有VPC和VSwitch（本配置已处理）
-2. 如果无法创建安全组，设置 `use_default_security_group = true`
-3. 确认RAM用户有以下最小权限：
-   - ecs:DescribeZones
-   - ecs:DescribeInstances
-   - ecs:RunInstances
-   - vpc:DescribeVpcs
-   - vpc:DescribeVSwitches
-   - ecs:DescribeSecurityGroups
+2. **VSwitch ID**：
+   - VPC → 交换机
+   - 选择同一VPC下的交换机，复制VSwitch ID（格式：vsw-xxxxxxxxx）
+   - 记住交换机所在的可用区
 
-## 输出信息
+3. **安全组ID**：
+   - ECS → 安全组
+   - 选择同一VPC下的安全组，复制安全组ID（格式：sg-xxxxxxxxx）
+
+4. **镜像ID**：
+   - ECS → 镜像 → 公共镜像
+   - 搜索"ubuntu_20_04"，选择最新版本
+   - 复制镜像ID
+
+**方法2：如果有阿里云CLI权限**
+
+```bash
+# 获取VPC
+aliyun ecs DescribeVpcs --region cn-shenzhen
+
+# 获取VSwitch
+aliyun ecs DescribeVSwitches --region cn-shenzhen
+
+# 获取安全组
+aliyun ecs DescribeSecurityGroups --region cn-shenzhen
+
+# 获取Ubuntu镜像
+aliyun ecs DescribeImages --region cn-shenzhen --ImageOwnerAlias system --ImageName "*ubuntu_20_04*"
+```## 输出信息
 
 部署完成后会输出：
 
@@ -99,6 +119,18 @@ Code: Forbidden.RAM
 ## 注意事项
 
 1. 如果没有密钥对，可以设置密码进行SSH登录
-2. 默认使用Ubuntu 20.04镜像
+2. 默认使用Ubuntu 24.04镜像（与Java代码保持一致）
 3. 默认系统盘40GB，可根据需要调整
 4. 如果使用默认安全组，请确保安全组规则允许必要的访问
+5. **实例命名**：
+   - 实例名称：`egr-[0,6]`（阿里云会自动添加6位数字后缀）
+   - 主机名：`egr-[0,6]`（系统内部计算机名称）
+6. **系统盘命名**：
+   - 系统盘名称必须符合阿里云命名规范
+   - 不能包含特殊字符如 `[`, `]` 等
+   - 默认使用 `egr-system` 静态名称
+7. **自动释放时间**：
+   - 仅对按量付费实例有效
+   - 使用UTC时间格式（RFC3339）：`2025-11-16T18:48:30Z`
+   - 实例会在指定时间自动释放，请提前备份重要数据
+   - 如不设置，实例将不会自动释放
