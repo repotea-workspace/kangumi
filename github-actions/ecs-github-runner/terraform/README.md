@@ -55,7 +55,28 @@ KEY_PAIR_NAME = "your-key-pair"                # 密钥对名称（推荐）
 SYSTEM_DISK_SIZE = 40                          # 系统盘大小
 ```
 
-### 3. 执行部署
+### 3. 选择计费模式（可选）
+
+使用切换脚本轻松在不同计费模式间切换：
+
+```bash
+# 运行计费模式切换工具
+chmod +x scripts/switch-billing-mode.sh
+./scripts/switch-billing-mode.sh
+```
+
+或手动编辑terraform.tfvars：
+
+```hcl
+# 按量付费模式（默认，稳定）
+SPOT_STRATEGY = "NoSpot"
+
+# 竞价实例模式（便宜但可能被回收）
+# SPOT_STRATEGY = "SpotAsPriceGo"
+# SPOT_DURATION = 1
+```
+
+### 4. 执行部署
 
 ```bash
 # 初始化
@@ -125,7 +146,11 @@ aliyun ecs DescribeImages --region cn-shenzhen --ImageOwnerAlias system --ImageN
 5. **实例命名**：
    - 实例名称：`egr-[0,6]`（阿里云会自动添加6位数字后缀）
    - 主机名：`egr-[0,6]`（系统内部计算机名称）
-6. **系统盘命名**：
+6. **计费模式**：
+   - 默认使用按量付费模式（匹配Java代码）
+   - 可通过修改 `SPOT_STRATEGY` 切换为竞价实例
+   - 竞价实例价格更低但可能被系统回收
+7. **系统盘命名**：
    - 系统盘名称必须符合阿里云命名规范
    - 不能包含特殊字符如 `[`, `]` 等
    - 默认使用 `egr-system` 静态名称

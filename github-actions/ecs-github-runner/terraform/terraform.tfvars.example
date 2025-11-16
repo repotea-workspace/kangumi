@@ -35,9 +35,13 @@ INTERNET_MAX_BANDWIDTH_OUT = 100
 # 安全配置
 SECURITY_ENHANCEMENT_STRATEGY = "Active"
 
-# 竞价实例配置 - 匹配Java代码
-SPOT_STRATEGY = "SpotAsPriceGo"
-SPOT_DURATION = 1
+# 计费模式选择 - 可随时切换
+# 按量付费模式（默认，匹配Java代码）
+SPOT_STRATEGY = "NoSpot"     # 不使用竞价实例
+
+# 竞价实例模式（可选，更便宜但可能被回收）
+# SPOT_STRATEGY = "SpotAsPriceGo"  # 跟随市场价格
+# SPOT_DURATION = 1                # 保留时间（1-6小时）
 
 # 元数据配置
 HTTP_TOKENS = "optional"

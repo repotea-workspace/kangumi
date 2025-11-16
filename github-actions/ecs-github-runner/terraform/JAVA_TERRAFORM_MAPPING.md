@@ -35,10 +35,16 @@
 
 ## 竞价实例配置对应
 
-| Java变量 | 值 | Terraform变量 | Terraform属性 |
+| Java变量 | 值（已移除） | Terraform变量 | Terraform属性 |
 |---------|---|-------------|-------------|
-| `spotStrategy` | `"SpotAsPriceGo"` | `SPOT_STRATEGY` | `spot_strategy` |
-| `spotDuration` | `1` | `SPOT_DURATION` | `spot_duration` |
+| `spotStrategy` | *已移除* | `SPOT_STRATEGY` | `spot_strategy` |
+| `spotDuration` | *已移除* | `SPOT_DURATION` | `spot_duration` |
+
+**竞价实例配置说明**：
+- Java代码中已移除竞价相关配置，使用纯按量付费模式
+- Terraform保留竞价配置选项，支持灵活切换
+- 默认为 `SPOT_STRATEGY = "NoSpot"`（按量付费）
+- 可通过修改变量切换为竞价模式
 
 ## 安全配置对应
 

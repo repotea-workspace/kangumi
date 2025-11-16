@@ -26,9 +26,9 @@ resource "alicloud_instance" "github_runner" {
   # 安全配置
   security_enhancement_strategy = var.SECURITY_ENHANCEMENT_STRATEGY
 
-  # 竞价实例配置（如果需要）
+  # 竞价实例配置（可选，支持切换）
   spot_strategy            = var.SPOT_STRATEGY
-  spot_duration            = var.SPOT_DURATION
+  spot_duration            = var.SPOT_STRATEGY != "NoSpot" ? var.SPOT_DURATION : null
 
   # 元数据配置
   http_tokens              = var.HTTP_TOKENS

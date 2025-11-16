@@ -132,11 +132,11 @@ variable "IO_OPTIMIZED" {
   default     = "optimized"
 }
 
-# 竞价策略
+# 竞价策略（可选，默认不使用竞价）
 variable "SPOT_STRATEGY" {
-  description = "Spot strategy. NoSpot, SpotWithPriceLimit, SpotAsPriceGo"
+  description = "Spot strategy. NoSpot (default), SpotWithPriceLimit, SpotAsPriceGo"
   type        = string
-  default     = "SpotAsPriceGo"
+  default     = "NoSpot"
 }
 
 # 竞价实例保留时长
