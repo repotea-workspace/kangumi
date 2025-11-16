@@ -1,0 +1,19 @@
+# 如果遇到权限问题无法创建安全组，设置为true使用默认安全组
+USE_DEFAULT_SECURITY_GROUP = true
+
+# 系统盘大小（GB）
+SYSTEM_DISK_SIZE = 40
+
+# 认证方式 - 密钥对或密码二选一
+
+# 方式1：使用密钥对（推荐，需要先在阿里云创建密钥对）
+# KEY_PAIR_NAME = "your-key-pair-name"
+
+# 方式2：使用密码登录
+# INSTANCE_PASSWORD = "YourSecurePassword123!"
+
+# ECS实例类型（可选，默认ecs.c7a.large）
+# ALI_ECS_INSTANCE_TYPE = "ecs.c7a.large"
+
+# 实例名称（可选，默认github-runner）
+# ALI_ECS_NAME = "my-github-runner"
