@@ -22,7 +22,7 @@ jobs:
         name: Cat for GitHub Actions
         id: get_key
         with:
-          path: __tests__/test_key_b64.txt
+          path: github-actions/gen-android-sign/__tests__/test_key_b64.txt
 
       - uses: ./github-actions/gen-android-sign
         name: Generate sign file
