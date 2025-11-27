@@ -1,0 +1,111 @@
+name: ecs-runner
+
+on:
+  workflow_dispatch:
+
+env:
+  ECS_REGION: cn-hongkong
+  ECS_VSWITCH_ID: vsw-j6cxoruwpjx23479pcwj8 # 替换为香港地域的 VSwitch ID
+  ECS_AVAILABILITY_ZONE: cn-hongkong-c # 替换为实际可用区
+  ECS_SECURITY_GROUP_ID: sg-j6cdwrlcl9xbzksin9of # 替换为安全组 ID
+  ECS_IMAGE_ID: ubuntu_22_04_x64_20G_alibase_20240101.vhd # 替换为需要的镜像 ID
+  ECS_RUNNER_LABEL_PREFIX: ecs
+  ECS_RUNNER_ADDITIONAL_LABELS: ecs,alicloud,hk # 可按需调整
+  ECS_INSTANCE_TYPE: ecs.c7a.large # 如需不同规格请修改
+  ECS_INSTANCE_NAME: egi-runner-[0,6]
+  ECS_HOST_NAME: egi-runner-[0,6]
+  ECS_SYSTEM_DISK_SIZE: 60 # 根据需求调整系统盘容量
+
+  ALI_ACCESS_KEY: ${{ secrets.ALI_ACCESS_KEY_AYN }}
+  ALI_SECRET_KEY: ${{ secrets.ALI_SECRET_KEY_AYN }}
+  GH_RUNNER_PAT: ${{ secrets.GT_0XFE10 }} # 设置可创建 self-hosted runner token 的 PAT（workflow + admin:org 自托管）
+
+jobs:
+  prepare-password:
+    name: Generate ECS instance password
+    runs-on: ubuntu-latest
+    outputs:
+      instance-password: ${{ steps.generate.outputs.password }}
+    steps:
+      - name: Generate strong password
+        id: generate
+        shell: bash
+        run: |
+          set -euo pipefail
+          password=""
+          while [ -z "$password" ]; do
+            candidate=$(LC_ALL=C tr -dc 'A-Za-z0-9!@#$%^&*-_=+' </dev/urandom | head -c 24)
+            if [[ $candidate =~ [a-z] && $candidate =~ [A-Z] && $candidate =~ [0-9] && $candidate =~ [!@#$%^&*\-_=+] ]]; then
+              password=$candidate
+            fi
+          done
+          echo "::add-mask::$password"
+          echo "password=$password" >> "$GITHUB_OUTPUT"
+
+  provision-runner:
+    name: Provision ECS runner (Hong Kong)
+    needs: prepare-password
+    runs-on: ubuntu-latest
+    outputs:
+      runner-label: ${{ steps.start.outputs.runner-label }}
+      runner-name: ${{ steps.start.outputs.runner-name }}
+      instance-id: ${{ steps.start.outputs.instance-id }}
+    steps:
+      - name: Start Aliyun ECS GitHub runner
+        id: start
+        uses: ./github-actions/ecs-github-runner
+        with:
+          mode: start
+          github_owner: ${{ github.repository_owner }}
+          github_repository: ${{ github.event.repository.name }}
+          github_pat: ${{ env.GH_RUNNER_PAT }}
+          ali_access_key: ${{ env.ALI_ACCESS_KEY }}
+          ali_secret_key: ${{ env.ALI_SECRET_KEY }}
+          ali_region: ${{ env.ECS_REGION }}
+          vswitch_id: ${{ env.ECS_VSWITCH_ID }}
+          availability_zone: ${{ env.ECS_AVAILABILITY_ZONE }}
+          security_group_id: ${{ env.ECS_SECURITY_GROUP_ID }}
+          image_id: ${{ env.ECS_IMAGE_ID }}
+          runner_label: ${{ env.ECS_RUNNER_LABEL_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
+          runner_additional_labels: ${{ env.ECS_RUNNER_ADDITIONAL_LABELS }}
+          ali_ecs_instance_type: ${{ env.ECS_INSTANCE_TYPE }}
+          ali_ecs_name: ${{ env.ECS_INSTANCE_NAME }}
+          host_name: ${{ env.ECS_HOST_NAME }}
+          system_disk_size: ${{ env.ECS_SYSTEM_DISK_SIZE }}
+          # key_pair_name: "" # 使用密码登录时保持为空
+          instance_password: ${{ needs.prepare-password.outputs.instance-password }}
+
+  run-on-ecs:
+    name: Run tests on ECS runner
+    needs: provision-runner
+    runs-on:
+      - self-hosted
+      - ${{ needs.provision-runner.outputs.runner-label }}
+    steps:
+      - name: Show environment info
+        run: |
+          set -x
+          uname -a
+          echo "Running on $HOSTNAME (instance ${{ needs.provision-runner.outputs.instance-id }})"
+
+  destroy-runner:
+    name: Destroy ECS runner
+    needs:
+      - provision-runner
+      - run-on-ecs
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Destroy Aliyun ECS GitHub runner
+        uses: ./github-actions/ecs-github-runner
+        with:
+          mode: destroy
+          github_owner: ${{ github.repository_owner }}
+          github_repository: ${{ github.event.repository.name }}
+          ali_access_key: ${{ env.ALI_ACCESS_KEY }}
+          ali_secret_key: ${{ env.ALI_SECRET_KEY }}
+          ali_region: ${{ env.ECS_REGION }}
+          vswitch_id: ${{ env.ECS_VSWITCH_ID }}
+          availability_zone: ${{ env.ECS_AVAILABILITY_ZONE }}
+          security_group_id: ${{ env.ECS_SECURITY_GROUP_ID }}
+          image_id: ${{ env.ECS_IMAGE_ID }}
