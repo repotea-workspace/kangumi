@@ -1,6 +1,8 @@
 name: ecs-runner
 
 on:
+  push:
+    branches: [ecs-github-runner]
   workflow_dispatch:
 
 env:
