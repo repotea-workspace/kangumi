@@ -41,7 +41,7 @@ variable "INSTANCE_PASSWORD" {
 variable "SYSTEM_DISK_SIZE" {
   description = "Size of the system disk in GB"
   type        = number
-  default     = 40
+  default     = 100
 }
 
 # 系统盘名称
