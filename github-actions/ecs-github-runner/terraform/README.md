@@ -8,6 +8,8 @@
 - 支持使用默认安全组或创建自定义安全组
 - 灵活的认证配置（密钥对或密码）
 
+> ✅ 推荐：直接在 GitHub 工作流里使用 [`kangumi/github-actions/ecs-github-runner`](../action.yml) 这个 Action，它会自动调用本 Terraform 项目并处理状态文件。同时也可以在本地按以下步骤单独执行 Terraform。
+
 ## 使用方法
 
 ### 1. 环境变量配置
@@ -88,6 +90,51 @@ terraform plan
 # 应用
 terraform apply
 ```
+
+当需要释放机器时，不必删除 `server.tf`，只需将变量 `RUNNER_ENABLED` 设为 `false` 再次 `apply` 即可：
+
+```bash
+terraform apply -auto-approve -var "RUNNER_ENABLED=false"
+```
+
+### 5. GitHub Action 工作流集成
+
+参考 [machulav/ec2-github-runner](https://github.com/machulav/ec2-github-runner) 的做法，本仓库提供了 `../workflow-example.yml`，完整演示如何在 GitHub Actions 中按需创建/销毁阿里云 ECS Runner：
+
+1. 将 `github-actions/ecs-github-runner/workflow-example.yml` 复制到你的项目 `.github/workflows/ecs-runner.yml`
+2. 在仓库 Secrets 中配置：
+   - `ALI_ACCESS_KEY`、`ALI_SECRET_KEY`、`ALI_REGION`
+   - `GH_RUNNER_PAT`（拥有 `repo` + `workflow` + `self-hosted runners` 权限的 PAT，用于换取一次性的 Runner registration token）
+3. 根据自己的 `terraform.tfvars` 完成 VPC/VSwitch/安全组/镜像等参数配置
+
+工作流包含三个 Job：
+
+- **provision-runner**：在 `ubuntu-latest` 上运行，调用 Terraform 创建 ECS，并通过 GitHub API 获取注册 token。创建成功后会把 `terraform.tfstate` 上传为 artifact 以供销毁阶段使用。
+- **run-on-ecs**：在新建的自托管 Runner 上执行实际任务，使用 `self-hosted` + 动态标签（`ecs-${run_id}`）确保只绑定到本次实例。
+- **destroy-runner**：`always()` 触发，先下载 Terraform state，再将 `RUNNER_ENABLED=false` 重新 `apply`，最终保证 ECS 被销毁，即使中途 Job 失败也会执行。
+
+> ⚠️ `TF_VAR_GITHUB_RUNNER_TOKEN` 由工作流实时调用 GitHub API 生成，仅在 `provision-runner` job 中使用，`destroy-runner` 无需该值。
+
+### 工作流中的状态同步
+
+由于 GitHub Actions 的不同 Job 之间不会共享文件，需要通过 artifact 传递 `terraform.tfstate`：
+
+```yaml
+- name: Persist Terraform state for cleanup
+  uses: actions/upload-artifact@v4
+  with:
+    name: ${{ env.TF_STATE_ARTIFACT }}
+    path: |
+      ${{ env.TF_WORKDIR }}/terraform.tfstate
+```
+
+销毁 Job 再用 `download-artifact` 取回 state 后执行 `terraform init && terraform apply -var "RUNNER_ENABLED=false"`，即可完成释放。
+
+结合以上流程，可以做到：
+
+- 当 GitHub Action 触发时自动执行 `terraform apply` 启动 ECS Runner
+- Action 完成或失败都会执行清理逻辑，确保 `terraform` 状态为“未创建”
+- 不再需要手动删除 `server.tf` 或手工执行 `terraform destroy`
 
 ### 4. 获取必需的资源ID
 

@@ -1,7 +1,7 @@
 
-variable ALI_ACCESS_KEY {}
-variable ALI_SECRET_KEY {}
-variable ALI_REGION {}
+variable "ALI_ACCESS_KEY" {}
+variable "ALI_SECRET_KEY" {}
+variable "ALI_REGION" {}
 
 variable "ALI_ECS_INSTANCE_TYPE" {
   description = "ECS instance type"
@@ -158,4 +158,90 @@ variable "AUTO_RELEASE_TIME" {
   description = "Automatic release time for Pay-As-You-Go instances (UTC time in RFC3339 format, e.g., 2025-11-16T18:48:30Z)"
   type        = string
   default     = ""
+}
+
+# Whether Terraform should provision (true) or destroy (false) the ECS runner
+variable "RUNNER_ENABLED" {
+  description = "Set to false to destroy the ECS runner when re-applying Terraform"
+  type        = bool
+  default     = true
+}
+
+# Optional custom runner name (defaults to ALI_ECS_NAME)
+variable "RUNNER_NAME" {
+  description = "Custom GitHub runner name"
+  type        = string
+  default     = ""
+}
+
+variable "RUNNER_USER" {
+  description = "Linux user used to run the GitHub runner service"
+  type        = string
+  default     = "github"
+}
+
+variable "RUNNER_WORKDIR" {
+  description = "Working directory for the GitHub runner"
+  type        = string
+  default     = "/opt/actions-runner/_work"
+}
+
+variable "RUNNER_VERSION" {
+  description = "GitHub runner version to install"
+  type        = string
+  default     = "2.316.0"
+}
+
+variable "RUNNER_EPHEMERAL" {
+  description = "Whether to register the runner as ephemeral (single job)"
+  type        = bool
+  default     = true
+}
+
+variable "GITHUB_OWNER" {
+  description = "GitHub organization or user that owns the repository"
+  type        = string
+  validation {
+    condition     = var.RUNNER_ENABLED ? length(var.GITHUB_OWNER) > 0 : true
+    error_message = "GITHUB_OWNER must be set when RUNNER_ENABLED is true"
+  }
+}
+
+variable "GITHUB_REPOSITORY" {
+  description = "Repository name when scope is repo"
+  type        = string
+  default     = ""
+  validation {
+    condition = var.RUNNER_ENABLED ? (
+      var.GITHUB_SCOPE == "org" ? true : length(var.GITHUB_REPOSITORY) > 0
+    ) : true
+    error_message = "GITHUB_REPOSITORY must be set when scope is repo and RUNNER_ENABLED is true"
+  }
+}
+
+variable "GITHUB_SCOPE" {
+  description = "Runner registration scope: repo or org"
+  type        = string
+  default     = "repo"
+  validation {
+    condition     = contains(["repo", "org"], var.GITHUB_SCOPE)
+    error_message = "GITHUB_SCOPE must be either 'repo' or 'org'"
+  }
+}
+
+variable "GITHUB_RUNNER_TOKEN" {
+  description = "Registration token generated via the GitHub Actions API"
+  type        = string
+  default     = ""
+  sensitive   = true
+  validation {
+    condition     = var.RUNNER_ENABLED ? length(var.GITHUB_RUNNER_TOKEN) > 0 : true
+    error_message = "GITHUB_RUNNER_TOKEN must be provided when RUNNER_ENABLED is true"
+  }
+}
+
+variable "GITHUB_RUNNER_LABELS" {
+  description = "Comma separated list of labels assigned to the runner"
+  type        = string
+  default     = "ecs,alicloud"
 }

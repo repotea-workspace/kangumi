@@ -1,18 +1,17 @@
 # ===== 必填项：网络资源（避免权限问题）=====
 # 这些ID必须手动指定，避免Terraform查询权限问题
-# 以下是根据Java代码示例的具体值
 
 # VPC ID - 请替换为你的实际VPC ID
 VPC_ID = "vpc-xxxxxxxxx"
 
 # VSwitch ID - Java代码中的值
-VSWITCH_ID = "vsw-wz9uncyx33urqcxpj8c1p"
+VSWITCH_ID = "vsw-xxxxxxxxx"
 
 # 可用区 - Java代码中的值
 AVAILABILITY_ZONE = "cn-shenzhen-e"
 
 # 安全组ID - Java代码中的值
-SECURITY_GROUP_ID = "sg-wz9eo52rpleayua0e1s6"
+SECURITY_GROUP_ID = "sg-xxxxxxxxx"
 
 # 镜像ID - Java代码中的Ubuntu 24.04
 IMAGE_ID = "ubuntu_24_04_x64_20G_alibase_20251102.vhd"
@@ -54,6 +53,28 @@ ALI_ECS_NAME = "egr-[0,6]"
 
 # 主机名 - Java代码中的值
 HOST_NAME = "egr-[0,6]"
+
+# ===== GitHub Runner 配置 =====
+# RUNNER_ENABLED 控制是否创建runner。设置为 false 并重新 terraform apply 即可释放机器
+RUNNER_ENABLED = true
+
+# 可选：自定义 runner 名称/标签（默认继承实例名称和 ecs,alicloud 标签）
+# RUNNER_NAME = "ecs-runner"
+# GITHUB_RUNNER_LABELS = "ecs,alicloud"
+
+# GitHub 仓库信息
+GITHUB_OWNER       = "your-org-or-user"
+GITHUB_REPOSITORY  = "your-repo"
+GITHUB_SCOPE       = "repo" # 或 org
+
+# Runner 版本/工作目录/用户（通常保持默认即可）
+# RUNNER_VERSION = "2.316.0"
+# RUNNER_USER    = "github"
+# RUNNER_WORKDIR = "/opt/actions-runner/_work"
+# RUNNER_EPHEMERAL = true
+
+# ⚠️ GitHub 注册 token 不要写在文件里，使用环境变量提供：
+# export TF_VAR_GITHUB_RUNNER_TOKEN=xxxx
 
 # ===== 认证配置 =====
 # 认证方式 - 密钥对或密码二选一

@@ -1,0 +1,71 @@
+#!/bin/bash
+set -euo pipefail
+
+exec > >(tee /var/log/github-runner-bootstrap.log) 2>&1
+
+RUNNER_USER="${runner_user}"
+RUNNER_HOME="/home/${runner_user}"
+if [ "${runner_user}" = "root" ]; then
+  RUNNER_HOME="/root"
+fi
+RUNNER_DIR="${RUNNER_HOME}/actions-runner"
+RUNNER_VERSION="${runner_version}"
+RUNNER_URL="${runner_url}"
+RUNNER_TOKEN="${runner_token}"
+RUNNER_LABELS="${runner_labels}"
+RUNNER_NAME="${runner_name}"
+RUNNER_WORKDIR="${runner_workdir}"
+RUNNER_EPHEMERAL="${runner_ephemeral}"
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get install -y curl jq git tar
+
+if [ "${runner_user}" != "root" ] && ! id -u "${runner_user}" >/dev/null 2>&1; then
+  useradd --create-home --shell /bin/bash "${runner_user}"
+fi
+
+mkdir -p "${RUNNER_DIR}"
+mkdir -p "${RUNNER_WORKDIR}"
+chown -R "${runner_user}:${runner_user}" "${RUNNER_HOME}" "${RUNNER_WORKDIR}"
+
+cd "${RUNNER_HOME}"
+
+RUNNER_TGZ="actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz"
+curl -L -o "${RUNNER_TGZ}" "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/${RUNNER_TGZ}"
+tar xzf "${RUNNER_TGZ}" -C "${RUNNER_DIR}" --strip-components=1
+rm -f "${RUNNER_TGZ}"
+chown -R "${runner_user}:${runner_user}" "${RUNNER_DIR}"
+
+runuser -u "${runner_user}" -- bash -c "cd ${RUNNER_DIR} && \
+  export RUNNER_ALLOW_RUNASROOT=1 && \
+  ./config.sh \
+    --unattended \
+    --replace \
+    --url ${RUNNER_URL} \
+    --token ${RUNNER_TOKEN} \
+    --labels ${RUNNER_LABELS} \
+    --name ${RUNNER_NAME} \
+    --work ${RUNNER_WORKDIR} \
+    %{ if runner_ephemeral == "true" }--ephemeral%{ endif %}"
+
+cat <<SERVICE >/etc/systemd/system/github-runner.service
+[Unit]
+Description=GitHub Actions Runner (${RUNNER_NAME})
+After=network.target
+
+[Service]
+User=${runner_user}
+Group=${runner_user}
+WorkingDirectory=${RUNNER_DIR}
+Environment=RUNNER_ALLOW_RUNASROOT=1
+ExecStart=/bin/bash -lc '${RUNNER_DIR}/run.sh'
+Restart=on-failure
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+systemctl daemon-reload
+systemctl enable --now github-runner.service
