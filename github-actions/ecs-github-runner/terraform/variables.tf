@@ -15,21 +15,21 @@ variable "ALI_ECS_NAME" {
   default     = "egr-[0,6]"
 }
 
-# 主机名称
+# Hostname
 variable "HOST_NAME" {
   description = "ECS instance hostname"
   type        = string
   default     = "egr-[0,6]"
 }
 
-# 可选：如果你想使用密钥对而不是密码
+# Optional: use an SSH key pair instead of a password
 variable "KEY_PAIR_NAME" {
   description = "Name of the key pair to use for SSH access"
   type        = string
   default     = ""
 }
 
-# 可选：如果你想设置实例密码
+# Optional: set an instance password
 variable "INSTANCE_PASSWORD" {
   description = "Password for the ECS instance"
   type        = string
@@ -37,14 +37,14 @@ variable "INSTANCE_PASSWORD" {
   sensitive   = true
 }
 
-# 可选：系统盘大小
+# Optional: system disk size
 variable "SYSTEM_DISK_SIZE" {
   description = "Size of the system disk in GB"
   type        = number
   default     = 100
 }
 
-# 系统盘名称
+# System disk name
 variable "SYSTEM_DISK_NAME" {
   description = "System disk name (must follow naming rules)"
   type        = string
@@ -53,93 +53,93 @@ variable "SYSTEM_DISK_NAME" {
 
 
 
-# # 手动指定VPC ID（必填，避免权限问题）
+# # Manually specify VPC ID (required to avoid permission issues)
 # variable "VPC_ID" {
 #   description = "VPC ID to use. Must be provided to avoid permission issues."
 #   type        = string
 # }
 
-# 手动指定VSwitch ID（必填，避免权限问题）
+# Manually specify VSwitch ID (required to avoid permission issues)
 variable "VSWITCH_ID" {
   description = "VSwitch ID to use. Must be provided to avoid permission issues."
   type        = string
 }
 
-# 手动指定可用区（必填，避免权限问题）
+# Manually specify availability zone (required to avoid permission issues)
 variable "AVAILABILITY_ZONE" {
   description = "Availability zone to use. Must be provided to avoid permission issues."
   type        = string
 }
 
-# 手动指定安全组ID（必填，避免权限问题）
+# Manually specify security group ID (required to avoid permission issues)
 variable "SECURITY_GROUP_ID" {
   description = "Security Group ID to use. Must be provided to avoid permission issues."
   type        = string
 }
 
-# 手动指定镜像ID（必填，避免权限问题）
+# Manually specify image ID (required to avoid permission issues)
 variable "IMAGE_ID" {
   description = "Image ID to use. Must be provided to avoid permission issues. Example: ubuntu_24_04_x64_20G_alibase_20251102.vhd"
   type        = string
 }
 
-# 实例计费类型
+# Instance charge type PostPaid/PrePaid
 variable "INSTANCE_CHARGE_TYPE" {
   description = "Instance charge type. PostPaid (Pay-As-You-Go) or PrePaid (Subscription)"
   type        = string
   default     = "PostPaid"
 }
 
-# 系统盘类型
+# System disk category
 variable "SYSTEM_DISK_CATEGORY" {
   description = "System disk category. cloud_efficiency, cloud_ssd, cloud_essd"
   type        = string
   default     = "cloud_essd"
 }
 
-# 系统盘性能级别（仅cloud_essd支持）
+# System disk performance tier (only cloud_essd supports this)
 variable "SYSTEM_DISK_PERFORMANCE_LEVEL" {
   description = "System disk performance level. PL0, PL1, PL2, PL3 (only for cloud_essd)"
   type        = string
   default     = "PL0"
 }
 
-# 网络计费类型
+# Network billing type
 variable "INTERNET_CHARGE_TYPE" {
   description = "Internet charge type. PayByBandwidth or PayByTraffic"
   type        = string
   default     = "PayByTraffic"
 }
 
-# 公网带宽最大值
+# Maximum public bandwidth (outbound)
 variable "INTERNET_MAX_BANDWIDTH_OUT" {
   description = "Maximum outbound public bandwidth (Mbps)"
   type        = number
   default     = 100
 }
 
-# 安全加固策略
+# Security hardening strategy
 variable "SECURITY_ENHANCEMENT_STRATEGY" {
   description = "Security enhancement strategy. Active or Deactive"
   type        = string
   default     = "Active"
 }
 
-# I/O优化
+# I/O optimization
 variable "IO_OPTIMIZED" {
   description = "Whether the instance is I/O optimized. optimized or none"
   type        = string
   default     = "optimized"
 }
 
-# 竞价策略（可选，默认不使用竞价）
+# Spot strategy (optional, disabled by default)
 variable "SPOT_STRATEGY" {
   description = "Spot strategy. NoSpot (default), SpotWithPriceLimit, SpotAsPriceGo"
   type        = string
   default     = "NoSpot"
 }
 
-# 竞价实例保留时长
+# Spot instance protection duration
 variable "SPOT_DURATION" {
   description = "Spot instance duration in hours (1-6)"
   type        = number
@@ -153,7 +153,7 @@ variable "HTTP_TOKENS" {
   default     = "optional"
 }
 
-# 自动释放时间
+# Auto-release time
 variable "AUTO_RELEASE_TIME" {
   description = "Automatic release time for Pay-As-You-Go instances (UTC time in RFC3339 format, e.g., 2025-11-16T18:48:30Z)"
   type        = string

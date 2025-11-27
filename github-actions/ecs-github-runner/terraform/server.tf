@@ -1,42 +1,42 @@
 
 
-# ECS实例
+# ECS Instance
 resource "alicloud_instance" "github_runner" {
   availability_zone = var.AVAILABILITY_ZONE
   security_groups   = [var.SECURITY_GROUP_ID]
   vswitch_id        = var.VSWITCH_ID
 
-  # 实例配置
+  # Instance configuration
   instance_type             = var.ALI_ECS_INSTANCE_TYPE
   instance_charge_type      = var.INSTANCE_CHARGE_TYPE
   instance_name             = var.ALI_ECS_NAME
   host_name                 = var.HOST_NAME
   image_id                  = var.IMAGE_ID
 
-  # 系统盘配置 - 匹配Java代码中的cloud_essd配置
+  # System disk configuration - matches cloud_essd settings used in Java code
   system_disk_category      = var.SYSTEM_DISK_CATEGORY
   system_disk_name          = var.SYSTEM_DISK_NAME
   system_disk_size          = var.SYSTEM_DISK_SIZE
   system_disk_performance_level = var.SYSTEM_DISK_PERFORMANCE_LEVEL
 
-  # 网络配置 - 匹配Java代码中的按流量计费
+  # Network configuration - matches pay-by-traffic settings in Java code
   internet_charge_type      = var.INTERNET_CHARGE_TYPE
   internet_max_bandwidth_out = var.INTERNET_MAX_BANDWIDTH_OUT
 
-  # 安全配置
+  # Security configuration
   security_enhancement_strategy = var.SECURITY_ENHANCEMENT_STRATEGY
 
-  # 竞价实例配置（可选，支持切换）
+  # Spot instance configuration (optional, toggleable)
   spot_strategy            = var.SPOT_STRATEGY
   spot_duration            = var.SPOT_STRATEGY != "NoSpot" ? var.SPOT_DURATION : null
 
-  # 元数据配置
+  # Metadata configuration
   http_tokens              = var.HTTP_TOKENS
 
-  # 自动释放时间（仅对按量付费实例有效）
+  # Auto-release time (only applicable to Pay-As-You-Go instances)
   auto_release_time        = var.AUTO_RELEASE_TIME != "" ? var.AUTO_RELEASE_TIME : null
 
-  # 密钥对和密码二选一
+  # Use either a key pair or a password
   key_name = var.KEY_PAIR_NAME != "" ? var.KEY_PAIR_NAME : null
   password = var.INSTANCE_PASSWORD != "" ? var.INSTANCE_PASSWORD : null
 
@@ -47,7 +47,7 @@ resource "alicloud_instance" "github_runner" {
   }
 }
 
-# 输出信息
+# Outputs
 output "instance_id" {
   value = alicloud_instance.github_runner.id
 }
