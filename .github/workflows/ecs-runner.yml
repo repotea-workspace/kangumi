@@ -105,11 +105,11 @@ jobs:
 
       - name: Cargo build
         working-directory: anyhow
-        run: cargo build --locked
+        run: cargo build
 
       - name: Cargo test
         working-directory: anyhow
-        run: cargo test --locked
+        run: cargo test
 
   destroy-runner:
     name: Destroy ECS runner
