@@ -29,7 +29,6 @@ jobs:
     outputs:
       instance-password: ${{ steps.generate.outputs.password }}
     steps:
-      - uses: actions/checkout@v4
       - id: generate
         uses: aammirmirza/RandomPasswordGenerator@v1.1
         with:
