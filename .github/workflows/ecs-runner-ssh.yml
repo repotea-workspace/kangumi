@@ -101,6 +101,7 @@ jobs:
           host: ${{ needs.provision-runner.outputs.public-ip }}
           username: root
           password: ${{ needs.provision-runner.outputs.instance-password }}
+          timeout: 60s
           script: |
             set -ex
             echo "=== System Info ==="
