@@ -1,4 +1,4 @@
-name: ECS Runner via SSH
+name: ECS Runner via SSH with password
 
 on:
   push:
@@ -11,11 +11,11 @@ env:
   ECS_AVAILABILITY_ZONE: cn-shenzhen-e
   ECS_SECURITY_GROUP_ID: sg-wz9eo52rpleayua0e1s6
   ECS_IMAGE_ID: fcos_34_20210529_3_0_3_x64_20G_alibase_20210824.vhd
-  #ECS_IMAGE_ID: ubuntu_24_04_x64_20G_alibase_20251102.vhd
   ECS_RUNNER_ADDITIONAL_LABELS: ecs,alicloud,shenzhen
   ECS_INSTANCE_TYPE: ecs.c7a.large
   ECS_SYSTEM_DISK_SIZE: 40
   ECS_SPOT_STRATEGY: SpotAsPriceGo
+  ECS_KEYPAIR_NAME: keypair-ali-generic
 
   ALI_ACCESS_KEY: ${{ secrets.ALI_ACCESS_KEY_AYN }}
   ALI_SECRET_KEY: ${{ secrets.ALI_SECRET_KEY_AYN }}
@@ -25,18 +25,6 @@ env:
   # RUNNER_VERSION: 2.330.0
 
 jobs:
-  prepare-password:
-    name: Generate ECS instance password
-    runs-on: ubuntu-latest
-    outputs:
-      instance-password: ${{ steps.generate.outputs.password }}
-    steps:
-      - id: generate
-        name: Generate strong password
-        run: |
-          # Generate 24-char password with mixed case, digits, and allowed special chars
-          pw=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9()~!@#$%^&*-_+=|<>?/' | head -c24)
-          echo "password=$pw" >> "$GITHUB_OUTPUT"
 
   provision-runner:
     name: Provision ECS runner
@@ -54,7 +42,6 @@ jobs:
         with:
           mode: start
           register_runner: "false"
-          expose_instance_password: "true"
           ali_access_key: ${{ env.ALI_ACCESS_KEY }}
           ali_secret_key: ${{ env.ALI_SECRET_KEY }}
           ali_region: ${{ env.ECS_REGION }}
@@ -66,8 +53,7 @@ jobs:
           ali_ecs_instance_type: ${{ env.ECS_INSTANCE_TYPE }}
           host_name: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
           system_disk_size: ${{ env.ECS_SYSTEM_DISK_SIZE }}
-          # key_pair_name: "" # 使用密码登录时保持为空
-          instance_password: ${{ needs.prepare-password.outputs.instance-password }}
+          key_pair_name: ${{ env.ECS_KEYPAIR_NAME }}
           # 抢占模式
           spot_strategy: ${{ env.ECS_SPOT_STRATEGY }}
 
@@ -93,7 +79,7 @@ jobs:
         with:
           host: ${{ needs.provision-runner.outputs.public-ip }}
           username: root
-          password: ${{ needs.provision-runner.outputs.instance-password }}
+          key: ${{ secrets.SSH_KEYPAIR_ALI_GENERIC }}
           timeout: 60s
           script: |
             set -ex
