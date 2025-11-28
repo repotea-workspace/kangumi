@@ -30,6 +30,7 @@ jobs:
       instance-password: ${{ steps.generate.outputs.password }}
     steps:
       - id: generate
+        name: Generate strong password
         run: |
           # Character sets per Alibaba Cloud ECS password requirements
           LOWER="abcdefghijklmnopqrstuvwxyz"
