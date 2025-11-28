@@ -66,7 +66,7 @@ jobs:
         run: |
           echo "::notice::ECS ready."
           echo "::notice::Public IP: ${{ needs.provision-runner.outputs.public-ip }}"
-          echo "::notice::Username: root"
+          echo "::notice::Username: core"
 
       - name: Wait for SSH using wait-for-port
         uses: docker://ghcr.io/repotea-workspace/kangumi/wait-for-port:latest
@@ -77,7 +77,7 @@ jobs:
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ needs.provision-runner.outputs.public-ip }}
-          username: root
+          username: core
           key: ${{ secrets.SSH_KEYPAIR_ALI_GENERIC }}
           timeout: 60s
           script: |
@@ -109,24 +109,24 @@ jobs:
             echo "=== Done ==="
 
 
-  # destroy-runner:
-  #   name: Destroy ECS runner
-  #   needs:
-  #     - provision-runner
-  #     - manual-instructions
-  #   if: always()
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v6
-  #     - name: Destroy Aliyun ECS GitHub runner
-  #       uses: ./github-actions/ecs-github-runner
-  #       with:
-  #         mode: destroy
-  #         register_runner: "false"
-  #         ali_access_key: ${{ env.ALI_ACCESS_KEY }}
-  #         ali_secret_key: ${{ env.ALI_SECRET_KEY }}
-  #         ali_region: ${{ env.ECS_REGION }}
-  #         vswitch_id: ${{ env.ECS_VSWITCH_ID }}
-  #         availability_zone: ${{ env.ECS_AVAILABILITY_ZONE }}
-  #         security_group_id: ${{ env.ECS_SECURITY_GROUP_ID }}
-  #         image_id: ${{ env.ECS_IMAGE_ID }}
+  destroy-runner:
+    name: Destroy ECS runner
+    needs:
+      - provision-runner
+      - manual-instructions
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Destroy Aliyun ECS GitHub runner
+        uses: ./github-actions/ecs-github-runner
+        with:
+          mode: destroy
+          register_runner: "false"
+          ali_access_key: ${{ env.ALI_ACCESS_KEY }}
+          ali_secret_key: ${{ env.ALI_SECRET_KEY }}
+          ali_region: ${{ env.ECS_REGION }}
+          vswitch_id: ${{ env.ECS_VSWITCH_ID }}
+          availability_zone: ${{ env.ECS_AVAILABILITY_ZONE }}
+          security_group_id: ${{ env.ECS_SECURITY_GROUP_ID }}
+          image_id: ${{ env.ECS_IMAGE_ID }}
