@@ -82,14 +82,27 @@ jobs:
           echo "::notice::Public IP: ${{ needs.provision-runner.outputs.public-ip }}"
           echo "::notice::Username: root"
 
-      - name: Wait for SSH port
-        uses: iFaxity/wait-on-action@v1
-        with:
-          resource: tcp:${{ needs.provision-runner.outputs.public-ip }}:22
-          timeout: 300000      # 最长等 300000ms = 300s
-          interval: 1000       # 每 1s 轮询一次
-          log: true            # 打印等待日志
 
+      # - name: Wait for SSH port
+      #   uses: iFaxity/wait-on-action@v1
+      #   with:
+      #     resource: tcp:${{ needs.provision-runner.outputs.public-ip }}:22
+      #     timeout: 300000      # 最长等 300000ms = 300s
+      #     interval: 1000       # 每 1s 轮询一次
+      #     log: true            # 打印等待日志
+
+      - name: Wait for SSH to be ready
+        run: |
+          for i in {1..30}; do
+            if nc -z -w5 ${{ needs.provision-runner.outputs.public-ip }} 22; then
+              echo "SSH is ready"
+              exit 0
+            fi
+            echo "Waiting for SSH... attempt $i"
+            sleep 10
+          done
+          echo "SSH not ready after 5 minutes"
+          exit 1
 
       - name: Execute remote commands via SSH
         uses: appleboy/ssh-action@v1
