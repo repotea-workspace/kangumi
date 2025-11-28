@@ -52,7 +52,10 @@ RUN \
   ln -s /usr/bin/python3 /usr/bin/python
 
 ## helm-diff
-RUN helm plugin install https://github.com/databus23/helm-diff --version=${HELM_DIFF_VERSION}
+## `--verify=false`: https://github.com/databus23/helm-diff/pull/887
+RUN helm plugin install https://github.com/databus23/helm-diff \
+      --version=${HELM_DIFF_VERSION} \
+      --verify=false
 
 ## s6-overlay
 # RUN curl -fSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" -o /tmp/s6-overlay-noarch.tar.xz || \
