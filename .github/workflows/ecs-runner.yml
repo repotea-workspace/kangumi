@@ -11,16 +11,15 @@ env:
   ECS_AVAILABILITY_ZONE: cn-hongkong-b # 替换为实际可用区
   ECS_SECURITY_GROUP_ID: sg-j6cdwrlcl9xbzksin9of # 替换为安全组 ID
   ECS_IMAGE_ID: ubuntu_24_04_x64_20G_alibase_20251102.vhd # 替换为需要的镜像 ID
-  ECS_RUNNER_LABEL_PREFIX: ecs
   ECS_RUNNER_ADDITIONAL_LABELS: ecs,alicloud,hk # 可按需调整
   ECS_INSTANCE_TYPE: ecs.c7a.large # 如需不同规格请修改
-  ECS_INSTANCE_NAME: egi-runner-[0,6]
-  ECS_HOST_NAME: egi-runner-[0,6]
   ECS_SYSTEM_DISK_SIZE: 60 # 根据需求调整系统盘容量
 
   ALI_ACCESS_KEY: ${{ secrets.ALI_ACCESS_KEY_AYN }}
   ALI_SECRET_KEY: ${{ secrets.ALI_SECRET_KEY_AYN }}
   GH_RUNNER_PAT: ${{ secrets.GT_0XFE10 }} # 设置可创建 self-hosted runner token 的 PAT（workflow + admin:org 自托管）
+
+  RUNNER_NAME_PREFIX: ecs-runner
 
 jobs:
   prepare-password:
@@ -62,11 +61,12 @@ jobs:
           availability_zone: ${{ env.ECS_AVAILABILITY_ZONE }}
           security_group_id: ${{ env.ECS_SECURITY_GROUP_ID }}
           image_id: ${{ env.ECS_IMAGE_ID }}
-          runner_label: ${{ env.ECS_RUNNER_LABEL_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
+          runner_label: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
           runner_additional_labels: ${{ env.ECS_RUNNER_ADDITIONAL_LABELS }}
+          runner_name: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
+          ali_ecs_name: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
           ali_ecs_instance_type: ${{ env.ECS_INSTANCE_TYPE }}
-          ali_ecs_name: ${{ env.ECS_INSTANCE_NAME }}
-          host_name: ${{ env.ECS_HOST_NAME }}
+          host_name: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
           system_disk_size: ${{ env.ECS_SYSTEM_DISK_SIZE }}
           # key_pair_name: "" # 使用密码登录时保持为空
           instance_password: ${{ needs.prepare-password.outputs.instance-password }}
