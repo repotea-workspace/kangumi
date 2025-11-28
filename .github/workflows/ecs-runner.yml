@@ -144,7 +144,7 @@ jobs:
 
       - name: Remove GitHub runner registration
         env:
-          GH_PAT: ${{ env.GH_RUNNER_PAT }}
+          GH_PAT: ${{ secrets.GITHUB_TOKEN }}
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
           X_RUNNER_NAME: ${{ needs.provision-runner.outputs.runner-name }}
