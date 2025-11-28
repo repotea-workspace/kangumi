@@ -85,7 +85,7 @@ jobs:
       - name: Wait for SSH using wait-for-port
         uses: docker://ghcr.io/repotea-workspace/kangumi/wait-for-port:latest
         with:
-          args: ${{ needs.provision-runner.outputs.public-ip }} 22 10
+          args: ${{ needs.provision-runner.outputs.public-ip }} 22 40
 
       - name: Execute remote commands via SSH
         uses: appleboy/ssh-action@v1
