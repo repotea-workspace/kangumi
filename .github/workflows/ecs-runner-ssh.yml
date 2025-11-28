@@ -66,8 +66,6 @@ jobs:
           host_name: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
           system_disk_size: ${{ env.ECS_SYSTEM_DISK_SIZE }}
           # key_pair_name: "" # 使用密码登录时保持为空
-          runner_ephemeral: "true"
-          # runner_version: ${{ env.RUNNER_VERSION }}
           instance_password: ${{ needs.prepare-password.outputs.instance-password }}
           # 抢占模式
           spot_strategy: ${{ env.ECS_SPOT_STRATEGY }}
@@ -84,18 +82,18 @@ jobs:
           echo "::notice::Public IP: ${{ needs.provision-runner.outputs.public-ip }}"
           echo "::notice::Username: root"
 
-      - name: Wait for SSH to be ready
-        run: |
-          for i in {1..30}; do
-            if nc -z -w5 ${{ needs.provision-runner.outputs.public-ip }} 22; then
-              echo "SSH is ready"
-              exit 0
-            fi
-            echo "Waiting for SSH... attempt $i"
-            sleep 10
-          done
-          echo "SSH not ready after 5 minutes"
-          exit 1
+      # - name: Wait for SSH to be ready
+      #   run: |
+      #     for i in {1..30}; do
+      #       if nc -z -w5 ${{ needs.provision-runner.outputs.public-ip }} 22; then
+      #         echo "SSH is ready"
+      #         exit 0
+      #       fi
+      #       echo "Waiting for SSH... attempt $i"
+      #       sleep 10
+      #     done
+      #     echo "SSH not ready after 5 minutes"
+      #     exit 1
 
       - name: Execute remote commands via SSH
         uses: appleboy/ssh-action@v1

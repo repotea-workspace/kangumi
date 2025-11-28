@@ -69,9 +69,9 @@ jobs:
           host_name: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
           system_disk_size: ${{ env.ECS_SYSTEM_DISK_SIZE }}
           # key_pair_name: "" # 使用密码登录时保持为空
+          instance_password: ${{ needs.prepare-password.outputs.instance-password }}
           runner_ephemeral: "false"
           # runner_version: ${{ env.RUNNER_VERSION }}
-          instance_password: ${{ needs.prepare-password.outputs.instance-password }}
 
   run-on-ecs:
     name: Run tests on ECS runner
