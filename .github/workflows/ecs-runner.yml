@@ -87,7 +87,7 @@ jobs:
           echo "Running on $HOSTNAME (instance ${{ needs.provision-runner.outputs.instance-id }})"
 
   test-anyhow:
-    name: Run tests on ECS runner
+    name: Test anyhow crate on ECS runner
     needs:
       - provision-runner
       - run-on-ecs
