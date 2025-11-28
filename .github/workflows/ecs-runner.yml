@@ -43,6 +43,7 @@ jobs:
       runner-name: ${{ steps.start.outputs.runner-name }}
       instance-id: ${{ steps.start.outputs.instance-id }}
     steps:
+      - uses: actions/checkout@v6
       - name: Start Aliyun ECS GitHub runner
         id: start
         uses: ./github-actions/ecs-github-runner
@@ -88,6 +89,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
       - name: Destroy Aliyun ECS GitHub runner
         uses: ./github-actions/ecs-github-runner
         with:
