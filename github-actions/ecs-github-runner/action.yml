@@ -53,6 +53,7 @@ inputs:
   system_disk_size:
     description: 'System disk size in GB'
     required: false
+    default: '100'
   system_disk_category:
     description: 'System disk category (cloud_efficiency/cloud_ssd/cloud_essd)'
     required: false
@@ -68,12 +69,14 @@ inputs:
   internet_max_bandwidth_out:
     description: 'Public bandwidth cap in Mbps'
     required: false
+    default: '100'
   spot_strategy:
     description: 'Spot strategy (NoSpot/SpotWithPriceLimit/SpotAsPriceGo)'
     required: false
   spot_duration:
     description: 'Spot protection duration in hours'
     required: false
+    default: '1'
   security_enhancement_strategy:
     description: 'Security enhancement strategy (Active/Deactive)'
     required: false

@@ -47,7 +47,7 @@ runuser -u "${runner_user}" -- bash -c "cd ${RUNNER_DIR} && \
     --labels ${RUNNER_LABELS} \
     --name ${RUNNER_NAME} \
     --work ${RUNNER_WORKDIR} \
-    %{ if runner_ephemeral == "true" }--ephemeral%{ endif %}"
+    %{ if runner_ephemeral == "true" }--ephemeral%{ endif }"
 
 cat <<SERVICE >/etc/systemd/system/github-runner.service
 [Unit]
