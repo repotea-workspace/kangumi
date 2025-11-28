@@ -69,7 +69,7 @@ jobs:
           host_name: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
           system_disk_size: ${{ env.ECS_SYSTEM_DISK_SIZE }}
           # key_pair_name: "" # 使用密码登录时保持为空
-          runner_ephemeral: "false"
+          runner_ephemeral: "true"
           instance_password: ${{ needs.prepare-password.outputs.instance-password }}
 
   run-on-ecs:
@@ -133,3 +133,25 @@ jobs:
           availability_zone: ${{ env.ECS_AVAILABILITY_ZONE }}
           security_group_id: ${{ env.ECS_SECURITY_GROUP_ID }}
           image_id: ${{ env.ECS_IMAGE_ID }}
+      # - name: Remove GitHub runner registration
+      #   env:
+      #     GH_PAT: ${{ env.GH_RUNNER_PAT }}
+      #     OWNER: ${{ github.repository_owner }}
+      #     REPO: ${{ github.event.repository.name }}
+      #     RUNNER_NAME: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
+      #   run: |
+      #     set -euo pipefail
+      #     if [ -z "$GH_PAT" ]; then
+      #       echo "GH_RUNNER_PAT not provided, skip runner cleanup"
+      #       exit 0
+      #     fi
+      #     api="https://api.github.com/repos/$OWNER/$REPO/actions/runners?per_page=100"
+      #     runner_id=$(curl -fsSL -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $GH_PAT" "$api" \
+      #       | jq -r --arg NAME "$RUNNER_NAME" '.runners[] | select(.name == $NAME) | .id' | head -n 1)
+      #     if [ -z "$runner_id" ]; then
+      #       echo "Runner $RUNNER_NAME not found in repo, nothing to delete."
+      #       exit 0
+      #     fi
+      #     echo "Deleting runner $RUNNER_NAME (id=$runner_id)"
+      #     curl -fsSL -X DELETE -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $GH_PAT" \
+      #       "https://api.github.com/repos/$OWNER/$REPO/actions/runners/$runner_id"
