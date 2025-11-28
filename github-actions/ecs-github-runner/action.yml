@@ -41,6 +41,7 @@ inputs:
   instance_charge_type:
     description: 'ECS charge type (PostPaid or PrePaid)'
     required: false
+    default: 'PostPaid'
   ali_ecs_instance_type:
     description: 'ECS instance type (e.g. ecs.c7a.large)'
     required: false
@@ -57,15 +58,19 @@ inputs:
   system_disk_category:
     description: 'System disk category (cloud_efficiency/cloud_ssd/cloud_essd)'
     required: false
+    default: 'cloud_essd'
   system_disk_performance_level:
     description: 'ESSD performance tier (PL0/PL1/PL2/PL3)'
     required: false
+    default: 'PL0'
   system_disk_name:
     description: 'System disk name'
     required: false
+    default: 'egr-system'
   internet_charge_type:
     description: 'PayByTraffic or PayByBandwidth'
     required: false
+    default: 'PayByTraffic'
   internet_max_bandwidth_out:
     description: 'Public bandwidth cap in Mbps'
     required: false
@@ -73,6 +78,7 @@ inputs:
   spot_strategy:
     description: 'Spot strategy (NoSpot/SpotWithPriceLimit/SpotAsPriceGo)'
     required: false
+    default: 'NoSpot'
   spot_duration:
     description: 'Spot protection duration in hours'
     required: false
@@ -80,9 +86,11 @@ inputs:
   security_enhancement_strategy:
     description: 'Security enhancement strategy (Active/Deactive)'
     required: false
+    default: 'Active'
   http_tokens:
     description: 'IMDS requirement (required/optional)'
     required: false
+    default: 'optional'
   auto_release_time:
     description: 'Auto release time in RFC3339, optional'
     required: false
