@@ -136,6 +136,12 @@ jobs:
           security_group_id: ${{ env.ECS_SECURITY_GROUP_ID }}
           image_id: ${{ env.ECS_IMAGE_ID }}
 
+      - name: Test
+        run: |
+          echo ${{ needs.provision-runner.outputs.runner-label }}
+          echo ${{ needs.provision-runner.outputs.runner-name }}
+          echo ${{ needs.provision-runner.outputs.instance-id }}
+
       - name: Remove GitHub runner registration
         env:
           GH_PAT: ${{ env.GH_RUNNER_PAT }}

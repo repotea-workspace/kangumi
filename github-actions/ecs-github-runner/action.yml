@@ -270,6 +270,7 @@ runs:
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: ${{ inputs.terraform_version }}
+        terraform_wrapper: false
 
     - name: Download Terraform state artifact (destroy)
       if: ${{ inputs.mode == 'destroy' }}
