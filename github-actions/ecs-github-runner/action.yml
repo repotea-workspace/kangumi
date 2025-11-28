@@ -157,9 +157,6 @@ outputs:
 
 runs:
   using: composite
-  env:
-    TF_WORKDIR: ${{ github.action_path }}/terraform
-    STATE_ARTIFACT: ${{ inputs.state_artifact_name }}
   steps:
     - name: Ensure GitHub metadata is provided
       shell: bash
@@ -260,18 +257,18 @@ runs:
       if: ${{ inputs.mode == 'destroy' }}
       uses: actions/download-artifact@v4
       with:
-        name: ${{ env.STATE_ARTIFACT }}
-        path: ${{ env.TF_WORKDIR }}
+        name: ${{ inputs.state_artifact_name }}
+        path: ${{ github.action_path }}/terraform
 
     - name: Terraform init
       shell: bash
-      working-directory: ${{ env.TF_WORKDIR }}
+      working-directory: ${{ github.action_path }}/terraform
       run: terraform init -input=false
 
     - name: Terraform apply (start)
       if: ${{ inputs.mode == 'start' }}
       shell: bash
-      working-directory: ${{ env.TF_WORKDIR }}
+      working-directory: ${{ github.action_path }}/terraform
       env:
         TF_VAR_ALI_ACCESS_KEY: ${{ inputs.ali_access_key }}
         TF_VAR_ALI_SECRET_KEY: ${{ inputs.ali_secret_key }}
@@ -313,7 +310,7 @@ runs:
     - name: Terraform apply (destroy)
       if: ${{ inputs.mode == 'destroy' }}
       shell: bash
-      working-directory: ${{ env.TF_WORKDIR }}
+      working-directory: ${{ github.action_path }}/terraform
       env:
         TF_VAR_ALI_ACCESS_KEY: ${{ inputs.ali_access_key }}
         TF_VAR_ALI_SECRET_KEY: ${{ inputs.ali_secret_key }}
@@ -353,7 +350,7 @@ runs:
       if: ${{ inputs.mode == 'start' }}
       id: tf_outputs
       shell: bash
-      working-directory: ${{ env.TF_WORKDIR }}
+      working-directory: ${{ github.action_path }}/terraform
       run: |
         set -euo pipefail
         terraform output -json > tf-output.json
@@ -370,16 +367,16 @@ runs:
       if: ${{ inputs.mode == 'start' }}
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ env.STATE_ARTIFACT }}
+        name: ${{ inputs.state_artifact_name }}
         path: |
-          ${{ env.TF_WORKDIR }}/terraform.tfstate
-          ${{ env.TF_WORKDIR }}/terraform.tfstate.backup
+          ${{ github.action_path }}/terraform/terraform.tfstate
+          ${{ github.action_path }}/terraform/terraform.tfstate.backup
         if-no-files-found: ignore
 
     - name: Cleanup Terraform state after destroy
       if: ${{ inputs.mode == 'destroy' }}
       shell: bash
-      working-directory: ${{ env.TF_WORKDIR }}
+      working-directory: ${{ github.action_path }}/terraform
       run: |
         set -euo pipefail
         rm -f terraform.tfstate terraform.tfstate.backup
