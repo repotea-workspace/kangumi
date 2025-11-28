@@ -39,7 +39,7 @@ FROM alpine:3 AS argocd
 ARG ARGOCD_VERSION
 RUN apk add --no-cache curl \
   && curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-amd64 \
-  && install -m 555 argocd-linux-amd64 /usr/local/bin/argocd 
+  && install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
 
 ##
 # Kubeseal
@@ -71,5 +71,8 @@ COPY --from=argocd /usr/local/bin/argocd /usr/local/bin/
 COPY --from=kubeseal /usr/local/bin/kubeseal /usr/local/bin/
 
 # Other deps
+## `--verify=false`: https://github.com/databus23/helm-diff/pull/887
 RUN apk add --no-cache ca-certificates curl make colordiff moreutils bash git \
-    && helm plugin install https://github.com/databus23/helm-diff --version=${HELM_DIFF_VERSION}
+    && helm plugin install https://github.com/databus23/helm-diff \
+      --version=${HELM_DIFF_VERSION} \
+      --verify=false
