@@ -9,7 +9,7 @@ inputs:
   terraform_version:
     description: "Terraform CLI version to use"
     required: false
-    default: "1.6.6"
+    default: "1.14.0"
   state_artifact_name:
     description: "Artifact name that stores terraform.tfstate between jobs"
     required: false

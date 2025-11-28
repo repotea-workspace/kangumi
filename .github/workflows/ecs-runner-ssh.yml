@@ -2,7 +2,7 @@ name: ECS Runner via SSH
 
 on:
   push:
-    branches: [ecs-github-runner]
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -82,22 +82,10 @@ jobs:
           echo "::notice::Public IP: ${{ needs.provision-runner.outputs.public-ip }}"
           echo "::notice::Username: root"
 
-      - name: Wait for SSH using igops/wait-for-port
+      - name: Wait for SSH using wait-for-port
         uses: docker://ghcr.io/repotea-workspace/kangumi/wait-for-port:latest
         with:
           args: ${{ needs.provision-runner.outputs.public-ip }} 22 10
-
-      # - name: Wait for SSH port
-      #   uses: iFaxity/wait-on-action@v1.2.1
-      #   with:
-      #     resource: tcp:${{ needs.provision-runner.outputs.public-ip }}:22
-      #     timeout: 300000
-      #     interval: 1000
-      #     log: true
-      # - name: Extra grace time for SSH auth
-      #   run: |
-      #     echo "Port 22 is open, waiting 10s to ensure SSH auth is ready..."
-      #     sleep 10
 
       - name: Execute remote commands via SSH
         uses: appleboy/ssh-action@v1

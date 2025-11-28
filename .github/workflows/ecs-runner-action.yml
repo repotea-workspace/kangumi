@@ -2,22 +2,23 @@ name: ECS Runner via Actions
 
 on:
   push:
-    branches: [ecs-github-runner]
+    branches: [main]
   workflow_dispatch:
 
 env:
   ECS_REGION: cn-hongkong
-  ECS_VSWITCH_ID: vsw-j6cxoruwpjx23479pcwj8 # 替换为香港地域的 VSwitch ID
-  ECS_AVAILABILITY_ZONE: cn-hongkong-b # 替换为实际可用区
-  ECS_SECURITY_GROUP_ID: sg-j6cdwrlcl9xbzksin9of # 替换为安全组 ID
-  ECS_IMAGE_ID: ubuntu_24_04_x64_20G_alibase_20251102.vhd # 替换为需要的镜像 ID
-  ECS_RUNNER_ADDITIONAL_LABELS: ecs,alicloud,hk # 可按需调整
-  ECS_INSTANCE_TYPE: ecs.c7a.large # 如需不同规格请修改
-  ECS_SYSTEM_DISK_SIZE: 60 # 根据需求调整系统盘容量
+  ECS_VSWITCH_ID: vsw-j6cxoruwpjx23479pcwj8 # replace VSwitch ID
+  ECS_AVAILABILITY_ZONE: cn-hongkong-b # replace with actual availability zone
+  ECS_SECURITY_GROUP_ID: sg-j6cdwrlcl9xbzksin9of # replace with security group ID
+  ECS_IMAGE_ID: ubuntu_24_04_x64_20G_alibase_20251102.vhd # replace with desired image ID
+  ECS_RUNNER_ADDITIONAL_LABELS: ecs,alicloud,hk # adjust as needed
+  ECS_INSTANCE_TYPE: ecs.c7a.large # modify if different specs are needed
+  ECS_SYSTEM_DISK_SIZE: 60 # adjust system disk size as needed
 
   ALI_ACCESS_KEY: ${{ secrets.ALI_ACCESS_KEY_AYN }}
   ALI_SECRET_KEY: ${{ secrets.ALI_SECRET_KEY_AYN }}
-  GH_RUNNER_PAT: ${{ secrets.GT_0XFE10 }} # 设置可创建 self-hosted runner token 的 PAT（workflow + admin:org 自托管）
+  # set PAT with workflow + admin:org self-hosted runner token creation permissions
+  GH_RUNNER_PAT: ${{ secrets.GT_0XFE10 }}
 
   RUNNER_NAME_PREFIX: ecs-runner
   # RUNNER_VERSION: 2.330.0
