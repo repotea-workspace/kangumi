@@ -91,18 +91,25 @@ jobs:
       #     interval: 1000       # 每 1s 轮询一次
       #     log: true            # 打印等待日志
 
-      - name: Wait for SSH to be ready
-        run: |
-          for i in {1..30}; do
-            if nc -z -w5 ${{ needs.provision-runner.outputs.public-ip }} 22; then
-              echo "SSH is ready"
-              exit 0
-            fi
-            echo "Waiting for SSH... attempt $i"
-            sleep 10
-          done
-          echo "SSH not ready after 5 minutes"
-          exit 1
+      # - name: Wait for SSH to be ready
+      #   run: |
+      #     for i in {1..30}; do
+      #       if nc -z -w5 ${{ needs.provision-runner.outputs.public-ip }} 22; then
+      #         echo "SSH is ready"
+      #         exit 0
+      #       fi
+      #       echo "Waiting for SSH... attempt $i"
+      #       sleep 10
+      #     done
+      #     echo "SSH not ready after 5 minutes"
+      #     exit 1
+
+      - name: Wait for SSH using igops/wait-for-port
+        uses: docker://igops/wait-for-port:latest
+        with:
+          # 传给容器的参数：HOST PORT
+          args: ${{ needs.provision-runner.outputs.public-ip }} 22
+
 
       - name: Execute remote commands via SSH
         uses: appleboy/ssh-action@v1
