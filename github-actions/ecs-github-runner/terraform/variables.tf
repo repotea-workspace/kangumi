@@ -201,6 +201,7 @@ variable "RUNNER_EPHEMERAL" {
 variable "GITHUB_OWNER" {
   description = "GitHub organization or user that owns the repository"
   type        = string
+  default     = ""
 }
 
 variable "GITHUB_REPOSITORY" {
@@ -230,4 +231,10 @@ variable "GITHUB_RUNNER_LABELS" {
   description = "Comma separated list of labels assigned to the runner"
   type        = string
   default     = "ecs,alicloud"
+}
+
+variable "REGISTER_RUNNER" {
+  description = "Whether to install and register the GitHub runner on the ECS instance"
+  type        = bool
+  default     = true
 }

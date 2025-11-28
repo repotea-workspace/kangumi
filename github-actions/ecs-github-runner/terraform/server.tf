@@ -2,8 +2,8 @@
 
 locals {
   runner_name = var.RUNNER_NAME != "" ? var.RUNNER_NAME : var.ALI_ECS_NAME
-  runner_url  = var.GITHUB_SCOPE == "org" ? format("https://github.com/%s", var.GITHUB_OWNER) : format("https://github.com/%s/%s", var.GITHUB_OWNER, var.GITHUB_REPOSITORY)
-  runner_user_data = var.RUNNER_ENABLED ? base64encode(templatefile("${path.module}/scripts/user_data.sh.tmpl", {
+  runner_url  = var.REGISTER_RUNNER ? (var.GITHUB_SCOPE == "org" ? format("https://github.com/%s", var.GITHUB_OWNER) : format("https://github.com/%s/%s", var.GITHUB_OWNER, var.GITHUB_REPOSITORY)) : ""
+  runner_user_data = var.RUNNER_ENABLED && var.REGISTER_RUNNER ? base64encode(templatefile("${path.module}/scripts/user_data.sh.tmpl", {
     runner_user      = var.RUNNER_USER
     runner_workdir   = var.RUNNER_WORKDIR
     runner_version   = var.RUNNER_VERSION

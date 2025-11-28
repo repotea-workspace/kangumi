@@ -22,6 +22,15 @@ This directory contains ready-to-use GitHub Actions workflows demonstrating diff
   - Ends with the same destroy/cleanup routine as `simple.yml`.
 - **When to use**: CI flows where several jobs must run sequentially on the same ECS machine (e.g., test suites, build→deploy pipelines).
 
+### `non-std.yml`
+
+- **Scenario**: Mainland Nonstd/bandwidth-restricted environment where GitHub cannot reach the ECS runner directly.
+- **Highlights**:
+  - Turns off runner registration (`register_runner: "false"`) and outputs the generated password (`expose_instance_password: "true"`).
+  - Provides a job that prints connection info so operators can SSH in manually.
+  - Destroy job still tears down the ECS instance, but runner cleanup is skipped because no registration occurred.
+- **When to use**: Provision servers inside Nonstd that will be accessed manually (or through another automation layer) rather than through GitHub Actions.
+
 ## Required inputs (common to both)
 
 - `ALI_*` secrets (Access Key, Secret Key, Region)

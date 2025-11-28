@@ -148,6 +148,14 @@ inputs:
     description: "Whether the runner is ephemeral (true/false)"
     required: false
     default: "true"
+  register_runner:
+    description: "Set to false to skip installing/registering the GitHub runner (machine only)"
+    required: false
+    default: "true"
+  expose_instance_password:
+    description: "Set to true to emit the instance password as an action output (use with caution)"
+    required: false
+    default: "false"
 
 outputs:
   runner-label:
@@ -165,6 +173,9 @@ outputs:
   private-ip:
     description: "ECS private IP"
     value: ${{ steps.tf_outputs.outputs.private_ip }}
+  instance-password:
+    description: "Instance password (only when expose_instance_password=true)"
+    value: ${{ steps.instance_password_output.outputs.value }}
 
 runs:
   using: composite
@@ -185,6 +196,7 @@ runs:
         REPOSITORY: ${{ inputs.github_repository }}
         PAT: ${{ inputs.github_pat }}
         RUNNER_TOKEN: ${{ inputs.github_runner_token }}
+        REGISTER: ${{ inputs.register_runner }}
       run: |
         set -euo pipefail
         if [ -z "$OWNER" ]; then
@@ -195,7 +207,7 @@ runs:
           echo "github_repository input is required when github_scope=repo" >&2
           exit 1
         fi
-        if [ "$MODE" = "start" ] && [ -z "$RUNNER_TOKEN" ] && [ -z "$PAT" ]; then
+        if [ "$MODE" = "start" ] && [ "$REGISTER" = "true" ] && [ -z "$RUNNER_TOKEN" ] && [ -z "$PAT" ]; then
           echo "Provide either github_runner_token or github_pat to request one" >&2
           exit 1
         fi
@@ -233,7 +245,7 @@ runs:
 
     - name: Resolve runner registration token
       id: runner_token
-      if: ${{ inputs.mode == 'start' }}
+      if: ${{ inputs.mode == 'start' && inputs.register_runner == 'true' }}
       shell: bash
       env:
         DIRECT_TOKEN: ${{ inputs.github_runner_token }}
@@ -323,6 +335,7 @@ runs:
         TF_VAR_RUNNER_USER: ${{ inputs.runner_user }}
         TF_VAR_RUNNER_WORKDIR: ${{ inputs.runner_workdir }}
         TF_VAR_RUNNER_EPHEMERAL: ${{ inputs.runner_ephemeral }}
+        TF_VAR_REGISTER_RUNNER: ${{ inputs.register_runner }}
         TF_VAR_RUNNER_ENABLED: "true"
       run: terraform apply -auto-approve -input=false
 
@@ -362,6 +375,7 @@ runs:
         TF_VAR_RUNNER_USER: ${{ inputs.runner_user }}
         TF_VAR_RUNNER_WORKDIR: ${{ inputs.runner_workdir }}
         TF_VAR_RUNNER_EPHEMERAL: ${{ inputs.runner_ephemeral }}
+        TF_VAR_REGISTER_RUNNER: ${{ inputs.register_runner }}
         TF_VAR_RUNNER_ENABLED: "false"
       run: terraform apply -auto-approve -input=false -var "RUNNER_ENABLED=false"
 
@@ -381,6 +395,15 @@ runs:
           echo "public_ip=$public_ip"
           echo "private_ip=$private_ip"
         } >> "$GITHUB_OUTPUT"
+    - name: Expose instance password output
+      if: ${{ inputs.mode == 'start' && inputs.expose_instance_password == 'true' }}
+      id: instance_password_output
+      shell: bash
+      env:
+        INPUT_PASSWORD: ${{ inputs.instance_password }}
+      run: |
+        set -euo pipefail
+        echo "value=$INPUT_PASSWORD" >> "$GITHUB_OUTPUT"
 
     - name: Upload Terraform state artifact
       if: ${{ inputs.mode == 'start' }}
