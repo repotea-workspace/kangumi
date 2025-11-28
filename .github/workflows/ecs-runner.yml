@@ -87,7 +87,9 @@ jobs:
 
   test-anyhow:
     name: Build & test anyhow crate
-    needs: run-on-ecs
+    needs:
+      - provision-runner
+      - run-on-ecs
     runs-on:
       - self-hosted
       - ${{ needs.provision-runner.outputs.runner-label }}
