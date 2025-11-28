@@ -14,6 +14,7 @@ env:
   ECS_RUNNER_ADDITIONAL_LABELS: ecs,alicloud,shenzhen
   ECS_INSTANCE_TYPE: ecs.c7a.large
   ECS_SYSTEM_DISK_SIZE: 40
+  ECS_SPOT_STRATEGY: SpotAsPriceGo
 
   ALI_ACCESS_KEY: ${{ secrets.ALI_ACCESS_KEY_AYN }}
   ALI_SECRET_KEY: ${{ secrets.ALI_SECRET_KEY_AYN }}
@@ -68,6 +69,8 @@ jobs:
           runner_ephemeral: "true"
           # runner_version: ${{ env.RUNNER_VERSION }}
           instance_password: ${{ needs.prepare-password.outputs.instance-password }}
+          # 抢占模式
+          spot_strategy: ${{ env.ECS_SPOT_STRATEGY }}
 
 
   manual-instructions:
