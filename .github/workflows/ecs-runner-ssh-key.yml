@@ -98,10 +98,6 @@ jobs:
             echo "=== Network Info ==="
             ip addr show
 
-            echo "=== Install some packages ==="
-            apt-get update -qq
-            apt-get install -y -qq curl wget git
-
             echo "=== Docker Info ==="
             docker version
             docker ps
