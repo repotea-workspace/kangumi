@@ -68,7 +68,7 @@ jobs:
           host_name: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
           system_disk_size: ${{ env.ECS_SYSTEM_DISK_SIZE }}
           # key_pair_name: "" # 使用密码登录时保持为空
-          runner_ephemeral: "false"
+          runner_ephemeral: "true"
           instance_password: ${{ needs.prepare-password.outputs.instance-password }}
 
   run-on-ecs:
@@ -84,15 +84,6 @@ jobs:
           uname -a
           echo "Running on $HOSTNAME (instance ${{ needs.provision-runner.outputs.instance-id }})"
 
-  test-anyhow:
-    name: Build & test anyhow crate
-    needs:
-      - provision-runner
-      - run-on-ecs
-    runs-on:
-      - self-hosted
-      - ${{ needs.provision-runner.outputs.runner-label }}
-    steps:
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Checkout anyhow repository
@@ -114,7 +105,7 @@ jobs:
     name: Destroy ECS runner
     needs:
       - provision-runner
-      - test-anyhow
+      - run-on-ecs
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -132,11 +123,3 @@ jobs:
           availability_zone: ${{ env.ECS_AVAILABILITY_ZONE }}
           security_group_id: ${{ env.ECS_SECURITY_GROUP_ID }}
           image_id: ${{ env.ECS_IMAGE_ID }}
-
-      - name: Remove stale GitHub runners
-        uses: matheusrosmaninho/github-runners-remove@v1
-        with:
-          access_token: ${{ env.GH_RUNNER_PAT }}
-          repo_owner: ${{ github.repository_owner }}
-          repo_name: ${{ github.event.repository.name }}
-          days_limit: "0"
