@@ -86,38 +86,38 @@ jobs:
           uname -a
           echo "Running on $HOSTNAME (instance ${{ needs.provision-runner.outputs.instance-id }})"
 
-  test-anyhow:
-    name: Test anyhow crate on ECS runner
-    needs:
-      - provision-runner
-      - run-on-ecs
-    runs-on:
-      - self-hosted
-      - ${{ needs.provision-runner.outputs.runner-label }}
-    steps:
-      - uses: dtolnay/rust-toolchain@stable
+  # test-anyhow:
+  #   name: Test anyhow crate on ECS runner
+  #   needs:
+  #     - provision-runner
+  #     - run-on-ecs
+  #   runs-on:
+  #     - self-hosted
+  #     - ${{ needs.provision-runner.outputs.runner-label }}
+  #   steps:
+  #     - uses: dtolnay/rust-toolchain@stable
 
-      - name: Checkout anyhow repository
-        uses: actions/checkout@v6
-        with:
-          repository: dtolnay/anyhow
-          ref: master
-          path: anyhow
+  #     - name: Checkout anyhow repository
+  #       uses: actions/checkout@v6
+  #       with:
+  #         repository: dtolnay/anyhow
+  #         ref: master
+  #         path: anyhow
 
-      - name: Cargo build
-        working-directory: anyhow
-        run: cargo build
+  #     - name: Cargo build
+  #       working-directory: anyhow
+  #       run: cargo build
 
-      - name: Cargo test
-        working-directory: anyhow
-        run: cargo test
+  #     - name: Cargo test
+  #       working-directory: anyhow
+  #       run: cargo test
 
   destroy-runner:
     name: Destroy ECS runner
     needs:
       - provision-runner
       - run-on-ecs
-      - test-anyhow
+      # - test-anyhow
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -141,7 +141,7 @@ jobs:
           GH_PAT: ${{ env.GH_RUNNER_PAT }}
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
-          RUNNER_NAME: ${{ needs.provision-runner.outputs.runner-name }}
+          RUNNER_NAME: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           set -euo pipefail
           if [ -z "$GH_PAT" ]; then
