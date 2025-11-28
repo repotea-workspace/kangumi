@@ -29,20 +29,17 @@ jobs:
     outputs:
       instance-password: ${{ steps.generate.outputs.password }}
     steps:
-      - name: Generate strong password
-        id: generate
+      - uses: actions/checkout@v4
+      - id: generate
+        uses: aammirmirza/RandomPasswordGenerator@v1.1
+        with:
+          length: 24
+      - name: Mask password output
         shell: bash
         run: |
-          set -euo pipefail
-          password=""
-          while [ -z "$password" ]; do
-            candidate=$(LC_ALL=C tr -dc 'A-Za-z0-9!@#$%^&*-_=+' </dev/urandom | head -c 24)
-            if [[ $candidate =~ [a-z] && $candidate =~ [A-Z] && $candidate =~ [0-9] && $candidate =~ [!@#$%^&*\-_=+] ]]; then
-              password=$candidate
-            fi
-          done
-          echo "::add-mask::$password"
-          echo "password=$password" >> "$GITHUB_OUTPUT"
+          pwd='${{ steps.generate.outputs.password }}'
+          echo "::add-mask::$pwd"
+          echo "password=$pwd" >> "$GITHUB_OUTPUT"
 
   provision-runner:
     name: Provision ECS runner (Hong Kong)
