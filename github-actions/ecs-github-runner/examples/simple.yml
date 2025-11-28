@@ -15,6 +15,7 @@ jobs:
       runner-name: ${{ steps.start.outputs.runner-name }}
       instance-id: ${{ steps.start.outputs.instance-id }}
     steps:
+      - uses: actions/checkout@v6
       - name: Start ECS GitHub runner
         id: start
         uses: kangumi/github-actions/ecs-github-runner@main
@@ -30,7 +31,9 @@ jobs:
           availability_zone: ${{ vars.ALI_AVAILABILITY_ZONE }}
           security_group_id: ${{ vars.ALI_SECURITY_GROUP_ID }}
           image_id: ${{ vars.ALI_IMAGE_ID }}
-          runner_label: ecs-${{ github.run_id }}-${{ github.run_attempt }}
+          runner_label: ecs-runner-${{ github.run_id }}-${{ github.run_attempt }}
+          runner_name: ecs-runner-${{ github.run_id }}-${{ github.run_attempt }}
+          runner_ephemeral: "true" # convert to false if you need multiple jobs on the same runner
 
   run-on-ecs:
     name: Execute workload on ECS runner
@@ -49,6 +52,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
       - name: Destroy ECS GitHub runner
         uses: kangumi/github-actions/ecs-github-runner@main
         with:

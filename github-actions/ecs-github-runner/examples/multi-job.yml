@@ -1,0 +1,117 @@
+name: ecs-runner-multi-job
+
+on:
+  workflow_dispatch:
+
+env:
+  RUNNER_PREFIX: ecs-runner
+
+jobs:
+  prepare-password:
+    runs-on: ubuntu-latest
+    outputs:
+      instance-password: ${{ steps.generate.outputs.password }}
+    steps:
+      - id: generate
+        name: Generate strong password
+        shell: bash
+        run: |
+          pw=$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9()~!@#$%^&*-_+=|<>?/' | head -c24)
+          echo "password=$pw" >> "$GITHUB_OUTPUT"
+
+  provision-runner:
+    name: Provision ECS runner
+    needs: prepare-password
+    runs-on: ubuntu-latest
+    outputs:
+      runner-label: ${{ steps.start.outputs.runner-label }}
+      runner-name: ${{ steps.start.outputs.runner-name }}
+      instance-id: ${{ steps.start.outputs.instance-id }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start ECS GitHub runner
+        id: start
+        uses: kangumi/github-actions/ecs-github-runner@main
+        with:
+          mode: start
+          github_owner: ${{ github.repository_owner }}
+          github_repository: ${{ github.event.repository.name }}
+          github_pat: ${{ secrets.GH_RUNNER_PAT }}
+          ali_access_key: ${{ secrets.ALI_ACCESS_KEY }}
+          ali_secret_key: ${{ secrets.ALI_SECRET_KEY }}
+          ali_region: ${{ secrets.ALI_REGION }}
+          vswitch_id: ${{ vars.ALI_VSWITCH_ID }}
+          availability_zone: ${{ vars.ALI_AVAILABILITY_ZONE }}
+          security_group_id: ${{ vars.ALI_SECURITY_GROUP_ID }}
+          image_id: ${{ vars.ALI_IMAGE_ID }}
+          runner_label: ${{ env.RUNNER_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
+          runner_name: ${{ env.RUNNER_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
+          runner_ephemeral: "false" # keep runner alive for multiple jobs
+          instance_password: ${{ needs.prepare-password.outputs.instance-password }}
+
+  smoke-test:
+    name: Smoke test
+    needs: provision-runner
+    runs-on:
+      - self-hosted
+      - ${{ needs.provision-runner.outputs.runner-label }}
+    steps:
+      - name: Print system info
+        run: |
+          uname -a
+          whoami
+          echo "Instance ID: ${{ needs.provision-runner.outputs.instance-id }}"
+
+  run-cargo-tests:
+    name: Build & test sample crate
+    needs:
+      - provision-runner
+      - smoke-test
+    runs-on:
+      - self-hosted
+      - ${{ needs.provision-runner.outputs.runner-label }}
+    steps:
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Checkout sample repo
+        uses: actions/checkout@v4
+        with:
+          repository: dtolnay/anyhow
+          ref: master
+          path: anyhow
+      - name: Cargo build
+        working-directory: anyhow
+        run: cargo build --locked
+      - name: Cargo test
+        working-directory: anyhow
+        run: cargo test --locked
+
+  destroy-runner:
+    name: Destroy ECS runner
+    needs:
+      - provision-runner
+      - smoke-test
+      - run-cargo-tests
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Destroy ECS GitHub runner
+        uses: kangumi/github-actions/ecs-github-runner@main
+        with:
+          mode: destroy
+          github_owner: ${{ github.repository_owner }}
+          github_repository: ${{ github.event.repository.name }}
+          ali_access_key: ${{ secrets.ALI_ACCESS_KEY }}
+          ali_secret_key: ${{ secrets.ALI_SECRET_KEY }}
+          ali_region: ${{ secrets.ALI_REGION }}
+          vswitch_id: ${{ vars.ALI_VSWITCH_ID }}
+          availability_zone: ${{ vars.ALI_AVAILABILITY_ZONE }}
+          security_group_id: ${{ vars.ALI_SECURITY_GROUP_ID }}
+          image_id: ${{ vars.ALI_IMAGE_ID }}
+      - name: Remove GitHub runner registration
+        uses: kangumi/github-actions/remove-self-hosted-runner@main
+        with:
+          access_token: ${{ secrets.GH_RUNNER_PAT }}
+          repo_owner: ${{ github.repository_owner }}
+          repo_name: ${{ github.event.repository.name }}
+          runner_name: ${{ needs.provision-runner.outputs.runner-name }}

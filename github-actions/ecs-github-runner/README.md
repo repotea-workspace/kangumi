@@ -90,3 +90,12 @@ jobs:
   - Action 下载同名 artifact → `terraform apply -var "RUNNER_ENABLED=false"`，保证 ECS 被销毁 → 删除本地 state。
 
 Terraform 变量与 Java 代码的映射详情请见 [`terraform/JAVA_TERRAFORM_MAPPING.md`](./terraform/JAVA_TERRAFORM_MAPPING.md)。
+
+## 示例工作流
+
+`examples/` 目录提供了两种常见场景：
+
+1. [`simple.yml`](./examples/simple.yml)：最小化示例，按顺序执行 “创建 → 单个 Job → 销毁”，并在最后调用 `remove-self-hosted-runner` Action 清理离线 Runner。
+2. [`multi-job.yml`](./examples/multi-job.yml)：展示如何在同一 ECS Runner 上串行运行多个 Job（smoke test + Rust 构建/测试），以及如何生成自定义密码、复用标签和执行最终清理。
+
+可以直接复制这些文件到你自己的仓库，根据文档替换变量/密钥即可。记得保留最后的销毁与清理步骤，避免遗留 ECS 资源或离线 Runner。
