@@ -84,12 +84,36 @@ jobs:
           uname -a
           echo "Running on $HOSTNAME (instance ${{ needs.provision-runner.outputs.instance-id }})"
 
+  test-anyhow:
+    name: Build & test anyhow crate
+    needs: provision-runner
+    runs-on:
+      - self-hosted
+      - ${{ needs.provision-runner.outputs.runner-label }}
+    steps:
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Checkout anyhow repository
+        uses: actions/checkout@v6
+        with:
+          repository: dtolnay/anyhow
+          ref: master
+          path: anyhow
+
+      - name: Cargo build
+        working-directory: anyhow
+        run: cargo build --locked
+
+      - name: Cargo test
+        working-directory: anyhow
+        run: cargo test --locked
 
   destroy-runner:
     name: Destroy ECS runner
     needs:
       - provision-runner
       - run-on-ecs
+      - test-anyhow
     if: always()
     runs-on: ubuntu-latest
     steps:
