@@ -4,7 +4,10 @@ ARG HELMFILE_VERSION
 ##
 # Kubectl
 ##
-FROM bitnami/kubectl:${KUBECTL_VERSION} AS kubectl
+FROM buildpack-deps:stable-curl AS kubectl
+ARG KUBECTL_VERSION
+RUN curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" \
+  && install -m 555 kubectl /usr/local/bin/kubectl
 
 ##
 # Kustomize
@@ -55,7 +58,7 @@ FROM alpine:3
 ARG HELM_DIFF_VERSION=v3.1.3
 
 # Kubectl
-COPY --from=kubectl /opt/bitnami/kubectl/bin/kubectl /usr/local/bin/
+COPY --from=kubectl /usr/local/bin/kubectl /usr/local/bin/
 # Kustomize
 COPY --from=kustomize ./kustomize /usr/local/bin/
 # Helm

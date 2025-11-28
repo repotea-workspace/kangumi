@@ -18,28 +18,28 @@ jobs:
     strategy:
       matrix:
         include:
-          - package: gotenberg
-            context: docker-image/gotenberg
-            build-args: ""
-          - package: node-liveness-probe
-            context: docker-image/node-liveness-probe
-            build-args: |
-              NODE_LIVENESS_PROBE_VERSION=v0.6.1
+          # - package: gotenberg
+          #   context: docker-image/gotenberg
+          #   build-args: ""
+          # - package: node-liveness-probe
+          #   context: docker-image/node-liveness-probe
+          #   build-args: |
+          #     NODE_LIVENESS_PROBE_VERSION=v0.6.1
           - package: terraform
             context: docker-image/terraform
             build-args: |
-              TERRAFORM_VERSION=1.4.6
+              TERRAFORM_VERSION=1.14.0
               TERRAFORM_BACKEND_GIT_VERSION=v0.1.8
           - package: k8ops
             context: docker-image/k8ops
             build-args: |
-              KUBECTL_VERSION=1.33.3
-              HELMFILE_VERSION=1.1.3-3.18.4
-              KUSTOMIZE_VERSION=v5.7.1
-              HELM_VERSION=v3.18.0
-              HELM_DIFF_VERSION=v3.1.3
-              ARGOCD_VERSION=v3.1.0
-              KUBESEAL_VERSION=0.31.0
+              KUBECTL_VERSION=v1.35.0
+              HELMFILE_VERSION=1.1.9-3.19.1
+              KUSTOMIZE_VERSION=v5.8.0
+              HELM_VERSION=v4.0.0
+              HELM_DIFF_VERSION=v3.14.1
+              ARGOCD_VERSION=v3.2.0
+              KUBESEAL_VERSION=0.33.1
 
           # - package: fat-android-sdk
           #   context: docker-image/fat-android-sdk
@@ -53,8 +53,11 @@ jobs:
           # - package: nubit
           #   context: docker-image/nubit
           #   build-args: ""
-          - package: harmonytools
-            context: docker-image/harmonytools
+          # - package: harmonytools
+          #   context: docker-image/harmonytools
+          #   build-args: ""
+          - package: wait-for-port
+            context: docker-image/wait-for-port
             build-args: ""
     steps:
       - uses: actions/checkout@v5
