@@ -1,4 +1,4 @@
-name: ecs-runner
+name: ECS Runner via Actions
 
 on:
   push:
