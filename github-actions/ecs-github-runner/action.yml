@@ -199,13 +199,15 @@ runs:
         REGISTER: ${{ inputs.register_runner }}
       run: |
         set -euo pipefail
-        if [ -z "$OWNER" ]; then
-          echo "github_owner input is required" >&2
-          exit 1
-        fi
-        if [ "$SCOPE" = "repo" ] && [ -z "$REPOSITORY" ]; then
-          echo "github_repository input is required when github_scope=repo" >&2
-          exit 1
+        if [ "$REGISTER" = "true" ]; then
+          if [ -z "$OWNER" ]; then
+            echo "github_owner input is required when register_runner=true" >&2
+            exit 1
+          fi
+          if [ "$SCOPE" = "repo" ] && [ -z "$REPOSITORY" ]; then
+            echo "github_repository input is required when github_scope=repo and register_runner=true" >&2
+            exit 1
+          fi
         fi
         if [ "$MODE" = "start" ] && [ "$REGISTER" = "true" ] && [ -z "$RUNNER_TOKEN" ] && [ -z "$PAT" ]; then
           echo "Provide either github_runner_token or github_pat to request one" >&2
