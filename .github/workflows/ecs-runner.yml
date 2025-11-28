@@ -37,7 +37,6 @@ jobs:
       - name: Mask password output
         shell: bash
         run: |
-          #echo "::add-mask::${{ steps.generate.outputs.password }}"
           echo "password=${{ steps.generate.outputs.password }}" >> "$GITHUB_OUTPUT"
 
   provision-runner:
