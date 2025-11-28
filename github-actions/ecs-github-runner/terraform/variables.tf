@@ -201,22 +201,12 @@ variable "RUNNER_EPHEMERAL" {
 variable "GITHUB_OWNER" {
   description = "GitHub organization or user that owns the repository"
   type        = string
-  validation {
-    condition     = var.RUNNER_ENABLED ? length(var.GITHUB_OWNER) > 0 : true
-    error_message = "GITHUB_OWNER must be set when RUNNER_ENABLED is true"
-  }
 }
 
 variable "GITHUB_REPOSITORY" {
   description = "Repository name when scope is repo"
   type        = string
   default     = ""
-  validation {
-    condition = var.RUNNER_ENABLED ? (
-      var.GITHUB_SCOPE == "org" ? true : length(var.GITHUB_REPOSITORY) > 0
-    ) : true
-    error_message = "GITHUB_REPOSITORY must be set when scope is repo and RUNNER_ENABLED is true"
-  }
 }
 
 variable "GITHUB_SCOPE" {
@@ -234,10 +224,6 @@ variable "GITHUB_RUNNER_TOKEN" {
   type        = string
   default     = ""
   sensitive   = true
-  validation {
-    condition     = var.RUNNER_ENABLED ? length(var.GITHUB_RUNNER_TOKEN) > 0 : true
-    error_message = "GITHUB_RUNNER_TOKEN must be provided when RUNNER_ENABLED is true"
-  }
 }
 
 variable "GITHUB_RUNNER_LABELS" {
