@@ -135,7 +135,7 @@ inputs:
   runner_version:
     description: "GitHub runner version to install"
     required: false
-    default: "2.316.0"
+    default: "2.330.0"
   runner_user:
     description: "Linux user that owns the runner process"
     required: false
