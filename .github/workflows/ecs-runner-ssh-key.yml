@@ -1,4 +1,4 @@
-name: ECS Runner via SSH with password
+name: ECS Runner via SSH with key
 
 on:
   push:
@@ -28,7 +28,6 @@ jobs:
 
   provision-runner:
     name: Provision ECS runner
-    needs: prepare-password
     runs-on: ubuntu-latest
     outputs:
       runner-name: ${{ steps.start.outputs.runner-name }}
