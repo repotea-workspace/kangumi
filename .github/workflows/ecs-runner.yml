@@ -69,6 +69,7 @@ jobs:
           host_name: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
           system_disk_size: ${{ env.ECS_SYSTEM_DISK_SIZE }}
           # key_pair_name: "" # 使用密码登录时保持为空
+          runner_ephemeral: "false"
           instance_password: ${{ needs.prepare-password.outputs.instance-password }}
 
   run-on-ecs:
@@ -86,7 +87,7 @@ jobs:
 
   test-anyhow:
     name: Build & test anyhow crate
-    needs: provision-runner
+    needs: run-on-ecs
     runs-on:
       - self-hosted
       - ${{ needs.provision-runner.outputs.runner-label }}
