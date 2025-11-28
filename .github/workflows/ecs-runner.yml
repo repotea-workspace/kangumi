@@ -20,6 +20,7 @@ env:
   GH_RUNNER_PAT: ${{ secrets.GT_0XFE10 }} # 设置可创建 self-hosted runner token 的 PAT（workflow + admin:org 自托管）
 
   RUNNER_NAME_PREFIX: ecs-runner
+  RUNNER_VERSION: 2.330.0
 
 jobs:
   prepare-password:
@@ -69,6 +70,7 @@ jobs:
           system_disk_size: ${{ env.ECS_SYSTEM_DISK_SIZE }}
           # key_pair_name: "" # 使用密码登录时保持为空
           runner_ephemeral: "true"
+          runner_version: ${{ env.RUNNER_VERSION }}
           instance_password: ${{ needs.prepare-password.outputs.instance-password }}
 
   run-on-ecs:
