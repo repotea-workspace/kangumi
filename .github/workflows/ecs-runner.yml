@@ -32,28 +32,8 @@ jobs:
       - id: generate
         name: Generate strong password
         run: |
-          # Character sets per Alibaba Cloud ECS password requirements
-          LOWER="abcdefghijklmnopqrstuvwxyz"
-          UPPER="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-          DIGITS="0123456789"
-          SPECIAL='()~!@#$%^&*-_+=|<>?/'
-          ALL="${LOWER}${UPPER}${DIGITS}${SPECIAL}"
-
-          # Ensure at least one character from each required category
-          pw=""
-          pw+="${LOWER:RANDOM%${#LOWER}:1}"
-          pw+="${UPPER:RANDOM%${#UPPER}:1}"
-          pw+="${DIGITS:RANDOM%${#DIGITS}:1}"
-          pw+="${SPECIAL:RANDOM%${#SPECIAL}:1}"
-
-          # Fill remaining 20 characters (total 24)
-          for i in {1..20}; do
-            pw+="${ALL:RANDOM%${#ALL}:1}"
-          done
-
-          # Shuffle the password
-          pw=$(echo "$pw" | fold -w1 | shuf | tr -d '\n')
-
+          # Generate 24-char password with mixed case, digits, and allowed special chars
+          pw=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9()~!@#$%^&*-_+=|<>?/' | head -c24)
           echo "::add-mask::$pw"
           echo "password=$pw" >> "$GITHUB_OUTPUT"
 
