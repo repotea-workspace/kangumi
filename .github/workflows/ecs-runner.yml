@@ -37,9 +37,8 @@ jobs:
       - name: Mask password output
         shell: bash
         run: |
-          pwd='${{ steps.generate.outputs.password }}'
-          echo "::add-mask::$pwd"
-          echo "password=$pwd" >> "$GITHUB_OUTPUT"
+          #echo "::add-mask::${{ steps.generate.outputs.password }}"
+          echo "password=${{ steps.generate.outputs.password }}" >> "$GITHUB_OUTPUT"
 
   provision-runner:
     name: Provision ECS runner (Hong Kong)
