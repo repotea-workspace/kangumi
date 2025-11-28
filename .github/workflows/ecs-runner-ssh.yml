@@ -10,8 +10,8 @@ env:
   ECS_VSWITCH_ID: vsw-wz9uncyx33urqcxpj8c1p
   ECS_AVAILABILITY_ZONE: cn-shenzhen-e
   ECS_SECURITY_GROUP_ID: sg-wz9eo52rpleayua0e1s6
-  # ECS_IMAGE_ID: fcos_34_20210529_3_0_3_x64_20G_alibase_20210824.vhd
-  ECS_IMAGE_ID: ubuntu_24_04_x64_20G_alibase_20251102.vhd
+  ECS_IMAGE_ID: fcos_34_20210529_3_0_3_x64_20G_alibase_20210824.vhd
+  #ECS_IMAGE_ID: ubuntu_24_04_x64_20G_alibase_20251102.vhd
   ECS_RUNNER_ADDITIONAL_LABELS: ecs,alicloud,shenzhen
   ECS_INSTANCE_TYPE: ecs.c7a.large
   ECS_SYSTEM_DISK_SIZE: 40
@@ -86,7 +86,7 @@ jobs:
       - name: Wait for SSH using wait-for-port
         uses: docker://ghcr.io/repotea-workspace/kangumi/wait-for-port:latest
         with:
-          args: ${{ needs.provision-runner.outputs.public-ip }} 22 40
+          args: ${{ needs.provision-runner.outputs.public-ip }} 22 10
 
       - name: Execute remote commands via SSH
         uses: appleboy/ssh-action@v1
