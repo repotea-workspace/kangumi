@@ -34,10 +34,6 @@ jobs:
         uses: aammirmirza/RandomPasswordGenerator@v1.1
         with:
           length: 24
-      - name: Mask password output
-        shell: bash
-        run: |
-          echo "password=${{ steps.generate.outputs.password }}" >> "$GITHUB_OUTPUT"
 
   provision-runner:
     name: Provision ECS runner (Hong Kong)
