@@ -102,8 +102,8 @@ inputs:
     required: false
 
   github_owner:
-    description: "GitHub organization or user name that owns the repository"
-    required: true
+    description: "GitHub organization or user name (required when register_runner=true)"
+    required: false
   github_repository:
     description: "Repository name (required when github_scope is repo)"
     required: false
