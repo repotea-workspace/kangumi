@@ -1,5 +1,5 @@
-name: 'Aliyun ECS GitHub Runner'
-description: 'Provision ephemeral GitHub Actions runners on Alibaba Cloud ECS by driving the bundled Terraform project.'
+name: "Aliyun ECS GitHub Runner"
+description: "Provision ephemeral GitHub Actions runners on Alibaba Cloud ECS by driving the bundled Terraform project."
 
 inputs:
   mode:
@@ -7,163 +7,163 @@ inputs:
     required: false
     default: start
   terraform_version:
-    description: 'Terraform CLI version to use'
+    description: "Terraform CLI version to use"
     required: false
-    default: '1.6.6'
+    default: "1.6.6"
   state_artifact_name:
-    description: 'Artifact name that stores terraform.tfstate between jobs'
+    description: "Artifact name that stores terraform.tfstate between jobs"
     required: false
-    default: 'ecs-github-runner-tfstate'
+    default: "ecs-github-runner-tfstate"
 
   ali_access_key:
-    description: 'Alibaba Cloud Access Key ID'
+    description: "Alibaba Cloud Access Key ID"
     required: true
   ali_secret_key:
-    description: 'Alibaba Cloud Access Key Secret'
+    description: "Alibaba Cloud Access Key Secret"
     required: true
   ali_region:
-    description: 'Alibaba Cloud region ID (e.g. cn-shenzhen)'
+    description: "Alibaba Cloud region ID (e.g. cn-shenzhen)"
     required: true
 
   vswitch_id:
-    description: 'Existing VSwitch ID that the runner should attach to'
+    description: "Existing VSwitch ID that the runner should attach to"
     required: true
   availability_zone:
-    description: 'Availability zone for the ECS instance'
+    description: "Availability zone for the ECS instance"
     required: true
   security_group_id:
-    description: 'Security group ID for the ECS instance'
+    description: "Security group ID for the ECS instance"
     required: true
   image_id:
-    description: 'Image ID for the ECS instance'
+    description: "Image ID for the ECS instance"
     required: true
 
   instance_charge_type:
-    description: 'ECS charge type (PostPaid or PrePaid)'
+    description: "ECS charge type (PostPaid or PrePaid)"
     required: false
-    default: 'PostPaid'
+    default: "PostPaid"
   ali_ecs_instance_type:
-    description: 'ECS instance type (e.g. ecs.c7a.large)'
+    description: "ECS instance type (e.g. ecs.c7a.large)"
     required: false
   ali_ecs_name:
-    description: 'ECS instance name template'
+    description: "ECS instance name template"
     required: false
   host_name:
-    description: 'Hostname inside the OS'
+    description: "Hostname inside the OS"
     required: false
   system_disk_size:
-    description: 'System disk size in GB'
+    description: "System disk size in GB"
     required: false
-    default: '100'
+    default: "100"
   system_disk_category:
-    description: 'System disk category (cloud_efficiency/cloud_ssd/cloud_essd)'
+    description: "System disk category (cloud_efficiency/cloud_ssd/cloud_essd)"
     required: false
-    default: 'cloud_essd'
+    default: "cloud_essd"
   system_disk_performance_level:
-    description: 'ESSD performance tier (PL0/PL1/PL2/PL3)'
+    description: "ESSD performance tier (PL0/PL1/PL2/PL3)"
     required: false
-    default: 'PL0'
+    default: "PL0"
   system_disk_name:
-    description: 'System disk name'
+    description: "System disk name"
     required: false
-    default: 'egr-system'
+    default: "egr-system"
   internet_charge_type:
-    description: 'PayByTraffic or PayByBandwidth'
+    description: "PayByTraffic or PayByBandwidth"
     required: false
-    default: 'PayByTraffic'
+    default: "PayByTraffic"
   internet_max_bandwidth_out:
-    description: 'Public bandwidth cap in Mbps'
+    description: "Public bandwidth cap in Mbps"
     required: false
-    default: '100'
+    default: "100"
   spot_strategy:
-    description: 'Spot strategy (NoSpot/SpotWithPriceLimit/SpotAsPriceGo)'
+    description: "Spot strategy (NoSpot/SpotWithPriceLimit/SpotAsPriceGo)"
     required: false
-    default: 'NoSpot'
+    default: "NoSpot"
   spot_duration:
-    description: 'Spot protection duration in hours'
+    description: "Spot protection duration in hours"
     required: false
-    default: '1'
+    default: "1"
   security_enhancement_strategy:
-    description: 'Security enhancement strategy (Active/Deactive)'
+    description: "Security enhancement strategy (Active/Deactive)"
     required: false
-    default: 'Active'
+    default: "Active"
   http_tokens:
-    description: 'IMDS requirement (required/optional)'
+    description: "IMDS requirement (required/optional)"
     required: false
-    default: 'optional'
+    default: "optional"
   auto_release_time:
-    description: 'Auto release time in RFC3339, optional'
+    description: "Auto release time in RFC3339, optional"
     required: false
   key_pair_name:
-    description: 'SSH key pair name'
+    description: "SSH key pair name"
     required: false
   instance_password:
-    description: 'Instance password when no key pair is specified'
+    description: "Instance password when no key pair is specified"
     required: false
 
   github_owner:
-    description: 'GitHub organization or user name that owns the repository'
+    description: "GitHub organization or user name that owns the repository"
     required: true
   github_repository:
-    description: 'Repository name (required when github_scope is repo)'
+    description: "Repository name (required when github_scope is repo)"
     required: false
   github_scope:
-    description: 'Registration scope: repo or org'
+    description: "Registration scope: repo or org"
     required: false
     default: repo
   github_pat:
-    description: 'Personal Access Token that can request runner registration tokens'
+    description: "Personal Access Token that can request runner registration tokens"
     required: false
   github_runner_token:
-    description: 'Optional pre-generated runner registration token (bypasses PAT call)'
+    description: "Optional pre-generated runner registration token (bypasses PAT call)"
     required: false
   github_api_url:
-    description: 'GitHub API root (useful for GHES)'
+    description: "GitHub API root (useful for GHES)"
     required: false
     default: https://api.github.com
 
   runner_label:
-    description: 'Unique label used to target this runner (defaults to ecs-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT})'
+    description: "Unique label used to target this runner (defaults to ecs-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT})"
     required: false
   runner_additional_labels:
-    description: 'Comma separated static labels always added to the runner'
+    description: "Comma separated static labels always added to the runner"
     required: false
-    default: 'ecs,alicloud'
+    default: "ecs,alicloud"
   runner_name:
-    description: 'Explicit GitHub runner name (defaults to ecs-runner-${runner_label})'
+    description: "Explicit GitHub runner name (defaults to ecs-runner-${runner_label})"
     required: false
   runner_version:
-    description: 'GitHub runner version to install'
+    description: "GitHub runner version to install"
     required: false
-    default: '2.316.0'
+    default: "2.316.0"
   runner_user:
-    description: 'Linux user that owns the runner process'
+    description: "Linux user that owns the runner process"
     required: false
-    default: 'github'
+    default: "github"
   runner_workdir:
-    description: 'Runner work directory path'
+    description: "Runner work directory path"
     required: false
-    default: '/opt/actions-runner/_work'
+    default: "/opt/actions-runner/_work"
   runner_ephemeral:
-    description: 'Whether the runner is ephemeral (true/false)'
+    description: "Whether the runner is ephemeral (true/false)"
     required: false
-    default: 'true'
+    default: "true"
 
 outputs:
   runner-label:
-    description: 'Label assigned to the runner so that other jobs can target it'
+    description: "Label assigned to the runner so that other jobs can target it"
     value: ${{ steps.metadata.outputs.label }}
   runner-name:
-    description: 'GitHub runner name'
+    description: "GitHub runner name"
     value: ${{ steps.metadata.outputs.name }}
   instance-id:
-    description: 'ECS instance ID'
+    description: "ECS instance ID"
     value: ${{ steps.tf_outputs.outputs.instance_id }}
   public-ip:
-    description: 'ECS public IP'
+    description: "ECS public IP"
     value: ${{ steps.tf_outputs.outputs.public_ip }}
   private-ip:
-    description: 'ECS private IP'
+    description: "ECS private IP"
     value: ${{ steps.tf_outputs.outputs.private_ip }}
 
 runs:

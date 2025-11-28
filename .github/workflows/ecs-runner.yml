@@ -10,7 +10,7 @@ env:
   ECS_VSWITCH_ID: vsw-j6cxoruwpjx23479pcwj8 # 替换为香港地域的 VSwitch ID
   ECS_AVAILABILITY_ZONE: cn-hongkong-c # 替换为实际可用区
   ECS_SECURITY_GROUP_ID: sg-j6cdwrlcl9xbzksin9of # 替换为安全组 ID
-  ECS_IMAGE_ID: ubuntu_22_04_x64_20G_alibase_20240101.vhd # 替换为需要的镜像 ID
+  ECS_IMAGE_ID: ubuntu_24_04_x64_20G_alibase_20251102.vhd # 替换为需要的镜像 ID
   ECS_RUNNER_LABEL_PREFIX: ecs
   ECS_RUNNER_ADDITIONAL_LABELS: ecs,alicloud,hk # 可按需调整
   ECS_INSTANCE_TYPE: ecs.c7a.large # 如需不同规格请修改
