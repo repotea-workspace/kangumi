@@ -71,17 +71,58 @@ jobs:
 
 
   manual-instructions:
-    name: Share SSH details (connect manually from nonstd mode)
+    name: Run commands via SSH
     needs: provision-runner
     runs-on: ubuntu-latest
     steps:
       - name: Print connection info
         run: |
-          echo "::notice::ECS ready in nonstd mode."
+          echo "::notice::ECS ready."
           echo "::notice::Public IP: ${{ needs.provision-runner.outputs.public-ip }}"
           echo "::notice::Username: root"
-          echo "::notice::Password: ${{ needs.provision-runner.outputs.instance-password }}"
-          echo "请使用上方 IP/密码 通过 SSH 或远程桌面运行你的脚本。执行完成后记得触发 destroy job。"
+
+      - name: Wait for SSH to be ready
+        run: |
+          for i in {1..30}; do
+            if nc -z -w5 ${{ needs.provision-runner.outputs.public-ip }} 22; then
+              echo "SSH is ready"
+              exit 0
+            fi
+            echo "Waiting for SSH... attempt $i"
+            sleep 10
+          done
+          echo "SSH not ready after 5 minutes"
+          exit 1
+
+      - name: Execute remote commands via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ needs.provision-runner.outputs.public-ip }}
+          username: root
+          password: ${{ needs.provision-runner.outputs.instance-password }}
+          script: |
+            set -ex
+            echo "=== System Info ==="
+            uname -a
+            cat /etc/os-release
+
+            echo "=== CPU Info ==="
+            lscpu | head -20
+
+            echo "=== Memory Info ==="
+            free -h
+
+            echo "=== Disk Info ==="
+            df -h
+
+            echo "=== Network Info ==="
+            ip addr show
+
+            echo "=== Install some packages ==="
+            apt-get update -qq
+            apt-get install -y -qq curl wget git
+
+            echo "=== Done ==="
 
 
   destroy-runner:
