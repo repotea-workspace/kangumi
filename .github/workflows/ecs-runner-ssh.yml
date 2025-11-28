@@ -37,7 +37,7 @@ jobs:
           echo "password=$pw" >> "$GITHUB_OUTPUT"
 
   provision-runner:
-    name: Provision ECS runner (Hong Kong)
+    name: Provision ECS runner
     needs: prepare-password
     runs-on: ubuntu-latest
     outputs:
@@ -53,9 +53,6 @@ jobs:
           mode: start
           register_runner: "false"
           expose_instance_password: "true"
-          github_owner: ${{ github.repository_owner }}
-          github_repository: ${{ github.event.repository.name }}
-          github_pat: ${{ env.GH_RUNNER_PAT }}
           ali_access_key: ${{ env.ALI_ACCESS_KEY }}
           ali_secret_key: ${{ env.ALI_SECRET_KEY }}
           ali_region: ${{ env.ECS_REGION }}
@@ -63,9 +60,6 @@ jobs:
           availability_zone: ${{ env.ECS_AVAILABILITY_ZONE }}
           security_group_id: ${{ env.ECS_SECURITY_GROUP_ID }}
           image_id: ${{ env.ECS_IMAGE_ID }}
-          runner_label: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
-          runner_additional_labels: ${{ env.ECS_RUNNER_ADDITIONAL_LABELS }}
-          runner_name: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
           ali_ecs_name: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
           ali_ecs_instance_type: ${{ env.ECS_INSTANCE_TYPE }}
           host_name: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -104,8 +98,6 @@ jobs:
         with:
           mode: destroy
           register_runner: "false"
-          github_owner: ${{ github.repository_owner }}
-          github_repository: ${{ github.event.repository.name }}
           ali_access_key: ${{ env.ALI_ACCESS_KEY }}
           ali_secret_key: ${{ env.ALI_SECRET_KEY }}
           ali_region: ${{ env.ECS_REGION }}

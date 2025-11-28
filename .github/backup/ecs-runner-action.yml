@@ -37,7 +37,7 @@ jobs:
           echo "password=$pw" >> "$GITHUB_OUTPUT"
 
   provision-runner:
-    name: Provision ECS runner (Hong Kong)
+    name: Provision ECS runner
     needs: prepare-password
     runs-on: ubuntu-latest
     outputs:
