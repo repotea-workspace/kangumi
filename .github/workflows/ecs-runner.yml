@@ -27,51 +27,34 @@ jobs:
     name: Generate ECS instance password
     runs-on: ubuntu-latest
     outputs:
-      instance-password: ${{ steps.password.outputs.password }}
+      instance-password: ${{ steps.generate.outputs.password }}
     steps:
-      - name: Run Unicode Generator
-        id: unicode
-        uses: konjoinfinity/random-unicode-text-generator@v1.0.0
-        with:
-          numOfChars: "128"
-          startRange: "0"
-          endRange: "0x10FFFF"
-      - name: Normalize password for ECS policy
-        id: password
-        shell: bash
+      - id: generate
         run: |
-          set -euo pipefail
-          raw='${{ steps.unicode.outputs.output }}'
-          allowed_class=']A-Za-z0-9()~!@#$%^&*_+=|:：<>?？/_-'
-          sanitized=$(printf '%s' "$raw" | tr -dc "$allowed_class")
-          sanitized=${sanitized:0:30}
+          # Character sets per Alibaba Cloud ECS password requirements
+          LOWER="abcdefghijklmnopqrstuvwxyz"
+          UPPER="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+          DIGITS="0123456789"
+          SPECIAL='()~!@#$%^&*-_+=|<>?/'
+          ALL="${LOWER}${UPPER}${DIGITS}${SPECIAL}"
 
-          is_valid() {
-            local candidate=$1
-            local lower=$(printf '%s' "$candidate" | tr '[:upper:]' '[:lower:]')
-            [[ ${#candidate} -ge 8 && ${#candidate} -le 30 ]] || return 1
-            [[ $candidate =~ [a-z] ]] || return 1
-            [[ $candidate =~ [A-Z] ]] || return 1
-            [[ $candidate =~ [0-9] ]] || return 1
-            [[ $candidate =~ [()~!@#$%^&*\-_+=|:：<>?？/\]] ]] || return 1
-            [[ $lower != "p@ssword" ]] || return 1
-            return 0
-          }
+          # Ensure at least one character from each required category
+          pw=""
+          pw+="${LOWER:RANDOM%${#LOWER}:1}"
+          pw+="${UPPER:RANDOM%${#UPPER}:1}"
+          pw+="${DIGITS:RANDOM%${#DIGITS}:1}"
+          pw+="${SPECIAL:RANDOM%${#SPECIAL}:1}"
 
-          password=""
-          if is_valid "$sanitized"; then
-            password=$sanitized
-          fi
-
-          while [ -z "$password" ]; do
-            candidate=$(LC_ALL=C tr -dc "$allowed_class" </dev/urandom | head -c 16)
-            if is_valid "$candidate"; then
-              password=$candidate
-            fi
+          # Fill remaining 20 characters (total 24)
+          for i in {1..20}; do
+            pw+="${ALL:RANDOM%${#ALL}:1}"
           done
 
-          echo "::add-mask::$password"
-          echo "password=$password" >> "$GITHUB_OUTPUT"
+          # Shuffle the password
+          pw=$(echo "$pw" | fold -w1 | shuf | tr -d '\n')
+
+          echo "::add-mask::$pw"
+          echo "password=$pw" >> "$GITHUB_OUTPUT"
 
   provision-runner:
     name: Provision ECS runner (Hong Kong)
