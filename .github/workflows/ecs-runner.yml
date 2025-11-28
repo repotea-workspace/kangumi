@@ -84,6 +84,7 @@ jobs:
           uname -a
           echo "Running on $HOSTNAME (instance ${{ needs.provision-runner.outputs.instance-id }})"
 
+
   destroy-runner:
     name: Destroy ECS runner
     needs:
