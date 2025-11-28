@@ -94,7 +94,7 @@ jobs:
             ip addr show
 
             echo "=== Docker Info ==="
-            docker version
+            sudo docker version
             sudo docker ps
 
             echo "=== Done ==="
