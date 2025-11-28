@@ -68,11 +68,6 @@ jobs:
           echo "::notice::Public IP: ${{ needs.provision-runner.outputs.public-ip }}"
           echo "::notice::Username: core"
 
-      - name: Wait for SSH using wait-for-port
-        uses: docker://ghcr.io/repotea-workspace/kangumi/wait-for-port:latest
-        with:
-          args: ${{ needs.provision-runner.outputs.public-ip }} 22 10
-
       - name: Execute remote commands via SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -100,7 +95,7 @@ jobs:
 
             echo "=== Docker Info ==="
             docker version
-            docker ps
+            sudo docker ps
 
             echo "=== Done ==="
 
