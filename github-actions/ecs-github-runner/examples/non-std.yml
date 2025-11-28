@@ -1,0 +1,84 @@
+name: ecs-runner-nonstd
+
+on:
+  workflow_dispatch:
+
+jobs:
+  prepare-password:
+    name: Generate password for ECS instance
+    runs-on: ubuntu-latest
+    outputs:
+      instance-password: ${{ steps.generate.outputs.password }}
+    steps:
+      - id: generate
+        shell: bash
+        run: |
+          pw=$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9()~!@#$%^&*-_+=|<>?/' | head -c20)
+          echo "password=$pw" >> "$GITHUB_OUTPUT"
+
+  provision:
+    name: Provision ECS server (no GitHub runner)
+    needs: prepare-password
+    runs-on: ubuntu-latest
+    outputs:
+      runner-name: ${{ steps.start.outputs.runner-name }}
+      public-ip: ${{ steps.start.outputs.public-ip }}
+      instance-password: ${{ steps.start.outputs.instance-password }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start ECS machine (nonstd mode)
+        id: start
+        uses: kangumi/github-actions/ecs-github-runner@main
+        with:
+          mode: start
+          register_runner: "false"
+          expose_instance_password: "true"
+          github_owner: ${{ github.repository_owner }}
+          github_repository: ${{ github.event.repository.name }}
+          ali_access_key: ${{ secrets.ALI_ACCESS_KEY }}
+          ali_secret_key: ${{ secrets.ALI_SECRET_KEY }}
+          ali_region: ${{ secrets.ALI_REGION }}
+          vswitch_id: ${{ vars.ALI_VSWITCH_ID }}
+          availability_zone: ${{ vars.ALI_AVAILABILITY_ZONE }}
+          security_group_id: ${{ vars.ALI_SECURITY_GROUP_ID }}
+          image_id: ${{ vars.ALI_IMAGE_ID }}
+          runner_label: ecs-nonstd-${{ github.run_id }}-${{ github.run_attempt }}
+          runner_name: ecs-nonstd-${{ github.run_id }}-${{ github.run_attempt }}
+          instance_password: ${{ needs.prepare-password.outputs.instance-password }}
+
+  manual-instructions:
+    name: Share SSH details (connect manually from nonstd mode)
+    needs: provision
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print connection info
+        run: |
+          echo "::notice::ECS ready in nonstd region."
+          echo "::notice::Public IP: ${{ needs.provision.outputs.public-ip }}"
+          echo "::notice::Username: root"
+          echo "::notice::Password: ${{ needs.provision.outputs.instance-password }}"
+          echo "请使用上方 IP/密码 通过 SSH 或远程桌面运行你的脚本。执行完成后记得触发 destroy job。"
+
+  destroy:
+    name: Destroy ECS server (nonstd mode)
+    needs:
+      - provision
+      - manual-instructions
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Destroy ECS GitHub runner
+        uses: kangumi/github-actions/ecs-github-runner@main
+        with:
+          mode: destroy
+          register_runner: "false"
+          github_owner: ${{ github.repository_owner }}
+          github_repository: ${{ github.event.repository.name }}
+          ali_access_key: ${{ secrets.ALI_ACCESS_KEY }}
+          ali_secret_key: ${{ secrets.ALI_SECRET_KEY }}
+          ali_region: ${{ secrets.ALI_REGION }}
+          vswitch_id: ${{ vars.ALI_VSWITCH_ID }}
+          availability_zone: ${{ vars.ALI_AVAILABILITY_ZONE }}
+          security_group_id: ${{ vars.ALI_SECURITY_GROUP_ID }}
+          image_id: ${{ vars.ALI_IMAGE_ID }}

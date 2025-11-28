@@ -1,0 +1,426 @@
+name: "Aliyun ECS GitHub Runner"
+description: "Provision ephemeral GitHub Actions runners on Alibaba Cloud ECS by driving the bundled Terraform project."
+
+inputs:
+  mode:
+    description: "start (default) provisions the runner, destroy tears it down"
+    required: false
+    default: start
+  terraform_version:
+    description: "Terraform CLI version to use"
+    required: false
+    default: "1.14.0"
+  state_artifact_name:
+    description: "Artifact name that stores terraform.tfstate between jobs"
+    required: false
+    default: "ecs-github-runner-tfstate"
+
+  ali_access_key:
+    description: "Alibaba Cloud Access Key ID"
+    required: true
+  ali_secret_key:
+    description: "Alibaba Cloud Access Key Secret"
+    required: true
+  ali_region:
+    description: "Alibaba Cloud region ID (e.g. cn-shenzhen)"
+    required: true
+
+  vswitch_id:
+    description: "Existing VSwitch ID that the runner should attach to"
+    required: true
+  availability_zone:
+    description: "Availability zone for the ECS instance"
+    required: true
+  security_group_id:
+    description: "Security group ID for the ECS instance"
+    required: true
+  image_id:
+    description: "Image ID for the ECS instance"
+    required: true
+
+  instance_charge_type:
+    description: "ECS charge type (PostPaid or PrePaid)"
+    required: false
+    default: "PostPaid"
+  ali_ecs_instance_type:
+    description: "ECS instance type (e.g. ecs.c7a.large)"
+    required: false
+  ali_ecs_name:
+    description: "ECS instance name template"
+    required: false
+  host_name:
+    description: "Hostname inside the OS"
+    required: false
+  system_disk_size:
+    description: "System disk size in GB"
+    required: false
+    default: "100"
+  system_disk_category:
+    description: "System disk category (cloud_efficiency/cloud_ssd/cloud_essd)"
+    required: false
+    default: "cloud_essd"
+  system_disk_performance_level:
+    description: "ESSD performance tier (PL0/PL1/PL2/PL3)"
+    required: false
+    default: "PL0"
+  system_disk_name:
+    description: "System disk name"
+    required: false
+    default: "egr-system"
+  internet_charge_type:
+    description: "PayByTraffic or PayByBandwidth"
+    required: false
+    default: "PayByTraffic"
+  internet_max_bandwidth_out:
+    description: "Public bandwidth cap in Mbps"
+    required: false
+    default: "100"
+  spot_strategy:
+    description: "Spot strategy (NoSpot/SpotWithPriceLimit/SpotAsPriceGo)"
+    required: false
+    default: "NoSpot"
+  spot_duration:
+    description: "Spot protection duration in hours"
+    required: false
+    default: "1"
+  security_enhancement_strategy:
+    description: "Security enhancement strategy (Active/Deactive)"
+    required: false
+    default: "Active"
+  http_tokens:
+    description: "IMDS requirement (required/optional)"
+    required: false
+    default: "optional"
+  auto_release_time:
+    description: "Auto release time in RFC3339, optional"
+    required: false
+  key_pair_name:
+    description: "SSH key pair name"
+    required: false
+  instance_password:
+    description: "Instance password when no key pair is specified"
+    required: false
+
+  github_owner:
+    description: "GitHub organization or user name (required when register_runner=true)"
+    required: false
+  github_repository:
+    description: "Repository name (required when github_scope is repo)"
+    required: false
+  github_scope:
+    description: "Registration scope: repo or org"
+    required: false
+    default: repo
+  github_pat:
+    description: "Personal Access Token that can request runner registration tokens"
+    required: false
+  github_runner_token:
+    description: "Optional pre-generated runner registration token (bypasses PAT call)"
+    required: false
+  github_api_url:
+    description: "GitHub API root (useful for GHES)"
+    required: false
+    default: https://api.github.com
+
+  runner_label:
+    description: "Unique label used to target this runner (defaults to ecs-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT})"
+    required: false
+  runner_additional_labels:
+    description: "Comma separated static labels always added to the runner"
+    required: false
+    default: "ecs,alicloud"
+  runner_name:
+    description: "Explicit GitHub runner name (defaults to ecs-runner-${runner_label})"
+    required: false
+  runner_version:
+    description: "GitHub runner version to install"
+    required: false
+    default: "2.330.0"
+  runner_user:
+    description: "Linux user that owns the runner process"
+    required: false
+    default: "github"
+  runner_workdir:
+    description: "Runner work directory path"
+    required: false
+    default: "/opt/actions-runner/_work"
+  runner_ephemeral:
+    description: "Whether the runner is ephemeral (true/false)"
+    required: false
+    default: "true"
+  register_runner:
+    description: "Set to false to skip installing/registering the GitHub runner (machine only)"
+    required: false
+    default: "true"
+  expose_instance_password:
+    description: "Set to true to emit the instance password as an action output (use with caution)"
+    required: false
+    default: "false"
+
+outputs:
+  runner-label:
+    description: "Label assigned to the runner so that other jobs can target it"
+    value: ${{ steps.metadata.outputs.label }}
+  runner-name:
+    description: "GitHub runner name"
+    value: ${{ steps.metadata.outputs.name }}
+  instance-id:
+    description: "ECS instance ID"
+    value: ${{ steps.tf_outputs.outputs.instance_id }}
+  public-ip:
+    description: "ECS public IP"
+    value: ${{ steps.tf_outputs.outputs.public_ip }}
+  private-ip:
+    description: "ECS private IP"
+    value: ${{ steps.tf_outputs.outputs.private_ip }}
+  instance-password:
+    description: "Instance password (only when expose_instance_password=true)"
+    value: ${{ steps.instance_password_output.outputs.value }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve Terraform working directory
+      id: tf_path
+      shell: bash
+      run: |
+        set -euo pipefail
+        tf_dir=$(cd "${GITHUB_ACTION_PATH}/terraform" && pwd)
+        echo "TF_WORKDIR=$tf_dir" >> "$GITHUB_ENV"
+    - name: Ensure GitHub metadata is provided
+      shell: bash
+      env:
+        MODE: ${{ inputs.mode }}
+        OWNER: ${{ inputs.github_owner }}
+        SCOPE: ${{ inputs.github_scope }}
+        REPOSITORY: ${{ inputs.github_repository }}
+        PAT: ${{ inputs.github_pat }}
+        RUNNER_TOKEN: ${{ inputs.github_runner_token }}
+        REGISTER: ${{ inputs.register_runner }}
+      run: |
+        set -euo pipefail
+        if [ "$REGISTER" = "true" ]; then
+          if [ -z "$OWNER" ]; then
+            echo "github_owner input is required when register_runner=true" >&2
+            exit 1
+          fi
+          if [ "$SCOPE" = "repo" ] && [ -z "$REPOSITORY" ]; then
+            echo "github_repository input is required when github_scope=repo and register_runner=true" >&2
+            exit 1
+          fi
+        fi
+        if [ "$MODE" = "start" ] && [ "$REGISTER" = "true" ] && [ -z "$RUNNER_TOKEN" ] && [ -z "$PAT" ]; then
+          echo "Provide either github_runner_token or github_pat to request one" >&2
+          exit 1
+        fi
+
+    - name: Prepare runner metadata
+      id: metadata
+      if: ${{ inputs.mode == 'start' }}
+      shell: bash
+      env:
+        INPUT_LABEL: ${{ inputs.runner_label }}
+        INPUT_NAME: ${{ inputs.runner_name }}
+        ADDITIONAL_LABELS: ${{ inputs.runner_additional_labels }}
+      run: |
+        set -euo pipefail
+        label="$INPUT_LABEL"
+        if [ -z "$label" ]; then
+          label="ecs-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+        fi
+        name="$INPUT_NAME"
+        if [ -z "$name" ]; then
+          name="ecs-runner-${label}"
+        fi
+        combined="$label"
+        if [ -n "$ADDITIONAL_LABELS" ]; then
+          combined="$ADDITIONAL_LABELS,$label"
+        fi
+        echo "Label: $label"
+        echo "Runner name: $name"
+        echo "Combined labels: $combined"
+        {
+          echo "label=$label"
+          echo "name=$name"
+          echo "labels=$combined"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Resolve runner registration token
+      id: runner_token
+      if: ${{ inputs.mode == 'start' && inputs.register_runner == 'true' }}
+      shell: bash
+      env:
+        DIRECT_TOKEN: ${{ inputs.github_runner_token }}
+        PAT: ${{ inputs.github_pat }}
+        OWNER: ${{ inputs.github_owner }}
+        REPOSITORY: ${{ inputs.github_repository }}
+        SCOPE: ${{ inputs.github_scope }}
+        API_URL: ${{ inputs.github_api_url }}
+      run: |
+        set -euo pipefail
+        if [ -n "$DIRECT_TOKEN" ]; then
+          echo "Using provided runner token"
+          echo "token=$DIRECT_TOKEN" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        endpoint="$API_URL"
+        if [ "$SCOPE" = "org" ]; then
+          endpoint="$endpoint/orgs/$OWNER/actions/runners/registration-token"
+        else
+          endpoint="$endpoint/repos/$OWNER/$REPOSITORY/actions/runners/registration-token"
+        fi
+        echo "Requesting runner token from $endpoint"
+        token=$(curl -fsSL -X POST \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer $PAT" \
+          "$endpoint" | jq -r '.token')
+        if [ -z "$token" ] || [ "$token" = "null" ]; then
+          echo "Failed to request runner registration token" >&2
+          exit 1
+        fi
+        echo "token=$token" >> "$GITHUB_OUTPUT"
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ inputs.terraform_version }}
+        # terraform_wrapper: false
+
+    - name: Download Terraform state artifact (destroy)
+      if: ${{ inputs.mode == 'destroy' }}
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.state_artifact_name }}
+        path: ${{ env.TF_WORKDIR }}
+
+    - name: Terraform init
+      shell: bash
+      working-directory: ${{ env.TF_WORKDIR }}
+      run: terraform init -input=false
+
+    - name: Terraform apply (start)
+      if: ${{ inputs.mode == 'start' }}
+      shell: bash
+      working-directory: ${{ env.TF_WORKDIR }}
+      env:
+        TF_VAR_ALI_ACCESS_KEY: ${{ inputs.ali_access_key }}
+        TF_VAR_ALI_SECRET_KEY: ${{ inputs.ali_secret_key }}
+        TF_VAR_ALI_REGION: ${{ inputs.ali_region }}
+        TF_VAR_VSWITCH_ID: ${{ inputs.vswitch_id }}
+        TF_VAR_AVAILABILITY_ZONE: ${{ inputs.availability_zone }}
+        TF_VAR_SECURITY_GROUP_ID: ${{ inputs.security_group_id }}
+        TF_VAR_IMAGE_ID: ${{ inputs.image_id }}
+        TF_VAR_INSTANCE_CHARGE_TYPE: ${{ inputs.instance_charge_type }}
+        TF_VAR_ALI_ECS_INSTANCE_TYPE: ${{ inputs.ali_ecs_instance_type }}
+        TF_VAR_ALI_ECS_NAME: ${{ inputs.ali_ecs_name }}
+        TF_VAR_HOST_NAME: ${{ inputs.host_name }}
+        TF_VAR_SYSTEM_DISK_SIZE: ${{ inputs.system_disk_size }}
+        TF_VAR_SYSTEM_DISK_CATEGORY: ${{ inputs.system_disk_category }}
+        TF_VAR_SYSTEM_DISK_PERFORMANCE_LEVEL: ${{ inputs.system_disk_performance_level }}
+        TF_VAR_SYSTEM_DISK_NAME: ${{ inputs.system_disk_name }}
+        TF_VAR_INTERNET_CHARGE_TYPE: ${{ inputs.internet_charge_type }}
+        TF_VAR_INTERNET_MAX_BANDWIDTH_OUT: ${{ inputs.internet_max_bandwidth_out }}
+        TF_VAR_SPOT_STRATEGY: ${{ inputs.spot_strategy }}
+        TF_VAR_SPOT_DURATION: ${{ inputs.spot_duration }}
+        TF_VAR_SECURITY_ENHANCEMENT_STRATEGY: ${{ inputs.security_enhancement_strategy }}
+        TF_VAR_HTTP_TOKENS: ${{ inputs.http_tokens }}
+        TF_VAR_AUTO_RELEASE_TIME: ${{ inputs.auto_release_time }}
+        TF_VAR_KEY_PAIR_NAME: ${{ inputs.key_pair_name }}
+        TF_VAR_INSTANCE_PASSWORD: ${{ inputs.instance_password }}
+        TF_VAR_GITHUB_OWNER: ${{ inputs.github_owner }}
+        TF_VAR_GITHUB_REPOSITORY: ${{ inputs.github_repository }}
+        TF_VAR_GITHUB_SCOPE: ${{ inputs.github_scope }}
+        TF_VAR_GITHUB_RUNNER_TOKEN: ${{ steps.runner_token.outputs.token }}
+        TF_VAR_GITHUB_RUNNER_LABELS: ${{ steps.metadata.outputs.labels }}
+        TF_VAR_RUNNER_NAME: ${{ steps.metadata.outputs.name }}
+        TF_VAR_RUNNER_VERSION: ${{ inputs.runner_version }}
+        TF_VAR_RUNNER_USER: ${{ inputs.runner_user }}
+        TF_VAR_RUNNER_WORKDIR: ${{ inputs.runner_workdir }}
+        TF_VAR_RUNNER_EPHEMERAL: ${{ inputs.runner_ephemeral }}
+        TF_VAR_REGISTER_RUNNER: ${{ inputs.register_runner }}
+        TF_VAR_RUNNER_ENABLED: "true"
+      run: terraform apply -auto-approve -input=false
+
+    - name: Terraform apply (destroy)
+      if: ${{ inputs.mode == 'destroy' }}
+      shell: bash
+      working-directory: ${{ env.TF_WORKDIR }}
+      env:
+        TF_VAR_ALI_ACCESS_KEY: ${{ inputs.ali_access_key }}
+        TF_VAR_ALI_SECRET_KEY: ${{ inputs.ali_secret_key }}
+        TF_VAR_ALI_REGION: ${{ inputs.ali_region }}
+        TF_VAR_VSWITCH_ID: ${{ inputs.vswitch_id }}
+        TF_VAR_AVAILABILITY_ZONE: ${{ inputs.availability_zone }}
+        TF_VAR_SECURITY_GROUP_ID: ${{ inputs.security_group_id }}
+        TF_VAR_IMAGE_ID: ${{ inputs.image_id }}
+        TF_VAR_INSTANCE_CHARGE_TYPE: ${{ inputs.instance_charge_type }}
+        TF_VAR_ALI_ECS_INSTANCE_TYPE: ${{ inputs.ali_ecs_instance_type }}
+        TF_VAR_ALI_ECS_NAME: ${{ inputs.ali_ecs_name }}
+        TF_VAR_HOST_NAME: ${{ inputs.host_name }}
+        TF_VAR_SYSTEM_DISK_SIZE: ${{ inputs.system_disk_size }}
+        TF_VAR_SYSTEM_DISK_CATEGORY: ${{ inputs.system_disk_category }}
+        TF_VAR_SYSTEM_DISK_PERFORMANCE_LEVEL: ${{ inputs.system_disk_performance_level }}
+        TF_VAR_SYSTEM_DISK_NAME: ${{ inputs.system_disk_name }}
+        TF_VAR_INTERNET_CHARGE_TYPE: ${{ inputs.internet_charge_type }}
+        TF_VAR_INTERNET_MAX_BANDWIDTH_OUT: ${{ inputs.internet_max_bandwidth_out }}
+        TF_VAR_SPOT_STRATEGY: ${{ inputs.spot_strategy }}
+        TF_VAR_SPOT_DURATION: ${{ inputs.spot_duration }}
+        TF_VAR_SECURITY_ENHANCEMENT_STRATEGY: ${{ inputs.security_enhancement_strategy }}
+        TF_VAR_HTTP_TOKENS: ${{ inputs.http_tokens }}
+        TF_VAR_AUTO_RELEASE_TIME: ${{ inputs.auto_release_time }}
+        TF_VAR_KEY_PAIR_NAME: ${{ inputs.key_pair_name }}
+        TF_VAR_INSTANCE_PASSWORD: ${{ inputs.instance_password }}
+        TF_VAR_GITHUB_OWNER: ${{ inputs.github_owner }}
+        TF_VAR_GITHUB_REPOSITORY: ${{ inputs.github_repository }}
+        TF_VAR_GITHUB_SCOPE: ${{ inputs.github_scope }}
+        TF_VAR_RUNNER_VERSION: ${{ inputs.runner_version }}
+        TF_VAR_RUNNER_USER: ${{ inputs.runner_user }}
+        TF_VAR_RUNNER_WORKDIR: ${{ inputs.runner_workdir }}
+        TF_VAR_RUNNER_EPHEMERAL: ${{ inputs.runner_ephemeral }}
+        TF_VAR_REGISTER_RUNNER: ${{ inputs.register_runner }}
+        TF_VAR_RUNNER_ENABLED: "false"
+      run: terraform apply -auto-approve -input=false -var "RUNNER_ENABLED=false"
+
+    - name: Capture Terraform outputs
+      if: ${{ inputs.mode == 'start' }}
+      id: tf_outputs
+      shell: bash
+      working-directory: ${{ env.TF_WORKDIR }}
+      run: |
+        set -euo pipefail
+        terraform output -json > tf-output.json
+        instance_id=$(jq -r '.instance_id.value // ""' tf-output.json)
+        public_ip=$(jq -r '.public_ip.value // ""' tf-output.json)
+        private_ip=$(jq -r '.private_ip.value // ""' tf-output.json)
+        {
+          echo "instance_id=$instance_id"
+          echo "public_ip=$public_ip"
+          echo "private_ip=$private_ip"
+        } >> "$GITHUB_OUTPUT"
+    - name: Expose instance password output
+      if: ${{ inputs.mode == 'start' && inputs.expose_instance_password == 'true' }}
+      id: instance_password_output
+      shell: bash
+      env:
+        INPUT_PASSWORD: ${{ inputs.instance_password }}
+      run: |
+        set -euo pipefail
+        echo "value=$INPUT_PASSWORD" >> "$GITHUB_OUTPUT"
+
+    - name: Upload Terraform state artifact
+      if: ${{ inputs.mode == 'start' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.state_artifact_name }}
+        path: |
+          ${{ env.TF_WORKDIR }}/terraform.tfstate
+          ${{ env.TF_WORKDIR }}/terraform.tfstate.backup
+        if-no-files-found: ignore
+
+    - name: Cleanup Terraform state after destroy
+      if: ${{ inputs.mode == 'destroy' }}
+      shell: bash
+      working-directory: ${{ env.TF_WORKDIR }}
+      run: |
+        set -euo pipefail
+        rm -f terraform.tfstate terraform.tfstate.backup

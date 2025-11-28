@@ -1,0 +1,153 @@
+name: ECS Runner via Actions
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  ECS_REGION: cn-hongkong
+  ECS_VSWITCH_ID: vsw-j6cxoruwpjx23479pcwj8 # replace VSwitch ID
+  ECS_AVAILABILITY_ZONE: cn-hongkong-b # replace with actual availability zone
+  ECS_SECURITY_GROUP_ID: sg-j6cdwrlcl9xbzksin9of # replace with security group ID
+  ECS_IMAGE_ID: ubuntu_24_04_x64_20G_alibase_20251102.vhd # replace with desired image ID
+  ECS_RUNNER_ADDITIONAL_LABELS: ecs,alicloud,hk # adjust as needed
+  ECS_INSTANCE_TYPE: ecs.c7a.large # modify if different specs are needed
+  ECS_SYSTEM_DISK_SIZE: 60 # adjust system disk size as needed
+
+  ALI_ACCESS_KEY: ${{ secrets.ALI_ACCESS_KEY_AYN }}
+  ALI_SECRET_KEY: ${{ secrets.ALI_SECRET_KEY_AYN }}
+  # set PAT with workflow + admin:org self-hosted runner token creation permissions
+  GH_RUNNER_PAT: ${{ secrets.GT_0XFE10 }}
+
+  RUNNER_NAME_PREFIX: ecs-runner
+  # RUNNER_VERSION: 2.330.0
+
+jobs:
+  prepare-password:
+    name: Generate ECS instance password
+    runs-on: ubuntu-latest
+    outputs:
+      instance-password: ${{ steps.generate.outputs.password }}
+    steps:
+      - id: generate
+        name: Generate strong password
+        run: |
+          # Generate 24-char password with mixed case, digits, and allowed special chars
+          pw=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9()~!@#$%^&*-_+=|<>?/' | head -c24)
+          echo "password=$pw" >> "$GITHUB_OUTPUT"
+
+  provision-runner:
+    name: Provision ECS runner
+    needs: prepare-password
+    runs-on: ubuntu-latest
+    outputs:
+      runner-label: ${{ steps.start.outputs.runner-label }}
+      runner-name: ${{ steps.start.outputs.runner-name }}
+      instance-id: ${{ steps.start.outputs.instance-id }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Start Aliyun ECS GitHub runner
+        id: start
+        uses: ./github-actions/ecs-github-runner
+        with:
+          mode: start
+          github_owner: ${{ github.repository_owner }}
+          github_repository: ${{ github.event.repository.name }}
+          github_pat: ${{ env.GH_RUNNER_PAT }}
+          ali_access_key: ${{ env.ALI_ACCESS_KEY }}
+          ali_secret_key: ${{ env.ALI_SECRET_KEY }}
+          ali_region: ${{ env.ECS_REGION }}
+          vswitch_id: ${{ env.ECS_VSWITCH_ID }}
+          availability_zone: ${{ env.ECS_AVAILABILITY_ZONE }}
+          security_group_id: ${{ env.ECS_SECURITY_GROUP_ID }}
+          image_id: ${{ env.ECS_IMAGE_ID }}
+          runner_label: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
+          runner_additional_labels: ${{ env.ECS_RUNNER_ADDITIONAL_LABELS }}
+          runner_name: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
+          ali_ecs_name: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
+          ali_ecs_instance_type: ${{ env.ECS_INSTANCE_TYPE }}
+          host_name: ${{ env.RUNNER_NAME_PREFIX }}-${{ github.run_id }}-${{ github.run_attempt }}
+          system_disk_size: ${{ env.ECS_SYSTEM_DISK_SIZE }}
+          # key_pair_name: "" # 使用密码登录时保持为空
+          instance_password: ${{ needs.prepare-password.outputs.instance-password }}
+          runner_ephemeral: "false"
+          # runner_version: ${{ env.RUNNER_VERSION }}
+
+  run-on-ecs:
+    name: Run tests on ECS runner
+    needs:
+      - provision-runner
+    runs-on:
+      - self-hosted
+      - ${{ needs.provision-runner.outputs.runner-label }}
+    steps:
+      - name: Show environment info
+        run: |
+          set -x
+          uname -a
+          echo "Running on $HOSTNAME (instance ${{ needs.provision-runner.outputs.instance-id }})"
+
+  test-anyhow:
+    name: Test anyhow crate on ECS runner
+    needs:
+      - provision-runner
+      # - run-on-ecs
+    runs-on:
+      - self-hosted
+      - ${{ needs.provision-runner.outputs.runner-label }}
+    steps:
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Checkout anyhow repository
+        uses: actions/checkout@v6
+        with:
+          repository: dtolnay/anyhow
+          ref: master
+          path: anyhow
+
+      - name: Cargo build
+        working-directory: anyhow
+        run: cargo build
+
+      - name: Cargo test
+        working-directory: anyhow
+        run: cargo test
+
+  destroy-runner:
+    name: Destroy ECS runner
+    needs:
+      - provision-runner
+      - run-on-ecs
+      - test-anyhow
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Destroy Aliyun ECS GitHub runner
+        uses: ./github-actions/ecs-github-runner
+        with:
+          mode: destroy
+          github_owner: ${{ github.repository_owner }}
+          github_repository: ${{ github.event.repository.name }}
+          ali_access_key: ${{ env.ALI_ACCESS_KEY }}
+          ali_secret_key: ${{ env.ALI_SECRET_KEY }}
+          ali_region: ${{ env.ECS_REGION }}
+          vswitch_id: ${{ env.ECS_VSWITCH_ID }}
+          availability_zone: ${{ env.ECS_AVAILABILITY_ZONE }}
+          security_group_id: ${{ env.ECS_SECURITY_GROUP_ID }}
+          image_id: ${{ env.ECS_IMAGE_ID }}
+
+      - name: Test
+        run: |
+          echo ${{ needs.provision-runner.outputs.runner-label }}
+          echo ${{ needs.provision-runner.outputs.runner-name }}
+          echo ${{ needs.provision-runner.outputs.instance-id }}
+
+      - name: Remove GitHub runner registration
+        uses: ./github-actions/remove-self-hosted-runner
+        with:
+          access_token: ${{ env.GH_RUNNER_PAT }}
+          github_owner: ${{ github.repository_owner }}
+          github_repository: ${{ github.event.repository.name }}
+          runner_name: ${{ needs.provision-runner.outputs.runner-name }}

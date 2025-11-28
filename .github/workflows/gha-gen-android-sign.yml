@@ -13,16 +13,16 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Install dependencies
-        run: cd gen-android-sign && npm i
+        run: cd github-actions/gen-android-sign && npm i
 
       - name: Run tests
-        run: cd gen-android-sign && npm run test
+        run: cd github-actions/gen-android-sign && npm run test
 
       - uses: pCYSl5EDgo/cat@1.0.0
         name: Cat for GitHub Actions
         id: get_key
         with:
-          path: __tests__/test_key_b64.txt
+          path: github-actions/gen-android-sign/__tests__/test_key_b64.txt
 
       - uses: ./github-actions/gen-android-sign
         name: Generate sign file

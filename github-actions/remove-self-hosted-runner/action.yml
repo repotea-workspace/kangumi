@@ -1,0 +1,48 @@
+name: "Remove self-hosted runner"
+description: "Delete a specific self-hosted runner registration from a GitHub repository."
+
+inputs:
+  access_token:
+    description: "GitHub token with admin runner permissions"
+    required: true
+  github_owner:
+    description: "Repository owner (org or user)"
+    required: true
+  github_repository:
+    description: "Repository name"
+    required: true
+  runner_name:
+    description: "Self-hosted runner name to delete"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Delete runner
+      shell: bash
+      env:
+        ACCESS_TOKEN: ${{ inputs.access_token }}
+        OWNER: ${{ inputs.github_owner }}
+        REPO: ${{ inputs.github_repository }}
+        TARGET_RUNNER_NAME: ${{ inputs.runner_name }}
+      run: |
+        set -euo pipefail
+        if [ -z "$ACCESS_TOKEN" ]; then
+          echo "access_token was not provided; skipping runner removal."
+          exit 0
+        fi
+
+        endpoint="https://api.github.com/repos/$OWNER/$REPO/actions/runners?per_page=100"
+        runner_id=$(curl -fsSL -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer $ACCESS_TOKEN" "$endpoint" \
+          | jq -r --arg NAME "$TARGET_RUNNER_NAME" '.runners[] | select(.name == $NAME) | .id' | head -n 1)
+
+        if [ -z "$runner_id" ]; then
+          echo "Runner $TARGET_RUNNER_NAME not found; nothing to delete."
+          exit 0
+        fi
+
+        echo "Deleting runner $TARGET_RUNNER_NAME (id=$runner_id)"
+        curl -fsSL -X DELETE -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer $ACCESS_TOKEN" \
+          "https://api.github.com/repos/$OWNER/$REPO/actions/runners/$runner_id" >/dev/null

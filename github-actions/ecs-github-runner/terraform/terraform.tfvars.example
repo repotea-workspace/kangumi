@@ -1,0 +1,86 @@
+# ===== 必填项：网络资源（避免权限问题）=====
+# 这些ID必须手动指定，避免Terraform查询权限问题
+
+# VPC ID - 请替换为你的实际VPC ID
+VPC_ID = "vpc-xxxxxxxxx"
+
+# VSwitch ID - Java代码中的值
+VSWITCH_ID = "vsw-xxxxxxxxx"
+
+# 可用区 - Java代码中的值
+AVAILABILITY_ZONE = "cn-shenzhen-e"
+
+# 安全组ID - Java代码中的值
+SECURITY_GROUP_ID = "sg-xxxxxxxxx"
+
+# 镜像ID - Java代码中的Ubuntu 24.04
+IMAGE_ID = "ubuntu_24_04_x64_20G_alibase_20251102.vhd"
+
+# ===== 高级配置（匹配Java代码配置）=====
+
+# 实例计费类型 - Java代码中为按量付费
+INSTANCE_CHARGE_TYPE = "PostPaid"
+
+# 系统盘配置 - 匹配Java代码中的cloud_essd配置
+SYSTEM_DISK_SIZE = 40
+SYSTEM_DISK_CATEGORY = "cloud_essd"
+SYSTEM_DISK_PERFORMANCE_LEVEL = "PL0"
+SYSTEM_DISK_NAME = "egr-system"
+
+# 网络配置 - 匹配Java代码中的按流量计费配置
+INTERNET_CHARGE_TYPE = "PayByTraffic"
+INTERNET_MAX_BANDWIDTH_OUT = 100
+
+# 安全配置
+SECURITY_ENHANCEMENT_STRATEGY = "Active"
+
+# 计费模式选择 - 可随时切换
+# 按量付费模式（默认，匹配Java代码）
+SPOT_STRATEGY = "NoSpot"     # 不使用竞价实例
+
+# 竞价实例模式（可选，更便宜但可能被回收）
+# SPOT_STRATEGY = "SpotAsPriceGo"  # 跟随市场价格
+# SPOT_DURATION = 1                # 保留时间（1-6小时）
+
+# 元数据配置
+HTTP_TOKENS = "optional"
+
+# 自动释放时间 - Java代码中的值（UTC时间，RFC3339格式）
+AUTO_RELEASE_TIME = "2025-11-16T18:48:30Z"
+
+# 实例名称 - Java代码中的最新值
+ALI_ECS_NAME = "egr-[0,6]"
+
+# 主机名 - Java代码中的值
+HOST_NAME = "egr-[0,6]"
+
+# ===== GitHub Runner 配置 =====
+# RUNNER_ENABLED 控制是否创建runner。设置为 false 并重新 terraform apply 即可释放机器
+RUNNER_ENABLED = true
+
+# 可选：自定义 runner 名称/标签（默认继承实例名称和 ecs,alicloud 标签）
+# RUNNER_NAME = "ecs-runner"
+# GITHUB_RUNNER_LABELS = "ecs,alicloud"
+
+# GitHub 仓库信息
+GITHUB_OWNER       = "your-org-or-user"
+GITHUB_REPOSITORY  = "your-repo"
+GITHUB_SCOPE       = "repo" # 或 org
+
+# Runner 版本/工作目录/用户（通常保持默认即可）
+# RUNNER_VERSION = "2.316.0"
+# RUNNER_USER    = "github"
+# RUNNER_WORKDIR = "/opt/actions-runner/_work"
+# RUNNER_EPHEMERAL = true
+
+# ⚠️ GitHub 注册 token 不要写在文件里，使用环境变量提供：
+# export TF_VAR_GITHUB_RUNNER_TOKEN=xxxx
+
+# ===== 认证配置 =====
+# 认证方式 - 密钥对或密码二选一
+
+# 方式1：使用密钥对（推荐，需要先在阿里云创建密钥对）
+# KEY_PAIR_NAME = "your-key-pair-name"
+
+# 方式2：使用密码登录
+# INSTANCE_PASSWORD = "YourSecurePassword123!"

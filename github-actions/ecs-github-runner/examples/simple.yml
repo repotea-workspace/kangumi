@@ -1,0 +1,68 @@
+name: ecs-runner
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  provision-runner:
+    name: Provision ECS runner
+    runs-on: ubuntu-latest
+    outputs:
+      runner-label: ${{ steps.start.outputs.runner-label }}
+      runner-name: ${{ steps.start.outputs.runner-name }}
+      instance-id: ${{ steps.start.outputs.instance-id }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Start ECS GitHub runner
+        id: start
+        uses: kangumi/github-actions/ecs-github-runner@main
+        with:
+          mode: start
+          github_owner: ${{ github.repository_owner }}
+          github_repository: ${{ github.event.repository.name }}
+          github_pat: ${{ secrets.GH_RUNNER_PAT }}
+          ali_access_key: ${{ secrets.ALI_ACCESS_KEY }}
+          ali_secret_key: ${{ secrets.ALI_SECRET_KEY }}
+          ali_region: ${{ secrets.ALI_REGION }}
+          vswitch_id: ${{ vars.ALI_VSWITCH_ID }}
+          availability_zone: ${{ vars.ALI_AVAILABILITY_ZONE }}
+          security_group_id: ${{ vars.ALI_SECURITY_GROUP_ID }}
+          image_id: ${{ vars.ALI_IMAGE_ID }}
+          runner_label: ecs-runner-${{ github.run_id }}-${{ github.run_attempt }}
+          runner_name: ecs-runner-${{ github.run_id }}-${{ github.run_attempt }}
+          runner_ephemeral: "true" # convert to false if you need multiple jobs on the same runner
+
+  run-on-ecs:
+    name: Execute workload on ECS runner
+    needs: provision-runner
+    runs-on:
+      - self-hosted
+      - ${{ needs.provision-runner.outputs.runner-label }}
+    steps:
+      - run: echo "Running on $HOSTNAME with instance ${{ needs.provision-runner.outputs.instance-id }}"
+
+  destroy-runner:
+    name: Destroy ECS runner
+    needs:
+      - provision-runner
+      - run-on-ecs
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Destroy ECS GitHub runner
+        uses: kangumi/github-actions/ecs-github-runner@main
+        with:
+          mode: destroy
+          github_owner: ${{ github.repository_owner }}
+          github_repository: ${{ github.event.repository.name }}
+          ali_access_key: ${{ secrets.ALI_ACCESS_KEY }}
+          ali_secret_key: ${{ secrets.ALI_SECRET_KEY }}
+          ali_region: ${{ secrets.ALI_REGION }}
+          vswitch_id: ${{ vars.ALI_VSWITCH_ID }}
+          availability_zone: ${{ vars.ALI_AVAILABILITY_ZONE }}
+          security_group_id: ${{ vars.ALI_SECURITY_GROUP_ID }}
+          image_id: ${{ vars.ALI_IMAGE_ID }}
