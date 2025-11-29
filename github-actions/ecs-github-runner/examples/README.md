@@ -44,3 +44,5 @@ Both workflows finish by:
 2. Invoking `kangumi/github-actions/remove-self-hosted-runner` to delete the runner record from the repository.
 
 Ensure these steps remain even if you customize the workflows, otherwise lingering ECS instances or offline runners may accumulate.
+
+> Tip: 需要额外的初始化操作？可以在工作流里设置 `custom_user_data: |` 追加自己的 shell 脚本片段，它会在云主机启动时执行。
