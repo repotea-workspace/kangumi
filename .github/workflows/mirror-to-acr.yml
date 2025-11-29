@@ -35,6 +35,7 @@ jobs:
 
           # Registry credentials (JSON format)
           # Keys are registry hosts, values are {username, password} objects
+          # Note: For ACR, provide BOTH vpc and public address if you want pre-check to work
           registry_credentials: |
             {
               "ghcr.io": {
@@ -42,6 +43,10 @@ jobs:
                 "password": "${{ secrets.GITHUB_TOKEN }}"
               },
               "crpi-uhy920dintikwpn3-vpc.cn-shenzhen.personal.cr.aliyuncs.com": {
+                "username": "${{ secrets.CR_ALI_USERNAME_JOECHOW }}",
+                "password": "${{ secrets.CR_ALI_PASSWORD_JOECHOW }}"
+              },
+              "crpi-uhy920dintikwpn3.cn-shenzhen.personal.cr.aliyuncs.com": {
                 "username": "${{ secrets.CR_ALI_USERNAME_JOECHOW }}",
                 "password": "${{ secrets.CR_ALI_PASSWORD_JOECHOW }}"
               }

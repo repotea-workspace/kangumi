@@ -135,78 +135,22 @@ runs:
           fi
         }
 
-        # Function to convert ACR internal (VPC) address to public address
+        # Function to convert ACR internal (VPC) address to public address for image existence check
         # Internal: crpi-xxx-vpc.cn-shenzhen.personal.cr.aliyuncs.com -> Public: crpi-xxx.cn-shenzhen.personal.cr.aliyuncs.com
         # Internal: registry-vpc.cn-hongkong.aliyuncs.com -> Public: registry.cn-hongkong.aliyuncs.com
         convert_vpc_to_public() {
           local image="$1"
-          # Replace -vpc. with . in the registry host part
-          echo "$image" | sed 's/-vpc\.\([^/]*\.aliyuncs\.com\)/.\1/'
-        }
-
-        # Function to convert ACR public address to internal (VPC) address
-        # Public: crpi-xxx.cn-shenzhen.personal.cr.aliyuncs.com -> Internal: crpi-xxx-vpc.cn-shenzhen.personal.cr.aliyuncs.com
-        # Public: registry.cn-hongkong.aliyuncs.com -> Internal: registry-vpc.cn-hongkong.aliyuncs.com
-        convert_public_to_vpc() {
-          local registry="$1"
-          # Only convert if it's an aliyuncs.com registry and doesn't already have -vpc
-          if [[ "$registry" == *".aliyuncs.com" ]] && [[ "$registry" != *"-vpc."* ]]; then
-            # Insert -vpc before the first dot
-            echo "$registry" | sed 's/\.\([^.]*\.aliyuncs\.com\)/-vpc.\1/'
+          # Only convert if it's an aliyuncs.com image with -vpc
+          if [[ "$image" == *".aliyuncs.com"* ]] && [[ "$image" == *"-vpc."* ]]; then
+            echo "$image" | sed 's/-vpc\.\([^/]*\.aliyuncs\.com\)/.\1/'
           else
-            echo "$registry"
+            echo "$image"
           fi
         }
 
-        # Function to get registry host for login (handles both VPC and public)
-        get_registry_for_login() {
-          local registry="$1"
-          # For ACR, we can login with either VPC or public address
-          # Try to find credentials in this order:
-          # 1. Exact match
-          # 2. VPC variant (if input is public)
-          # 3. Public variant (if input is VPC)
-
-          local creds
-
-          # 1. Check exact match first
-          creds=$(echo "$REGISTRY_CREDENTIALS" | jq -r --arg reg "$registry" '.[$reg] // empty')
-          if [ -n "$creds" ]; then
-            echo "$registry"
-            return
-          fi
-
-          # 2. Try VPC variant (convert public to VPC)
-          local vpc_registry
-          vpc_registry=$(convert_public_to_vpc "$registry")
-          if [ "$vpc_registry" != "$registry" ]; then
-            creds=$(echo "$REGISTRY_CREDENTIALS" | jq -r --arg reg "$vpc_registry" '.[$reg] // empty')
-            if [ -n "$creds" ]; then
-              echo "$vpc_registry"
-              return
-            fi
-          fi
-
-          # 3. Try public variant (convert VPC to public)
-          local public_registry
-          public_registry=$(echo "$registry" | sed 's/-vpc\.\([^/]*\.aliyuncs\.com\)/.\1/')
-          if [ "$public_registry" != "$registry" ]; then
-            creds=$(echo "$REGISTRY_CREDENTIALS" | jq -r --arg reg "$public_registry" '.[$reg] // empty')
-            if [ -n "$creds" ]; then
-              echo "$public_registry"
-              return
-            fi
-          fi
-
-          # Return original if no credentials found
-          echo "$registry"
-        }
-
-        # Function to login to a registry
+        # Function to login to a registry (exact match only)
         login_to_registry() {
           local registry="$1"
-          local login_registry
-          login_registry=$(get_registry_for_login "$registry")
 
           # Skip if already logged in
           if [[ -n "${LOGGED_IN_REGISTRIES[$registry]:-}" ]]; then
@@ -214,18 +158,9 @@ runs:
             return 0
           fi
 
-          # Also check if we logged in via public/vpc variant
-          local public_registry
-          public_registry=$(echo "$registry" | sed 's/-vpc\.\([^/]*\.aliyuncs\.com\)/.\1/')
-          if [[ -n "${LOGGED_IN_REGISTRIES[$public_registry]:-}" ]]; then
-            echo "Already logged in to $registry (via $public_registry)"
-            LOGGED_IN_REGISTRIES[$registry]=1
-            return 0
-          fi
-
-          # Check if credentials exist for this registry
+          # Check if credentials exist for this registry (exact match)
           local creds
-          creds=$(echo "$REGISTRY_CREDENTIALS" | jq -r --arg reg "$login_registry" '.[$reg] // empty')
+          creds=$(echo "$REGISTRY_CREDENTIALS" | jq -r --arg reg "$registry" '.[$reg] // empty')
 
           if [ -n "$creds" ]; then
             local username password
@@ -233,15 +168,14 @@ runs:
             password=$(echo "$creds" | jq -r '.password')
 
             if [ -n "$username" ] && [ -n "$password" ] && [ "$username" != "null" ] && [ "$password" != "null" ]; then
-              echo "Logging in to registry: $login_registry"
-              if [ "$login_registry" = "docker.io" ]; then
+              echo "Logging in to registry: $registry"
+              if [ "$registry" = "docker.io" ]; then
                 echo "$password" | docker login -u "$username" --password-stdin
               else
-                echo "$password" | docker login "$login_registry" -u "$username" --password-stdin
+                echo "$password" | docker login "$registry" -u "$username" --password-stdin
               fi
               LOGGED_IN_REGISTRIES[$registry]=1
-              LOGGED_IN_REGISTRIES[$login_registry]=1
-              echo "Successfully logged in to $login_registry"
+              echo "Successfully logged in to $registry"
               return 0
             fi
           fi
