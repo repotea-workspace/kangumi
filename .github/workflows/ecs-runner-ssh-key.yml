@@ -55,7 +55,7 @@ jobs:
           key_pair_name: ${{ env.ECS_KEYPAIR_NAME }}
           # 抢占模式
           spot_strategy: ${{ env.ECS_SPOT_STRATEGY }}
-          post_ssh_wait_seconds: 120
+          post_ssh_wait_seconds: 121
           custom_user_data: |
             #更新包管理工具
             apt-get update
