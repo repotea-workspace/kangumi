@@ -78,13 +78,13 @@ jobs:
         run: |
           echo "::notice::ECS ready."
           echo "::notice::Public IP: ${{ needs.provision-runner.outputs.public-ip }}"
-          echo "::notice::Username: core"
+          echo "::notice::Username: root"
 
       - name: Execute remote commands via SSH
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ needs.provision-runner.outputs.public-ip }}
-          username: core
+          username: root
           key: ${{ secrets.SSH_KEYPAIR_ALI_GENERIC }}
           timeout: 60s
           script: |
