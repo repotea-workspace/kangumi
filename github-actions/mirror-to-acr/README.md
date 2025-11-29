@@ -184,11 +184,33 @@ jobs:
 | `ssh_private_key` | SSH private key (for key-based auth) | No | - |
 | `instance_password` | ECS instance password (for password auth) | No | - |
 | `post_ssh_wait_seconds` | Wait time after SSH ready | No | `30` |
+| `runner_name_prefix` | Prefix for ECS instance name | No | `mirror-acr` |
+| `job_id` | Unique job ID for matrix builds (avoids naming conflicts) | No | - |
 | `scp_timeout` | SCP timeout | No | `30m` |
 | `ssh_timeout` | SSH timeout | No | `30m` |
 | `ecs_auto_release_hours` | Hours until ECS auto-release (safety) | No | `1` |
 
 \* You must provide **one of**: `source_image` + `target_image`, `config_content`, or `config_file`
+
+### Matrix Builds
+
+When using matrix strategy to run multiple mirror jobs in parallel, you **must** provide a unique `job_id` to avoid naming conflicts:
+
+```yaml
+jobs:
+  mirror:
+    strategy:
+      matrix:
+        region: [sz, hk]
+    steps:
+      - uses: ./github-actions/mirror-to-acr
+        with:
+          job_id: ${{ matrix.region }}  # Required for matrix builds!
+          config_file: mirror-config-${{ matrix.region }}.yaml
+          # ... other inputs
+```
+
+Without `job_id`, parallel jobs will conflict on ECS instance names and Terraform state artifacts.
 
 ### Authentication Options
 

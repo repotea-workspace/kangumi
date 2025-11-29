@@ -90,6 +90,10 @@ inputs:
     description: "Prefix for ECS instance name"
     required: false
     default: "mirror-acr"
+  job_id:
+    description: "Unique job identifier for matrix builds (e.g. matrix.region). Used to avoid naming conflicts when running multiple jobs in parallel."
+    required: false
+    default: ""
   scp_timeout:
     description: "SCP transfer timeout"
     required: false
@@ -397,11 +401,27 @@ runs:
       shell: bash
       env:
         AUTO_RELEASE_HOURS: ${{ inputs.ecs_auto_release_hours }}
+        JOB_ID: ${{ inputs.job_id }}
+        RUNNER_NAME_PREFIX: ${{ inputs.runner_name_prefix }}
       run: |
         # Calculate auto release time: current time + N hours in RFC3339 format
         auto_release_time=$(date -u -d "+${AUTO_RELEASE_HOURS} hour" '+%Y-%m-%dT%H:%M:%SZ')
         echo "auto_release_time=$auto_release_time" >> "$GITHUB_OUTPUT"
         echo "ECS auto release time: $auto_release_time (${AUTO_RELEASE_HOURS}h from now)"
+
+        # Generate unique names for ECS and artifact (support matrix builds)
+        if [ -n "$JOB_ID" ]; then
+          unique_suffix="${{ github.run_id }}-${{ github.run_attempt }}-${JOB_ID}"
+        else
+          unique_suffix="${{ github.run_id }}-${{ github.run_attempt }}"
+        fi
+        ecs_name="${RUNNER_NAME_PREFIX}-${unique_suffix}"
+        artifact_name="mirror-acr-tfstate-${unique_suffix}"
+
+        echo "ecs_name=$ecs_name" >> "$GITHUB_OUTPUT"
+        echo "artifact_name=$artifact_name" >> "$GITHUB_OUTPUT"
+        echo "ECS name: $ecs_name"
+        echo "Artifact name: $artifact_name"
 
     # Step 3: Provision Aliyun ECS (skip if no images to mirror)
     - name: Provision Aliyun ECS
@@ -411,6 +431,7 @@ runs:
       with:
         mode: start
         register_runner: "false"
+        state_artifact_name: ${{ steps.auto_release.outputs.artifact_name }}
         ali_access_key: ${{ inputs.ali_access_key }}
         ali_secret_key: ${{ inputs.ali_secret_key }}
         ali_region: ${{ inputs.ali_region }}
@@ -418,9 +439,9 @@ runs:
         availability_zone: ${{ inputs.availability_zone }}
         security_group_id: ${{ inputs.security_group_id }}
         image_id: ${{ inputs.image_id }}
-        ali_ecs_name: ${{ inputs.runner_name_prefix }}-${{ github.run_id }}-${{ github.run_attempt }}
+        ali_ecs_name: ${{ steps.auto_release.outputs.ecs_name }}
         ali_ecs_instance_type: ${{ inputs.instance_type }}
-        host_name: ${{ inputs.runner_name_prefix }}-${{ github.run_id }}-${{ github.run_attempt }}
+        host_name: ${{ steps.auto_release.outputs.ecs_name }}
         system_disk_size: ${{ inputs.system_disk_size }}
         key_pair_name: ${{ inputs.key_pair_name }}
         instance_password: ${{ inputs.instance_password }}
@@ -615,6 +636,7 @@ runs:
       with:
         mode: destroy
         register_runner: "false"
+        state_artifact_name: ${{ steps.auto_release.outputs.artifact_name }}
         ali_access_key: ${{ inputs.ali_access_key }}
         ali_secret_key: ${{ inputs.ali_secret_key }}
         ali_region: ${{ inputs.ali_region }}
