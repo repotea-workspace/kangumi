@@ -456,3 +456,10 @@ runs:
       run: |
         set -euo pipefail
         rm -f terraform.tfstate terraform.tfstate.backup
+
+    - name: Delete Terraform state artifact
+      if: ${{ always() && inputs.mode == 'destroy' }}
+      uses: geekyeggo/delete-artifact@v5
+      with:
+        name: ${{ inputs.state_artifact_name }}
+        failOnError: false
