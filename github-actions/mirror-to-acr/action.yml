@@ -2,10 +2,28 @@ name: "Mirror Docker Images to Aliyun ACR"
 description: "Mirror Docker images to Alibaba Cloud Container Registry via ECS internal network"
 
 inputs:
-  # Config file path
+  # Image source options (use ONE of the following three methods):
+  # Method 1: Single image - provide source_image and target_image
+  # Method 2: Inline config - provide config_content (YAML string)
+  # Method 3: Config file - provide config_file path
+
+  # Method 1: Single image mirroring
+  source_image:
+    description: "Source image to mirror (e.g. ghcr.io/org/image:tag). Use with target_image."
+    required: false
+  target_image:
+    description: "Target image in ACR (e.g. registry-vpc.cn-shenzhen.aliyuncs.com/ns/image:tag). Use with source_image."
+    required: false
+
+  # Method 2: Inline config content
+  config_content:
+    description: "YAML config content as string. Alternative to config_file."
+    required: false
+
+  # Method 3: Config file path
   config_file:
     description: "Path to the YAML config file containing mirror definitions"
-    required: true
+    required: false
 
   # Registry credentials (JSON format)
   # Format: {"registry_host": {"username": "xxx", "password": "xxx"}, ...}
@@ -107,18 +125,42 @@ runs:
       id: pull
       shell: bash
       env:
+        SOURCE_IMAGE: ${{ inputs.source_image }}
+        TARGET_IMAGE: ${{ inputs.target_image }}
+        CONFIG_CONTENT: ${{ inputs.config_content }}
         CONFIG_FILE: ${{ inputs.config_file }}
         REGISTRY_CREDENTIALS: ${{ inputs.registry_credentials }}
       run: |
         set -euo pipefail
 
-        if [ ! -f "$CONFIG_FILE" ]; then
-          echo "::error::Config file not found: $CONFIG_FILE"
+        # Determine config source and create effective config file
+        EFFECTIVE_CONFIG="${GITHUB_WORKSPACE}/.mirror-config-effective.yaml"
+
+        if [ -n "$SOURCE_IMAGE" ] && [ -n "$TARGET_IMAGE" ]; then
+          # Method 1: Single image mode
+          echo "=== Using single image mode ==="
+          echo "Source: $SOURCE_IMAGE"
+          echo "Target: $TARGET_IMAGE"
+          cat > "$EFFECTIVE_CONFIG" <<EOF
+          mirror:
+            - source: "$SOURCE_IMAGE"
+              target: "$TARGET_IMAGE"
+          EOF
+        elif [ -n "$CONFIG_CONTENT" ]; then
+          # Method 2: Inline config content
+          echo "=== Using inline config content ==="
+          echo "$CONFIG_CONTENT" > "$EFFECTIVE_CONFIG"
+        elif [ -n "$CONFIG_FILE" ] && [ -f "$CONFIG_FILE" ]; then
+          # Method 3: Config file
+          echo "=== Using config file: $CONFIG_FILE ==="
+          cp "$CONFIG_FILE" "$EFFECTIVE_CONFIG"
+        else
+          echo "::error::No valid config provided. Use one of: (1) source_image + target_image, (2) config_content, (3) config_file"
           exit 1
         fi
 
-        echo "=== Parsing config file: $CONFIG_FILE ==="
-        cat "$CONFIG_FILE"
+        echo "=== Effective config ==="
+        cat "$EFFECTIVE_CONFIG"
 
         # Create temp directory for tar files
         IMAGES_DIR="${GITHUB_WORKSPACE}/.mirror-images"
@@ -197,12 +239,12 @@ runs:
         TAR_FILES=()
         TARGET_REGISTRIES=()
 
-        count=$(yq '.mirror | length' "$CONFIG_FILE")
+        count=$(yq '.mirror | length' "$EFFECTIVE_CONFIG")
         echo "Found $count images to mirror"
 
         for ((i=0; i<count; i++)); do
-          source=$(yq ".mirror[$i].source" "$CONFIG_FILE")
-          target=$(yq ".mirror[$i].target" "$CONFIG_FILE")
+          source=$(yq ".mirror[$i].source" "$EFFECTIVE_CONFIG")
+          target=$(yq ".mirror[$i].target" "$EFFECTIVE_CONFIG")
 
           echo ""
           echo "=== Processing image $((i+1))/$count ==="
@@ -521,3 +563,13 @@ runs:
 
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "mirrored_images=$TARGETS_JSON" >> "$GITHUB_OUTPUT"
+
+    # Step 8: Cleanup temporary files (always run to avoid polluting the workspace)
+    - name: Cleanup temporary files
+      if: always()
+      shell: bash
+      run: |
+        echo "=== Cleaning up temporary files ==="
+        rm -rf "${GITHUB_WORKSPACE}/.mirror-config-effective.yaml" || true
+        rm -rf "${GITHUB_WORKSPACE}/.mirror-images" || true
+        echo "✓ Cleanup complete"

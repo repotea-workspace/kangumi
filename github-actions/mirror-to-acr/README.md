@@ -15,7 +15,39 @@ Since servers in China cannot directly access Docker Hub and other international
 
 ## Usage
 
-### Create a config file
+There are **three ways** to specify which images to mirror:
+
+### Method 1: Single Image (Quick)
+
+For mirroring a single image, use `source_image` and `target_image`:
+
+```yaml
+- uses: ./github-actions/mirror-to-acr
+  with:
+    source_image: ghcr.io/org/app:v1.0.0
+    target_image: registry-vpc.cn-shenzhen.aliyuncs.com/myns/app:v1.0.0
+    # ... other inputs
+```
+
+### Method 2: Inline Config (Dynamic)
+
+Provide config content directly as a YAML string:
+
+```yaml
+- uses: ./github-actions/mirror-to-acr
+  with:
+    config_content: |
+      mirror:
+        - source: ghcr.io/org/app:v1.0.0
+          target: registry-vpc.cn-shenzhen.aliyuncs.com/myns/app:v1.0.0
+        - source: docker.io/nginx:1.25
+          target: registry-vpc.cn-shenzhen.aliyuncs.com/myns/nginx:1.25
+    # ... other inputs
+```
+
+This is useful when generating the config dynamically in a previous step.
+
+### Method 3: Config File (Traditional)
 
 Create a YAML config file (e.g., `mirror-config.yaml`) with the images to mirror:
 
@@ -29,6 +61,13 @@ mirror:
 
   - source: quay.io/jetstack/cert-manager-controller:v1.19.1
     target: crpi-xxx.cn-shenzhen.personal.cr.aliyuncs.com/coohub/jetstack_cert-manager-controller:v1.19.1
+```
+
+```yaml
+- uses: ./github-actions/mirror-to-acr
+  with:
+    config_file: mirror-config.yaml
+    # ... other inputs
 ```
 
 ### Naming Convention
@@ -110,7 +149,10 @@ jobs:
 
 | Name | Description | Required | Default |
 |------|-------------|----------|---------|
-| `config_file` | Path to YAML config file | Yes | - |
+| `source_image` | Source image to mirror (use with `target_image`) | No* | - |
+| `target_image` | Target image in ACR (use with `source_image`) | No* | - |
+| `config_content` | YAML config content as string | No* | - |
+| `config_file` | Path to YAML config file | No* | - |
 | `registry_credentials` | JSON object with registry credentials (see below) | No | `{}` |
 | `ali_access_key` | Alibaba Cloud Access Key | Yes | - |
 | `ali_secret_key` | Alibaba Cloud Secret Key | Yes | - |
@@ -128,6 +170,9 @@ jobs:
 | `post_ssh_wait_seconds` | Wait time after SSH ready | No | `30` |
 | `scp_timeout` | SCP timeout | No | `30m` |
 | `ssh_timeout` | SSH timeout | No | `30m` |
+| `ecs_auto_release_hours` | Hours until ECS auto-release (safety) | No | `1` |
+
+\* You must provide **one of**: `source_image` + `target_image`, `config_content`, or `config_file`
 
 ### Authentication Options
 
