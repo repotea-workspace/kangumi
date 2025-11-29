@@ -12,7 +12,7 @@ inputs:
     description: "Source image to mirror (e.g. ghcr.io/org/image:tag). Use with target_image."
     required: false
   target_image:
-    description: "Target image in ACR (e.g. registry-vpc.cn-shenzhen.aliyuncs.com/ns/image:tag). Use with source_image."
+    description: "Target image(s) in ACR. Supports multiple targets separated by newlines or commas. Use with source_image."
     required: false
 
   # Method 2: Inline config content
@@ -137,14 +137,25 @@ runs:
         EFFECTIVE_CONFIG="${GITHUB_WORKSPACE}/.mirror-config-effective.yaml"
 
         if [ -n "$SOURCE_IMAGE" ] && [ -n "$TARGET_IMAGE" ]; then
-          # Method 1: Single image mode
+          # Method 1: Single/Multi image mode - one source to one or more targets
           echo "=== Using single image mode ==="
           echo "Source: $SOURCE_IMAGE"
-          echo "Target: $TARGET_IMAGE"
+
+          # Parse targets (support comma or newline separated)
+          # Replace commas with newlines, then filter empty lines
+          targets_list=$(echo "$TARGET_IMAGE" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$')
+
+          echo "Targets:"
+          echo "$targets_list"
+
+          # Generate config with targets array
           {
             echo "mirror:"
             echo "  - source: \"$SOURCE_IMAGE\""
-            echo "    target: \"$TARGET_IMAGE\""
+            echo "    targets:"
+            while IFS= read -r t; do
+              echo "      - \"$t\""
+            done <<< "$targets_list"
           } > "$EFFECTIVE_CONFIG"
         elif [ -n "$CONFIG_CONTENT" ]; then
           # Method 2: Inline config content
@@ -239,61 +250,96 @@ runs:
         TAR_FILES=()
         TARGET_REGISTRIES=()
 
-        count=$(yq '.mirror | length' "$EFFECTIVE_CONFIG")
-        echo "Found $count images to mirror"
+        entry_count=$(yq '.mirror | length' "$EFFECTIVE_CONFIG")
+        echo "Found $entry_count mirror entries"
 
-        for ((i=0; i<count; i++)); do
+        # Track which sources we've already pulled (to avoid duplicate pulls)
+        declare -A PULLED_SOURCES
+
+        for ((i=0; i<entry_count; i++)); do
           source=$(yq ".mirror[$i].source" "$EFFECTIVE_CONFIG")
-          target=$(yq ".mirror[$i].target" "$EFFECTIVE_CONFIG")
+
+          # Support both 'target' (single string) and 'targets' (array) formats
+          # Check if 'targets' array exists
+          targets_count=$(yq ".mirror[$i].targets | length" "$EFFECTIVE_CONFIG" 2>/dev/null || echo "0")
+
+          if [ "$targets_count" != "0" ] && [ "$targets_count" != "null" ]; then
+            # New format: targets array
+            targets_array=()
+            for ((j=0; j<targets_count; j++)); do
+              t=$(yq ".mirror[$i].targets[$j]" "$EFFECTIVE_CONFIG")
+              targets_array+=("$t")
+            done
+          else
+            # Old format: single target
+            single_target=$(yq ".mirror[$i].target" "$EFFECTIVE_CONFIG")
+            targets_array=("$single_target")
+          fi
 
           echo ""
-          echo "=== Processing image $((i+1))/$count ==="
+          echo "=== Processing entry $((i+1))/$entry_count ==="
           echo "Source: $source"
-          echo "Target: $target"
+          echo "Targets (${#targets_array[@]}): ${targets_array[*]}"
 
-          # Track target registry for later
-          target_registry=$(get_registry_host "$target")
-          if [[ ! " ${TARGET_REGISTRIES[*]:-} " =~ " ${target_registry} " ]]; then
-            TARGET_REGISTRIES+=("$target_registry")
-          fi
+          # Check which targets need mirroring
+          targets_to_mirror=()
+          for target in "${targets_array[@]}"; do
+            # Track target registry for later
+            target_registry=$(get_registry_host "$target")
+            if [[ ! " ${TARGET_REGISTRIES[*]:-} " =~ " ${target_registry} " ]]; then
+              TARGET_REGISTRIES+=("$target_registry")
+            fi
 
-          # Check if target image already exists (using public address for ACR)
-          # Convert VPC address to public address for checking
-          public_target=$(convert_vpc_to_public "$target")
-          public_target_registry=$(get_registry_host "$public_target")
+            # Check if target image already exists (using public address for ACR)
+            public_target=$(convert_vpc_to_public "$target")
+            public_target_registry=$(get_registry_host "$public_target")
 
-          echo "Checking if target image exists (public address): $public_target"
+            echo "Checking if target exists: $public_target"
+            login_to_registry "$public_target_registry"
 
-          # Login to target registry first (for checking)
-          login_to_registry "$public_target_registry"
+            if docker manifest inspect "$public_target" > /dev/null 2>&1; then
+              echo "  ✓ Already exists, skipping: $target"
+            else
+              echo "  ✗ Not found, will mirror: $target"
+              targets_to_mirror+=("$target")
+            fi
+          done
 
-          if docker manifest inspect "$public_target" > /dev/null 2>&1; then
-            echo "✓ Image already exists in target registry, skipping: $target"
-            echo "  (checked via public address: $public_target)"
+          # Skip if all targets already exist
+          if [ ${#targets_to_mirror[@]} -eq 0 ]; then
+            echo "All targets already exist for source: $source"
             continue
           fi
-          echo "Image not found in target registry, proceeding with mirror..."
 
-          # Get source registry and login if needed
-          source_registry=$(get_registry_host "$source")
-          echo "Source registry: $source_registry"
-          login_to_registry "$source_registry"
-
-          # Generate safe filename for tar
+          # Pull source image only once
           safe_name=$(echo "$source" | sed 's/[^a-zA-Z0-9._-]/_/g')
           tar_file="${IMAGES_DIR}/${safe_name}.tar"
 
-          echo "Pulling image: $source"
-          docker pull "$source"
+          if [[ -z "${PULLED_SOURCES[$source]:-}" ]]; then
+            source_registry=$(get_registry_host "$source")
+            echo "Source registry: $source_registry"
+            login_to_registry "$source_registry"
 
-          echo "Saving image to: $tar_file"
-          docker save -o "$tar_file" "$source"
+            echo "Pulling image: $source"
+            docker pull "$source"
 
-          SOURCES+=("$source")
-          TARGETS+=("$target")
-          TAR_FILES+=("$tar_file")
+            echo "Saving image to: $tar_file"
+            docker save -o "$tar_file" "$source"
+            echo "Saved: $(ls -lh "$tar_file")"
 
-          echo "Saved: $(ls -lh "$tar_file")"
+            PULLED_SOURCES[$source]="$tar_file"
+          else
+            echo "Source already pulled: $source"
+            tar_file="${PULLED_SOURCES[$source]}"
+          fi
+
+          # Add each target that needs mirroring
+          for target in "${targets_to_mirror[@]}"; do
+            SOURCES+=("$source")
+            TARGETS+=("$target")
+            TAR_FILES+=("$tar_file")
+            echo "Queued for mirror: $source -> $target"
+          done
         done
 
         # Store arrays as JSON for later steps
@@ -301,7 +347,7 @@ runs:
         echo "targets=$(printf '%s\n' "${TARGETS[@]}" | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
         echo "tar_files=$(printf '%s\n' "${TAR_FILES[@]}" | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
         echo "target_registries=$(printf '%s\n' "${TARGET_REGISTRIES[@]}" | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
-        echo "count=$count" >> "$GITHUB_OUTPUT"
+        echo "entry_count=$entry_count" >> "$GITHUB_OUTPUT"
 
         # Check if there are images to mirror
         images_to_mirror=${#SOURCES[@]}
@@ -457,25 +503,46 @@ runs:
           readarray -t source_arr <<< "$sources"
           readarray -t target_arr <<< "$targets"
 
+          # Track loaded sources to avoid duplicate loads
+          declare -A LOADED_SOURCES
+
+          # Count how many times each source is used (for cleanup decision)
+          declare -A SOURCE_USAGE_COUNT
+          declare -A SOURCE_CURRENT_COUNT
+          for src in "${source_arr[@]}"; do
+            SOURCE_USAGE_COUNT[$src]=$((${SOURCE_USAGE_COUNT[$src]:-0} + 1))
+            SOURCE_CURRENT_COUNT[$src]=0
+          done
+
           # Process each image
           for ((i=0; i<${#source_arr[@]}; i++)); do
             source="${source_arr[$i]}"
             target="${target_arr[$i]}"
 
+            # Increment current count for this source
+            SOURCE_CURRENT_COUNT[$source]=$((${SOURCE_CURRENT_COUNT[$source]} + 1))
+            is_last_use=false
+            if [ "${SOURCE_CURRENT_COUNT[$source]}" -eq "${SOURCE_USAGE_COUNT[$source]}" ]; then
+              is_last_use=true
+            fi
+
             echo ""
             echo "=== Image $((i+1))/${#source_arr[@]} ==="
             echo "Source: $source"
             echo "Target: $target"
+            echo "Usage: ${SOURCE_CURRENT_COUNT[$source]}/${SOURCE_USAGE_COUNT[$source]} (last=$is_last_use)"
 
             # Double-check if target image already exists in registry
-            # Note: We already check this in the pull step (using public ACR address),
-            # but we keep this check here as a safety net in case:
-            # 1. The image was pushed between pull and push steps
-            # 2. The tar file exists from a previous partial run
-            # On ECS we can use the VPC address directly since we're inside Aliyun network
             echo "Checking if target image already exists..."
             if docker manifest inspect "$target" > /dev/null 2>&1; then
               echo "Image already exists in target registry, skipping: $target"
+              # Still need to cleanup if this is the last use
+              if [ "$is_last_use" = true ]; then
+                safe_name=$(echo "$source" | sed 's/[^a-zA-Z0-9._-]/_/g')
+                docker rmi "$source" 2>/dev/null || true
+                rm -f "/tmp/mirror-images/${safe_name}.tar"
+                echo "Cleaned up source image (last use)"
+              fi
               continue
             fi
             echo "Image not found in target registry, proceeding with mirror..."
@@ -484,13 +551,19 @@ runs:
             safe_name=$(echo "$source" | sed 's/[^a-zA-Z0-9._-]/_/g')
             tar_file="/tmp/mirror-images/${safe_name}.tar"
 
-            if [ ! -f "$tar_file" ]; then
-              echo "::warning::Tar file not found: $tar_file"
-              continue
-            fi
+            # Load image only if not already loaded
+            if [[ -z "${LOADED_SOURCES[$source]:-}" ]]; then
+              if [ ! -f "$tar_file" ]; then
+                echo "::warning::Tar file not found: $tar_file"
+                continue
+              fi
 
-            echo "Loading image from: $tar_file"
-            docker load -i "$tar_file"
+              echo "Loading image from: $tar_file"
+              docker load -i "$tar_file"
+              LOADED_SOURCES[$source]=1
+            else
+              echo "Image already loaded: $source"
+            fi
 
             echo "Tagging: $source -> $target"
             docker tag "$source" "$target"
@@ -500,9 +573,15 @@ runs:
 
             echo "Successfully mirrored: $target"
 
-            # Cleanup to save disk space
-            docker rmi "$source" "$target" || true
-            rm -f "$tar_file"
+            # Cleanup target image immediately to save space
+            docker rmi "$target" 2>/dev/null || true
+
+            # Only cleanup source image and tar file on last use
+            if [ "$is_last_use" = true ]; then
+              echo "Last use of source, cleaning up..."
+              docker rmi "$source" 2>/dev/null || true
+              rm -f "$tar_file"
+            fi
           done
 
           echo ""

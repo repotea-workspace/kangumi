@@ -19,29 +19,44 @@ There are **three ways** to specify which images to mirror:
 
 ### Method 1: Single Image (Quick)
 
-For mirroring a single image, use `source_image` and `target_image`:
+For mirroring a single image to one or more targets, use `source_image` and `target_image`:
 
 ```yaml
+# Single target
 - uses: ./github-actions/mirror-to-acr
   with:
     source_image: ghcr.io/org/app:v1.0.0
     target_image: registry-vpc.cn-shenzhen.aliyuncs.com/myns/app:v1.0.0
     # ... other inputs
+
+# Multiple targets (comma or newline separated)
+- uses: ./github-actions/mirror-to-acr
+  with:
+    source_image: ghcr.io/org/app:v1.0.0
+    target_image: |
+      registry-vpc.cn-shenzhen.aliyuncs.com/myns/app:v1.0.0
+      registry-vpc.cn-shenzhen.aliyuncs.com/myns/app:latest
+    # ... other inputs
 ```
 
 ### Method 2: Inline Config (Dynamic)
 
-Provide config content directly as a YAML string:
+Provide config content directly as a YAML string. Supports both single `target` and multiple `targets`:
 
 ```yaml
 - uses: ./github-actions/mirror-to-acr
   with:
     config_content: |
       mirror:
-        - source: ghcr.io/org/app:v1.0.0
-          target: registry-vpc.cn-shenzhen.aliyuncs.com/myns/app:v1.0.0
+        # Single target (legacy format)
         - source: docker.io/nginx:1.25
           target: registry-vpc.cn-shenzhen.aliyuncs.com/myns/nginx:1.25
+
+        # Multiple targets (new format)
+        - source: ghcr.io/org/app:v1.0.0
+          targets:
+            - registry-vpc.cn-shenzhen.aliyuncs.com/myns/app:v1.0.0
+            - registry-vpc.cn-shenzhen.aliyuncs.com/myns/app:latest
     # ... other inputs
 ```
 
@@ -53,14 +68,15 @@ Create a YAML config file (e.g., `mirror-config.yaml`) with the images to mirror
 
 ```yaml
 mirror:
+  # Single target
   - source: bitnami/sealed-secrets-controller:0.33.1
     target: crpi-xxx.cn-shenzhen.personal.cr.aliyuncs.com/coohub/bitnami_sealed-secrets-controller:0.33.1
 
+  # Multiple targets - mirror to both SZ and HK regions
   - source: ghcr.io/0xfe10/cert-manager-alicloud-esa-webhook:v0.1.10
-    target: crpi-xxx.cn-shenzhen.personal.cr.aliyuncs.com/coohub/0xfe10_cert-manager-alicloud-esa-webhook:v0.1.10
-
-  - source: quay.io/jetstack/cert-manager-controller:v1.19.1
-    target: crpi-xxx.cn-shenzhen.personal.cr.aliyuncs.com/coohub/jetstack_cert-manager-controller:v1.19.1
+    targets:
+      - crpi-xxx.cn-shenzhen.personal.cr.aliyuncs.com/coohub/0xfe10_cert-manager-alicloud-esa-webhook:v0.1.10
+      - registry-vpc.cn-hongkong.aliyuncs.com/coohub/0xfe10_cert-manager-alicloud-esa-webhook:v0.1.10
 ```
 
 ```yaml
