@@ -298,18 +298,6 @@ runs:
           echo "=== Docker Info ==="
           docker version
 
-          # Function to extract registry host from image name
-          get_registry_host() {
-            local image="$1"
-            if [[ "$image" =~ ^([^/]+\.[^/]+)/ ]]; then
-              echo "${BASH_REMATCH[1]}"
-            elif [[ "$image" =~ ^([^/]+)/ ]] && [[ "${BASH_REMATCH[1]}" == *"."* || "${BASH_REMATCH[1]}" == *":"* ]]; then
-              echo "${BASH_REMATCH[1]}"
-            else
-              echo "docker.io"
-            fi
-          }
-
           # Track logged in registries
           declare -A LOGGED_IN_REGISTRIES
 
@@ -365,6 +353,14 @@ runs:
             echo "=== Image $((i+1))/${#source_arr[@]} ==="
             echo "Source: $source"
             echo "Target: $target"
+
+            # Check if target image already exists in registry
+            echo "Checking if target image already exists..."
+            if docker manifest inspect "$target" > /dev/null 2>&1; then
+              echo "Image already exists in target registry, skipping: $target"
+              continue
+            fi
+            echo "Image not found in target registry, proceeding with mirror..."
 
             # Find the tar file
             safe_name=$(echo "$source" | sed 's/[^a-zA-Z0-9._-]/_/g')

@@ -62,3 +62,11 @@ jobs:
           spot_strategy: ${{ env.ECS_SPOT_STRATEGY }}
           key_pair_name: ${{ env.ECS_KEYPAIR_NAME }}
           ssh_private_key: ${{ secrets.SSH_KEYPAIR_ALI_GENERIC }}
+
+  clean-artifacts:
+    name: Clean artifacts
+    runs-on: ubuntu-latest
+    needs: [ mirror ]
+    if: always()
+    steps:
+      - uses: geekyeggo/delete-artifact@v5
