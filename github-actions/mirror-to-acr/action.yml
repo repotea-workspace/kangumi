@@ -282,7 +282,11 @@ runs:
           echo "Targets (${#targets_array[@]}): ${targets_array[*]}"
 
           # Check which targets need mirroring
+          # For multiple targets: if ANY target is missing, mirror ALL targets
+          # This handles the common case of pushing both :v1.0.0 and :latest tags
           targets_to_mirror=()
+          any_missing=false
+
           for target in "${targets_array[@]}"; do
             # Track target registry for later
             target_registry=$(get_registry_host "$target")
@@ -298,14 +302,31 @@ runs:
             login_to_registry "$public_target_registry"
 
             if docker manifest inspect "$public_target" > /dev/null 2>&1; then
-              echo "  ✓ Already exists, skipping: $target"
+              echo "  ✓ Already exists: $target"
             else
-              echo "  ✗ Not found, will mirror: $target"
-              targets_to_mirror+=("$target")
+              echo "  ✗ Not found: $target"
+              any_missing=true
             fi
           done
 
-          # Skip if all targets already exist
+          # Decision logic:
+          # - Single target: only mirror if missing
+          # - Multiple targets: mirror ALL if ANY is missing (to refresh tags like :latest)
+          if [ ${#targets_array[@]} -eq 1 ]; then
+            # Single target mode: only add if missing
+            if [ "$any_missing" = true ]; then
+              targets_to_mirror=("${targets_array[@]}")
+              echo "Single target missing, will mirror"
+            fi
+          else
+            # Multiple targets mode: add ALL if any is missing
+            if [ "$any_missing" = true ]; then
+              targets_to_mirror=("${targets_array[@]}")
+              echo "Multiple targets with at least one missing, will mirror ALL targets"
+            fi
+          fi
+
+          # Skip if no targets need mirroring
           if [ ${#targets_to_mirror[@]} -eq 0 ]; then
             echo "All targets already exist for source: $source"
             continue
