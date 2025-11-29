@@ -4,7 +4,7 @@ Clone Any
 ## Clone a repository via https
 
 ```
-- uses: actions/checkout@v5
+- uses: actions/checkout@v6
   with:
     repository: repotea-workspace/kangumi
     path: .github/actions
@@ -18,7 +18,7 @@ Clone Any
 ## Clone a repository via ssh
 
 ```
-- uses: actions/checkout@v5
+- uses: actions/checkout@v6
   with:
     repository: repotea-workspace/kangumi
     path: .github/actions

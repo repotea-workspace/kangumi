@@ -45,7 +45,7 @@ The path of sign key file
 
 ```yaml
 steps:
-  - uses: actions/checkout@v5
+  - uses: actions/checkout@v6
     with:
       repository: repotea-workspace/kangumi
       path: .github/actions

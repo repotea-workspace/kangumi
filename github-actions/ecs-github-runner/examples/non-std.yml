@@ -25,7 +25,7 @@ jobs:
       public-ip: ${{ steps.start.outputs.public-ip }}
       instance-password: ${{ steps.start.outputs.instance-password }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Start ECS machine (nonstd mode)
         id: start
         uses: kangumi/github-actions/ecs-github-runner@main
@@ -67,7 +67,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Destroy ECS GitHub runner
         uses: kangumi/github-actions/ecs-github-runner@main
         with:

@@ -49,7 +49,7 @@ runs:
         mkdir __origin__
         find . -maxdepth 1 ! -path './__origin__' ! -path '.' -exec mv {} __origin__/ \;
 
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         repository: ${{ inputs.repository }}
         ref: ${{ steps.prepare_options.outputs.GIT_REF }}
