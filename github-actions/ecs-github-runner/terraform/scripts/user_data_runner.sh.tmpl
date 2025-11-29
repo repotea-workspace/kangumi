@@ -1,7 +1,6 @@
-#!/bin/bash
-set -euo pipefail
-
-exec > >(tee /var/log/github-runner-bootstrap.log) 2>&1
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get install -y curl jq git tar
 
 RUNNER_USER="${runner_user}"
 RUNNER_HOME="/home/${runner_user}"
@@ -16,10 +15,6 @@ RUNNER_LABELS="${runner_labels}"
 RUNNER_NAME="${runner_name}"
 RUNNER_WORKDIR="${runner_workdir}"
 RUNNER_EPHEMERAL="${runner_ephemeral}"
-
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -y
-apt-get install -y curl jq git tar
 
 if [ "${runner_user}" != "root" ] && ! id -u "${runner_user}" >/dev/null 2>&1; then
   useradd --create-home --shell /bin/bash "${runner_user}"

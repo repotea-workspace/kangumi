@@ -238,3 +238,9 @@ variable "REGISTER_RUNNER" {
   type        = bool
   default     = true
 }
+
+variable "CUSTOM_USER_DATA" {
+  description = "Additional shell script content appended to user data"
+  type        = string
+  default     = ""
+}

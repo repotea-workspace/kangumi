@@ -1,0 +1,12 @@
+# Mirror configuration for Docker images to Aliyun ACR
+#
+# Naming convention: Replace "/" with "_" in source image path
+# Example: ghcr.io/0xfe10/my-image:v1 -> 0xfe10_my-image:v1
+#
+# Target format: <acr-registry>/<namespace>/<converted-name>:<tag>
+
+mirror:
+  # cert-manager related
+  - source: quay.io/jetstack/cert-manager-controller:v1.19.1
+    target: crpi-uhy920dintikwpn3-vpc.cn-shenzhen.personal.cr.aliyuncs.com/coohub/jetstack_cert-manager-controller:v1.19.1
+

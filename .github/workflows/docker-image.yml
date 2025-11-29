@@ -60,7 +60,7 @@ jobs:
             context: docker-image/wait-for-port
             build-args: ""
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: benjlevesque/short-sha@v3.0
 
@@ -110,7 +110,7 @@ jobs:
               GCM_VERSION=2.6.1
               HELM_DIFF_VERSION=v3.14.1
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: benjlevesque/short-sha@v3.0
 

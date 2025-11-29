@@ -10,7 +10,7 @@ jobs:
     name: Test gen android sign
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install dependencies
         run: cd github-actions/gen-android-sign && npm i

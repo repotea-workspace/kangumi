@@ -3,16 +3,32 @@
 locals {
   runner_name = var.RUNNER_NAME != "" ? var.RUNNER_NAME : var.ALI_ECS_NAME
   runner_url  = var.REGISTER_RUNNER ? (var.GITHUB_SCOPE == "org" ? format("https://github.com/%s", var.GITHUB_OWNER) : format("https://github.com/%s/%s", var.GITHUB_OWNER, var.GITHUB_REPOSITORY)) : ""
-  runner_user_data = var.RUNNER_ENABLED && var.REGISTER_RUNNER ? base64encode(templatefile("${path.module}/scripts/user_data.sh.tmpl", {
-    runner_user      = var.RUNNER_USER
-    runner_workdir   = var.RUNNER_WORKDIR
-    runner_version   = var.RUNNER_VERSION
-    runner_token     = var.GITHUB_RUNNER_TOKEN
-    runner_url       = local.runner_url
-    runner_labels    = var.GITHUB_RUNNER_LABELS
-    runner_name      = local.runner_name
-    runner_ephemeral = var.RUNNER_EPHEMERAL ? "true" : "false"
-  })) : null
+
+  user_data_parts = compact(concat(
+    var.REGISTER_RUNNER ? [
+      templatefile("${path.module}/scripts/user_data_runner.sh.tmpl", {
+        runner_user      = var.RUNNER_USER
+        runner_workdir   = var.RUNNER_WORKDIR
+        runner_version   = var.RUNNER_VERSION
+        runner_token     = var.GITHUB_RUNNER_TOKEN
+        runner_url       = local.runner_url
+        runner_labels    = var.GITHUB_RUNNER_LABELS
+        runner_name      = local.runner_name
+        runner_ephemeral = var.RUNNER_EPHEMERAL ? "true" : "false"
+      })
+    ] : [],
+    trimspace(var.CUSTOM_USER_DATA) != "" ? [trimspace(var.CUSTOM_USER_DATA)] : []
+  ))
+
+  user_data_rendered = length(local.user_data_parts) > 0 ? join("\n\n", local.user_data_parts) : ""
+
+  runner_user_data = var.RUNNER_ENABLED && local.user_data_rendered != "" ? base64encode(<<EOT
+#!/bin/bash
+set -euo pipefail
+
+${local.user_data_rendered}
+EOT
+  ) : null
 }
 
 # ECS Instance

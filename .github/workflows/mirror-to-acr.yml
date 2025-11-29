@@ -1,0 +1,77 @@
+name: Mirror Docker Images to Aliyun ACR
+
+on:
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - '.github/workflows/mirror-to-acr.yml'
+  #     - 'github-actions/mirror-to-acr/**'
+  workflow_dispatch:
+
+env:
+  # Aliyun ECS Configuration
+  ECS_REGION: cn-shenzhen
+  ECS_VSWITCH_ID: vsw-wz9uncyx33urqcxpj8c1p
+  ECS_AVAILABILITY_ZONE: cn-shenzhen-e
+  ECS_SECURITY_GROUP_ID: sg-wz9eo52rpleayua0e1s6
+  ECS_IMAGE_ID: ubuntu_24_04_x64_20G_alibase_20251102.vhd
+  ECS_INSTANCE_TYPE: ecs.c7a.large
+  ECS_SYSTEM_DISK_SIZE: 40
+  ECS_SPOT_STRATEGY: SpotAsPriceGo
+  ECS_KEYPAIR_NAME: keypair-ali-generic
+
+jobs:
+  mirror:
+    name: Mirror Docker Images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Mirror images to ACR
+        uses: ./github-actions/mirror-to-acr
+        with:
+          config_file: github-actions/mirror-to-acr/examples/mirror-config.yaml
+
+          # Registry credentials (JSON format)
+          # Keys are registry hosts, values are {username, password} objects
+          # Note: For ACR, provide BOTH vpc and public address if you want pre-check to work
+          registry_credentials: |
+            {
+              "ghcr.io": {
+                "username": "${{ github.actor }}",
+                "password": "${{ secrets.GITHUB_TOKEN }}"
+              },
+              "crpi-uhy920dintikwpn3-vpc.cn-shenzhen.personal.cr.aliyuncs.com": {
+                "username": "${{ secrets.CR_ALI_USERNAME_JOECHOW }}",
+                "password": "${{ secrets.CR_ALI_PASSWORD_JOECHOW }}"
+              },
+              "crpi-uhy920dintikwpn3.cn-shenzhen.personal.cr.aliyuncs.com": {
+                "username": "${{ secrets.CR_ALI_USERNAME_JOECHOW }}",
+                "password": "${{ secrets.CR_ALI_PASSWORD_JOECHOW }}"
+              }
+            }
+
+          # Aliyun credentials
+          ali_access_key: ${{ secrets.ALI_ACCESS_KEY_AYN }}
+          ali_secret_key: ${{ secrets.ALI_SECRET_KEY_AYN }}
+          ali_region: ${{ env.ECS_REGION }}
+
+          # ECS configuration
+          vswitch_id: ${{ env.ECS_VSWITCH_ID }}
+          availability_zone: ${{ env.ECS_AVAILABILITY_ZONE }}
+          security_group_id: ${{ env.ECS_SECURITY_GROUP_ID }}
+          image_id: ${{ env.ECS_IMAGE_ID }}
+          instance_type: ${{ env.ECS_INSTANCE_TYPE }}
+          system_disk_size: ${{ env.ECS_SYSTEM_DISK_SIZE }}
+          spot_strategy: ${{ env.ECS_SPOT_STRATEGY }}
+          key_pair_name: ${{ env.ECS_KEYPAIR_NAME }}
+          ssh_private_key: ${{ secrets.SSH_KEYPAIR_ALI_GENERIC }}
+
+  clean-artifacts:
+    name: Clean artifacts
+    runs-on: ubuntu-latest
+    needs: [ mirror ]
+    if: always()
+    steps:
+      - uses: geekyeggo/delete-artifact@v5

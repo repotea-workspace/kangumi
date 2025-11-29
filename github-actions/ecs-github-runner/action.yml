@@ -14,6 +14,10 @@ inputs:
     description: "Artifact name that stores terraform.tfstate between jobs"
     required: false
     default: "ecs-github-runner-tfstate"
+  post_ssh_wait_seconds:
+    description: "Extra seconds to sleep after SSH port becomes reachable (only when mode=start)"
+    required: false
+    default: "10"
 
   ali_access_key:
     description: "Alibaba Cloud Access Key ID"
@@ -156,6 +160,10 @@ inputs:
     description: "Set to true to emit the instance password as an action output (use with caution)"
     required: false
     default: "false"
+  custom_user_data:
+    description: "Additional shell script content appended to user data (runs as root)"
+    required: false
+    default: ""
 
 outputs:
   runner-label:
@@ -338,6 +346,7 @@ runs:
         TF_VAR_RUNNER_WORKDIR: ${{ inputs.runner_workdir }}
         TF_VAR_RUNNER_EPHEMERAL: ${{ inputs.runner_ephemeral }}
         TF_VAR_REGISTER_RUNNER: ${{ inputs.register_runner }}
+        TF_VAR_CUSTOM_USER_DATA: ${{ inputs.custom_user_data }}
         TF_VAR_RUNNER_ENABLED: "true"
       run: terraform apply -auto-approve -input=false
 
@@ -378,6 +387,7 @@ runs:
         TF_VAR_RUNNER_WORKDIR: ${{ inputs.runner_workdir }}
         TF_VAR_RUNNER_EPHEMERAL: ${{ inputs.runner_ephemeral }}
         TF_VAR_REGISTER_RUNNER: ${{ inputs.register_runner }}
+        TF_VAR_CUSTOM_USER_DATA: ${{ inputs.custom_user_data }}
         TF_VAR_RUNNER_ENABLED: "false"
       run: terraform apply -auto-approve -input=false -var "RUNNER_ENABLED=false"
 
@@ -397,6 +407,28 @@ runs:
           echo "public_ip=$public_ip"
           echo "private_ip=$private_ip"
         } >> "$GITHUB_OUTPUT"
+    - name: Validate SSH wait inputs
+      if: ${{ inputs.mode == 'start' }}
+      shell: bash
+      env:
+        PUBLIC_IP: ${{ steps.tf_outputs.outputs.public_ip }}
+        POST_WAIT: ${{ inputs.post_ssh_wait_seconds }}
+      run: |
+        set -euo pipefail
+        if [ -z "$PUBLIC_IP" ] || [ "$PUBLIC_IP" = "null" ]; then
+          echo "Public IP output is empty; cannot wait for SSH connectivity" >&2
+          exit 1
+        fi
+        if ! [[ "$POST_WAIT" =~ ^[0-9]+$ ]]; then
+          echo "post_ssh_wait_seconds must be a non-negative integer" >&2
+          exit 1
+        fi
+        echo "Waiting for SSH on $PUBLIC_IP (post-success wait ${POST_WAIT}s)..."
+    - name: Wait for SSH availability
+      if: ${{ inputs.mode == 'start' }}
+      uses: docker://ghcr.io/repotea-workspace/kangumi/wait-for-port:latest
+      with:
+        args: ${{ format('{0} 22 {1}', steps.tf_outputs.outputs.public_ip, inputs.post_ssh_wait_seconds) }}
     - name: Expose instance password output
       if: ${{ inputs.mode == 'start' && inputs.expose_instance_password == 'true' }}
       id: instance_password_output
@@ -424,3 +456,10 @@ runs:
       run: |
         set -euo pipefail
         rm -f terraform.tfstate terraform.tfstate.backup
+
+    - name: Delete Terraform state artifact
+      if: ${{ always() && inputs.mode == 'destroy' }}
+      uses: geekyeggo/delete-artifact@v5
+      with:
+        name: ${{ inputs.state_artifact_name }}
+        failOnError: false

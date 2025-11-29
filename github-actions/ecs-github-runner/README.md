@@ -86,8 +86,9 @@ jobs:
 | 输入 | 默认值 | 作用 |
 | --- | --- | --- |
 | `runner_ephemeral` | `true` | 设置为 `false` 可在同一台机器上串行执行多个 Job（示例见 `multi-job.yml`） |
-| `register_runner` | `true` | 设为 `false` 时仅创建 ECS 机器，不安装/注册 GitHub Runner（“China 模式”） |
+| `register_runner` | `true` | 设为 `false` 时仅创建 ECS 机器，不安装/注册 GitHub Runner（“Nonstd 模式”） |
 | `expose_instance_password` | `false` | 若填 `true`，Action 会把 `instance_password` 作为输出返回，方便后续 SSH（谨慎使用） |
+| `custom_user_data` | `""` | 追加自定义 shell 脚本到 user-data，满足个性化初始化需求（默认空） |
 | `state_artifact_name` | `ecs-github-runner-tfstate` | 如果一个 workflow 需要多次创建/销毁，可用不同 artifact 名称隔离状态 |
 
 ## 运行机制
@@ -106,17 +107,17 @@ Terraform 变量与 Java 代码的映射详情请见 [`terraform/JAVA_TERRAFORM_
 
 1. [`simple.yml`](./examples/simple.yml)：最小化示例，按顺序执行 “创建 → 单个 Job → 销毁”，并在最后调用 `remove-self-hosted-runner` Action 清理离线 Runner。
 2. [`multi-job.yml`](./examples/multi-job.yml)：展示如何在同一 ECS Runner 上串行运行多个 Job（smoke test + Rust 构建/测试），以及如何生成自定义密码、复用标签和执行最终清理。
-3. [`china.yml`](./examples/china.yml)：示例化 “只开机、不注册 Runner” 的流程，Action 会回传公网 IP 和密码，方便在中国网络环境下手动 SSH 进主机执行任务。
+3. [`non-std.yml`](./examples/non-std.yml)：示例化 “只开机、不注册 Runner” 的流程，Action 会回传公网 IP 和密码，方便在受限网络环境下手动 SSH 进主机执行任务。
 
 可以直接复制这些文件到你自己的仓库，根据文档替换变量/密钥即可。记得保留最后的销毁与清理步骤，避免遗留 ECS 资源或离线 Runner。
 
-## China 模式说明
+## Non-Standard 网络模式说明
 
-由于 GitHub Actions 容器运行在境外，在中国大陆网络环境下可能无法访问到 ECS 机器。此时可以：
+由于在中国大陆或其他受限网络环境下无法运行 GitHub Actions, 此时可以：
 
 1. `register_runner: "false"`：只创建 ECS 机器，不注册 Runner。
-2. `expose_instance_password: "true"`：把实例密码作为输出返回，配合公网 IP 直接 SSH 登录。
-3. 在工作流里提示运维人员使用输出信息登录到服务器（参考 [`china.yml`](./examples/china.yml)）。
+2. `expose_instance_password: "true"`：把实例密码作为输出返回，配合公网 IP 直接 SSH 登录。(或者你设置了 `key_pair_name` 使用 ssh private key 登录)
+3. 在工作流里提示运维人员使用输出信息登录到服务器（参考 [`non-std.yml`](./examples/non-std.yml)）。
 4. 手动/脚本执行完毕后，仍需运行 `mode: destroy` 来释放实例。
 
 > 如果你只需要“开机 + 获取凭据”，可以跳过 `run-on-ecs` 这样的自托管 Job，只保留 `provision` 和 `destroy` 两个 Job。
