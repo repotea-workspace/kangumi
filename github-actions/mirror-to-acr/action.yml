@@ -135,9 +135,47 @@ runs:
           fi
         }
 
+        # Function to convert ACR internal (VPC) address to public address
+        # Internal: crpi-xxx-vpc.cn-shenzhen.personal.cr.aliyuncs.com -> Public: crpi-xxx.cn-shenzhen.personal.cr.aliyuncs.com
+        # Internal: registry-vpc.cn-hongkong.aliyuncs.com -> Public: registry.cn-hongkong.aliyuncs.com
+        convert_vpc_to_public() {
+          local image="$1"
+          # Replace -vpc. with . in the registry host part
+          echo "$image" | sed 's/-vpc\.\([^/]*\.aliyuncs\.com\)/.\1/'
+        }
+
+        # Function to get registry host for login (handles both VPC and public)
+        get_registry_for_login() {
+          local registry="$1"
+          # For ACR, we can login with either VPC or public address
+          # Try to find credentials for VPC address first, then public
+          local public_registry
+          public_registry=$(echo "$registry" | sed 's/-vpc\.\([^/]*\.aliyuncs\.com\)/.\1/')
+
+          # Check if we have credentials for VPC address
+          local creds
+          creds=$(echo "$REGISTRY_CREDENTIALS" | jq -r --arg reg "$registry" '.[$reg] // empty')
+          if [ -n "$creds" ]; then
+            echo "$registry"
+            return
+          fi
+
+          # Check if we have credentials for public address
+          creds=$(echo "$REGISTRY_CREDENTIALS" | jq -r --arg reg "$public_registry" '.[$reg] // empty')
+          if [ -n "$creds" ]; then
+            echo "$public_registry"
+            return
+          fi
+
+          # Return original if no credentials found
+          echo "$registry"
+        }
+
         # Function to login to a registry
         login_to_registry() {
           local registry="$1"
+          local login_registry
+          login_registry=$(get_registry_for_login "$registry")
 
           # Skip if already logged in
           if [[ -n "${LOGGED_IN_REGISTRIES[$registry]:-}" ]]; then
@@ -145,9 +183,18 @@ runs:
             return 0
           fi
 
+          # Also check if we logged in via public/vpc variant
+          local public_registry
+          public_registry=$(echo "$registry" | sed 's/-vpc\.\([^/]*\.aliyuncs\.com\)/.\1/')
+          if [[ -n "${LOGGED_IN_REGISTRIES[$public_registry]:-}" ]]; then
+            echo "Already logged in to $registry (via $public_registry)"
+            LOGGED_IN_REGISTRIES[$registry]=1
+            return 0
+          fi
+
           # Check if credentials exist for this registry
           local creds
-          creds=$(echo "$REGISTRY_CREDENTIALS" | jq -r --arg reg "$registry" '.[$reg] // empty')
+          creds=$(echo "$REGISTRY_CREDENTIALS" | jq -r --arg reg "$login_registry" '.[$reg] // empty')
 
           if [ -n "$creds" ]; then
             local username password
@@ -155,14 +202,15 @@ runs:
             password=$(echo "$creds" | jq -r '.password')
 
             if [ -n "$username" ] && [ -n "$password" ] && [ "$username" != "null" ] && [ "$password" != "null" ]; then
-              echo "Logging in to registry: $registry"
-              if [ "$registry" = "docker.io" ]; then
+              echo "Logging in to registry: $login_registry"
+              if [ "$login_registry" = "docker.io" ]; then
                 echo "$password" | docker login -u "$username" --password-stdin
               else
-                echo "$password" | docker login "$registry" -u "$username" --password-stdin
+                echo "$password" | docker login "$login_registry" -u "$username" --password-stdin
               fi
               LOGGED_IN_REGISTRIES[$registry]=1
-              echo "Successfully logged in to $registry"
+              LOGGED_IN_REGISTRIES[$login_registry]=1
+              echo "Successfully logged in to $login_registry"
               return 0
             fi
           fi
@@ -189,16 +237,33 @@ runs:
           echo "Source: $source"
           echo "Target: $target"
 
-          # Get source registry and login if needed
-          source_registry=$(get_registry_host "$source")
-          echo "Source registry: $source_registry"
-          login_to_registry "$source_registry"
-
           # Track target registry for later
           target_registry=$(get_registry_host "$target")
           if [[ ! " ${TARGET_REGISTRIES[*]:-} " =~ " ${target_registry} " ]]; then
             TARGET_REGISTRIES+=("$target_registry")
           fi
+
+          # Check if target image already exists (using public address for ACR)
+          # Convert VPC address to public address for checking
+          public_target=$(convert_vpc_to_public "$target")
+          public_target_registry=$(get_registry_host "$public_target")
+
+          echo "Checking if target image exists (public address): $public_target"
+
+          # Login to target registry first (for checking)
+          login_to_registry "$public_target_registry"
+
+          if docker manifest inspect "$public_target" > /dev/null 2>&1; then
+            echo "✓ Image already exists in target registry, skipping: $target"
+            echo "  (checked via public address: $public_target)"
+            continue
+          fi
+          echo "Image not found in target registry, proceeding with mirror..."
+
+          # Get source registry and login if needed
+          source_registry=$(get_registry_host "$source")
+          echo "Source registry: $source_registry"
+          login_to_registry "$source_registry"
 
           # Generate safe filename for tar
           safe_name=$(echo "$source" | sed 's/[^a-zA-Z0-9._-]/_/g')
@@ -354,7 +419,12 @@ runs:
             echo "Source: $source"
             echo "Target: $target"
 
-            # Check if target image already exists in registry
+            # Double-check if target image already exists in registry
+            # Note: We already check this in the pull step (using public ACR address),
+            # but we keep this check here as a safety net in case:
+            # 1. The image was pushed between pull and push steps
+            # 2. The tar file exists from a previous partial run
+            # On ECS we can use the VPC address directly since we're inside Aliyun network
             echo "Checking if target image already exists..."
             if docker manifest inspect "$target" > /dev/null 2>&1; then
               echo "Image already exists in target registry, skipping: $target"
