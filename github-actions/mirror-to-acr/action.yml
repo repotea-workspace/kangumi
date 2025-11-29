@@ -474,7 +474,7 @@ runs:
         source: ".mirror-images/*.tar"
         target: /tmp/mirror-images/
         strip_components: 1
-        debug: "true"
+        debug: "false"
 
     # Step 5: Execute docker load, tag, and push on ECS (skip if no images to mirror)
     - name: Load, tag and push images on ECS
