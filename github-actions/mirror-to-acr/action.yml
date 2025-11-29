@@ -144,27 +144,58 @@ runs:
           echo "$image" | sed 's/-vpc\.\([^/]*\.aliyuncs\.com\)/.\1/'
         }
 
+        # Function to convert ACR public address to internal (VPC) address
+        # Public: crpi-xxx.cn-shenzhen.personal.cr.aliyuncs.com -> Internal: crpi-xxx-vpc.cn-shenzhen.personal.cr.aliyuncs.com
+        # Public: registry.cn-hongkong.aliyuncs.com -> Internal: registry-vpc.cn-hongkong.aliyuncs.com
+        convert_public_to_vpc() {
+          local registry="$1"
+          # Only convert if it's an aliyuncs.com registry and doesn't already have -vpc
+          if [[ "$registry" == *".aliyuncs.com" ]] && [[ "$registry" != *"-vpc."* ]]; then
+            # Insert -vpc before the first dot
+            echo "$registry" | sed 's/\.\([^.]*\.aliyuncs\.com\)/-vpc.\1/'
+          else
+            echo "$registry"
+          fi
+        }
+
         # Function to get registry host for login (handles both VPC and public)
         get_registry_for_login() {
           local registry="$1"
           # For ACR, we can login with either VPC or public address
-          # Try to find credentials for VPC address first, then public
-          local public_registry
-          public_registry=$(echo "$registry" | sed 's/-vpc\.\([^/]*\.aliyuncs\.com\)/.\1/')
+          # Try to find credentials in this order:
+          # 1. Exact match
+          # 2. VPC variant (if input is public)
+          # 3. Public variant (if input is VPC)
 
-          # Check if we have credentials for VPC address
           local creds
+
+          # 1. Check exact match first
           creds=$(echo "$REGISTRY_CREDENTIALS" | jq -r --arg reg "$registry" '.[$reg] // empty')
           if [ -n "$creds" ]; then
             echo "$registry"
             return
           fi
 
-          # Check if we have credentials for public address
-          creds=$(echo "$REGISTRY_CREDENTIALS" | jq -r --arg reg "$public_registry" '.[$reg] // empty')
-          if [ -n "$creds" ]; then
-            echo "$public_registry"
-            return
+          # 2. Try VPC variant (convert public to VPC)
+          local vpc_registry
+          vpc_registry=$(convert_public_to_vpc "$registry")
+          if [ "$vpc_registry" != "$registry" ]; then
+            creds=$(echo "$REGISTRY_CREDENTIALS" | jq -r --arg reg "$vpc_registry" '.[$reg] // empty')
+            if [ -n "$creds" ]; then
+              echo "$vpc_registry"
+              return
+            fi
+          fi
+
+          # 3. Try public variant (convert VPC to public)
+          local public_registry
+          public_registry=$(echo "$registry" | sed 's/-vpc\.\([^/]*\.aliyuncs\.com\)/.\1/')
+          if [ "$public_registry" != "$registry" ]; then
+            creds=$(echo "$REGISTRY_CREDENTIALS" | jq -r --arg reg "$public_registry" '.[$reg] // empty')
+            if [ -n "$creds" ]; then
+              echo "$public_registry"
+              return
+            fi
           fi
 
           # Return original if no credentials found
