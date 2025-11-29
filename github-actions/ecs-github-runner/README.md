@@ -116,7 +116,7 @@ Terraform 变量与 Java 代码的映射详情请见 [`terraform/JAVA_TERRAFORM_
 由于在中国大陆或其他受限网络环境下无法运行 GitHub Actions, 此时可以：
 
 1. `register_runner: "false"`：只创建 ECS 机器，不注册 Runner。
-2. `expose_instance_password: "true"`：把实例密码作为输出返回，配合公网 IP 直接 SSH 登录。
+2. `expose_instance_password: "true"`：把实例密码作为输出返回，配合公网 IP 直接 SSH 登录。(或者你设置了 `key_pair_name` 使用 ssh private key 登录)
 3. 在工作流里提示运维人员使用输出信息登录到服务器（参考 [`non-std.yml`](./examples/non-std.yml)）。
 4. 手动/脚本执行完毕后，仍需运行 `mode: destroy` 来释放实例。
 
