@@ -122,11 +122,27 @@ jobs:
 | `instance_type` | ECS instance type | No | `ecs.c7a.large` |
 | `system_disk_size` | System disk size (GB) | No | `40` |
 | `spot_strategy` | Spot strategy | No | `SpotAsPriceGo` |
-| `key_pair_name` | SSH key pair name | Yes | - |
-| `ssh_private_key` | SSH private key | Yes | - |
+| `key_pair_name` | SSH key pair name (for key-based auth) | No | - |
+| `ssh_private_key` | SSH private key (for key-based auth) | No | - |
+| `instance_password` | ECS instance password (for password auth) | No | - |
 | `post_ssh_wait_seconds` | Wait time after SSH ready | No | `30` |
 | `scp_timeout` | SCP timeout | No | `30m` |
 | `ssh_timeout` | SSH timeout | No | `30m` |
+
+### Authentication Options
+
+You can choose one of two authentication methods for ECS SSH access:
+
+**Option 1: Key-based authentication**
+```yaml
+key_pair_name: ${{ env.ECS_KEYPAIR_NAME }}
+ssh_private_key: ${{ secrets.SSH_KEYPAIR_ALI_GENERIC }}
+```
+
+**Option 2: Password authentication**
+```yaml
+instance_password: ${{ secrets.ECS_PASSWORD }}
+```
 
 ## Outputs
 
@@ -138,7 +154,8 @@ jobs:
 
 - `ALI_ACCESS_KEY` - Alibaba Cloud Access Key ID
 - `ALI_SECRET_KEY` - Alibaba Cloud Secret Key
-- `SSH_KEYPAIR_ALI_GENERIC` - SSH private key for ECS access
+- `SSH_KEYPAIR_ALI_GENERIC` - SSH private key for ECS access (if using key-based auth)
+- Or `ECS_PASSWORD` - ECS instance password (if using password auth)
 
 ### Registry Credentials Format
 

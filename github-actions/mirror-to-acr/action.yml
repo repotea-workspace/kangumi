@@ -54,11 +54,14 @@ inputs:
     required: false
     default: "SpotAsPriceGo"
   key_pair_name:
-    description: "SSH key pair name for ECS"
-    required: true
+    description: "SSH key pair name for ECS (required if using key-based auth)"
+    required: false
   ssh_private_key:
-    description: "SSH private key content for connecting to ECS"
-    required: true
+    description: "SSH private key content for connecting to ECS (required if using key-based auth)"
+    required: false
+  instance_password:
+    description: "ECS instance password for SSH auth (alternative to key-based auth)"
+    required: false
 
   # Optional settings
   post_ssh_wait_seconds:
@@ -294,6 +297,7 @@ runs:
         host_name: ${{ inputs.runner_name_prefix }}-${{ github.run_id }}-${{ github.run_attempt }}
         system_disk_size: ${{ inputs.system_disk_size }}
         key_pair_name: ${{ inputs.key_pair_name }}
+        instance_password: ${{ inputs.instance_password }}
         spot_strategy: ${{ inputs.spot_strategy }}
         post_ssh_wait_seconds: ${{ inputs.post_ssh_wait_seconds }}
         custom_user_data: |
@@ -317,6 +321,7 @@ runs:
         host: ${{ steps.provision.outputs.public-ip }}
         username: root
         key: ${{ inputs.ssh_private_key }}
+        password: ${{ inputs.instance_password }}
         timeout: ${{ inputs.scp_timeout }}
         source: ".mirror-images/*.tar"
         target: /tmp/mirror-images/
@@ -337,6 +342,7 @@ runs:
         host: ${{ steps.provision.outputs.public-ip }}
         username: root
         key: ${{ inputs.ssh_private_key }}
+        password: ${{ inputs.instance_password }}
         timeout: ${{ inputs.ssh_timeout }}
         envs: REGISTRY_CREDENTIALS,SOURCES_JSON,TARGETS_JSON,TARGET_REGISTRIES_JSON
         script: |
