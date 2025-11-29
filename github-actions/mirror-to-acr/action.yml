@@ -278,7 +278,7 @@ runs:
     - name: Provision Aliyun ECS
       id: provision
       if: ${{ steps.pull.outputs.has_images == 'true' }}
-      uses: repotea-workspace/kangumi/github-actions/ecs-github-runner@mirror-docker-aliyun
+      uses: repotea-workspace/kangumi/github-actions/ecs-github-runner@main
       with:
         mode: start
         register_runner: "false"
@@ -445,7 +445,7 @@ runs:
     # Step 5: Cleanup - Destroy ECS instance (only if it was provisioned)
     - name: Destroy ECS instance
       if: ${{ always() && steps.pull.outputs.has_images == 'true' }}
-      uses: repotea-workspace/kangumi/github-actions/ecs-github-runner@mirror-docker-aliyun
+      uses: repotea-workspace/kangumi/github-actions/ecs-github-runner@main
       with:
         mode: destroy
         register_runner: "false"

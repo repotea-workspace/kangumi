@@ -1,11 +1,11 @@
 name: Mirror Docker Images to Aliyun ACR
 
 on:
-  push:
-    branches: [main, mirror-docker-aliyun]
-    paths:
-      - '.github/workflows/mirror-to-acr.yml'
-      - 'github-actions/mirror-to-acr/**'
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - '.github/workflows/mirror-to-acr.yml'
+  #     - 'github-actions/mirror-to-acr/**'
   workflow_dispatch:
 
 env:
