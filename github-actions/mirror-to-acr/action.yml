@@ -80,6 +80,10 @@ inputs:
     description: "SSH command timeout"
     required: false
     default: "30m"
+  ecs_auto_release_hours:
+    description: "Hours until ECS instance auto-release (safety mechanism if workflow fails)"
+    required: false
+    default: "1"
 
 outputs:
   mirrored_images:
@@ -277,7 +281,20 @@ runs:
           echo "Target registries that will need login: ${TARGET_REGISTRIES[*]}"
         fi
 
-    # Step 2: Provision Aliyun ECS (skip if no images to mirror)
+    # Step 2: Calculate auto release time for ECS safety
+    - name: Calculate ECS auto release time
+      id: auto_release
+      if: ${{ steps.pull.outputs.has_images == 'true' }}
+      shell: bash
+      env:
+        AUTO_RELEASE_HOURS: ${{ inputs.ecs_auto_release_hours }}
+      run: |
+        # Calculate auto release time: current time + N hours in RFC3339 format
+        auto_release_time=$(date -u -d "+${AUTO_RELEASE_HOURS} hour" '+%Y-%m-%dT%H:%M:%SZ')
+        echo "auto_release_time=$auto_release_time" >> "$GITHUB_OUTPUT"
+        echo "ECS auto release time: $auto_release_time (${AUTO_RELEASE_HOURS}h from now)"
+
+    # Step 3: Provision Aliyun ECS (skip if no images to mirror)
     - name: Provision Aliyun ECS
       id: provision
       if: ${{ steps.pull.outputs.has_images == 'true' }}
@@ -299,6 +316,7 @@ runs:
         key_pair_name: ${{ inputs.key_pair_name }}
         instance_password: ${{ inputs.instance_password }}
         spot_strategy: ${{ inputs.spot_strategy }}
+        auto_release_time: ${{ steps.auto_release.outputs.auto_release_time }}
         post_ssh_wait_seconds: ${{ inputs.post_ssh_wait_seconds }}
         custom_user_data: |
           # Update package manager
@@ -313,7 +331,7 @@ runs:
           systemctl start docker
           systemctl enable docker
 
-    # Step 3: Upload tar files to ECS via SCP (skip if no images to mirror)
+    # Step 4: Upload tar files to ECS via SCP (skip if no images to mirror)
     - name: Upload images to ECS
       if: ${{ steps.pull.outputs.has_images == 'true' }}
       uses: appleboy/scp-action@v1
@@ -328,7 +346,7 @@ runs:
         strip_components: 1
         debug: "true"
 
-    # Step 4: Execute docker load, tag, and push on ECS (skip if no images to mirror)
+    # Step 5: Execute docker load, tag, and push on ECS (skip if no images to mirror)
     - name: Load, tag and push images on ECS
       id: push
       if: ${{ steps.pull.outputs.has_images == 'true' }}
@@ -448,7 +466,7 @@ runs:
           echo ""
           echo "=== All images processed ==="
 
-    # Step 5: Cleanup - Destroy ECS instance (only if it was provisioned)
+    # Step 6: Cleanup - Destroy ECS instance (only if it was provisioned)
     - name: Destroy ECS instance
       if: ${{ always() && steps.pull.outputs.has_images == 'true' }}
       uses: repotea-workspace/kangumi/github-actions/ecs-github-runner@main
@@ -463,7 +481,7 @@ runs:
         security_group_id: ${{ inputs.security_group_id }}
         image_id: ${{ inputs.image_id }}
 
-    # Step 6: Summary
+    # Step 7: Summary
     - name: Generate summary
       id: summary
       if: always()
