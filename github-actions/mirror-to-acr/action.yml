@@ -1,0 +1,439 @@
+name: "Mirror Docker Images to Aliyun ACR"
+description: "Mirror Docker images to Alibaba Cloud Container Registry via ECS internal network"
+
+inputs:
+  # Config file path
+  config_file:
+    description: "Path to the YAML config file containing mirror definitions"
+    required: true
+
+  # Registry credentials (JSON format)
+  # Format: {"registry_host": {"username": "xxx", "password": "xxx"}, ...}
+  # Example: {"ghcr.io": {"username": "user", "password": "token"}, "docker.io": {"username": "user", "password": "pass"}}
+  registry_credentials:
+    description: "JSON object containing registry credentials. Keys are registry hosts, values are {username, password} objects."
+    required: false
+    default: "{}"
+
+  # Aliyun ECS credentials
+  ali_access_key:
+    description: "Alibaba Cloud Access Key ID"
+    required: true
+  ali_secret_key:
+    description: "Alibaba Cloud Access Key Secret"
+    required: true
+  ali_region:
+    description: "Alibaba Cloud region ID (e.g. cn-shenzhen)"
+    required: true
+    default: "cn-shenzhen"
+
+  # ECS instance configuration
+  vswitch_id:
+    description: "Existing VSwitch ID for the ECS instance"
+    required: true
+  availability_zone:
+    description: "Availability zone for the ECS instance"
+    required: true
+  security_group_id:
+    description: "Security group ID for the ECS instance"
+    required: true
+  image_id:
+    description: "Image ID for the ECS instance"
+    required: false
+    default: "ubuntu_24_04_x64_20G_alibase_20251102.vhd"
+  instance_type:
+    description: "ECS instance type"
+    required: false
+    default: "ecs.c7a.large"
+  system_disk_size:
+    description: "System disk size in GB"
+    required: false
+    default: "40"
+  spot_strategy:
+    description: "Spot strategy (NoSpot/SpotWithPriceLimit/SpotAsPriceGo)"
+    required: false
+    default: "SpotAsPriceGo"
+  key_pair_name:
+    description: "SSH key pair name for ECS"
+    required: true
+  ssh_private_key:
+    description: "SSH private key content for connecting to ECS"
+    required: true
+
+  # Optional settings
+  post_ssh_wait_seconds:
+    description: "Extra seconds to wait after SSH becomes available"
+    required: false
+    default: "30"
+  runner_name_prefix:
+    description: "Prefix for ECS instance name"
+    required: false
+    default: "mirror-acr"
+  scp_timeout:
+    description: "SCP transfer timeout"
+    required: false
+    default: "30m"
+  ssh_timeout:
+    description: "SSH command timeout"
+    required: false
+    default: "30m"
+
+outputs:
+  mirrored_images:
+    description: "JSON array of successfully mirrored images"
+    value: ${{ steps.summary.outputs.mirrored_images }}
+  failed_images:
+    description: "JSON array of failed images"
+    value: ${{ steps.summary.outputs.failed_images }}
+
+runs:
+  using: composite
+  steps:
+    # Step 0: Install deps
+    - name: Install yq
+      uses: dcarbone/install-yq-action@v1
+    - name: Install jq
+      uses: dcarbone/install-jq-action@v3
+
+    # Step 1: Login to registries and pull images
+    - name: Login to registries and pull images
+      id: pull
+      shell: bash
+      env:
+        CONFIG_FILE: ${{ inputs.config_file }}
+        REGISTRY_CREDENTIALS: ${{ inputs.registry_credentials }}
+      run: |
+        set -euo pipefail
+
+        if [ ! -f "$CONFIG_FILE" ]; then
+          echo "::error::Config file not found: $CONFIG_FILE"
+          exit 1
+        fi
+
+        echo "=== Parsing config file: $CONFIG_FILE ==="
+        cat "$CONFIG_FILE"
+
+        # Create temp directory for tar files
+        IMAGES_DIR="${GITHUB_WORKSPACE}/.mirror-images"
+        mkdir -p "$IMAGES_DIR"
+        echo "images_dir=$IMAGES_DIR" >> "$GITHUB_OUTPUT"
+
+        # Track logged in registries to avoid duplicate logins
+        declare -A LOGGED_IN_REGISTRIES
+
+        # Function to extract registry host from image name
+        get_registry_host() {
+          local image="$1"
+          # Check if image contains a registry host (has a dot before the first slash)
+          if [[ "$image" =~ ^([^/]+\.[^/]+)/ ]]; then
+            echo "${BASH_REMATCH[1]}"
+          elif [[ "$image" =~ ^([^/]+)/ ]] && [[ "${BASH_REMATCH[1]}" == *"."* || "${BASH_REMATCH[1]}" == *":"* ]]; then
+            echo "${BASH_REMATCH[1]}"
+          else
+            # Default to docker.io for images like "nginx:latest" or "library/nginx"
+            echo "docker.io"
+          fi
+        }
+
+        # Function to login to a registry
+        login_to_registry() {
+          local registry="$1"
+
+          # Skip if already logged in
+          if [[ -n "${LOGGED_IN_REGISTRIES[$registry]:-}" ]]; then
+            echo "Already logged in to $registry"
+            return 0
+          fi
+
+          # Check if credentials exist for this registry
+          local creds
+          creds=$(echo "$REGISTRY_CREDENTIALS" | jq -r --arg reg "$registry" '.[$reg] // empty')
+
+          if [ -n "$creds" ]; then
+            local username password
+            username=$(echo "$creds" | jq -r '.username')
+            password=$(echo "$creds" | jq -r '.password')
+
+            if [ -n "$username" ] && [ -n "$password" ] && [ "$username" != "null" ] && [ "$password" != "null" ]; then
+              echo "Logging in to registry: $registry"
+              if [ "$registry" = "docker.io" ]; then
+                echo "$password" | docker login -u "$username" --password-stdin
+              else
+                echo "$password" | docker login "$registry" -u "$username" --password-stdin
+              fi
+              LOGGED_IN_REGISTRIES[$registry]=1
+              echo "Successfully logged in to $registry"
+              return 0
+            fi
+          fi
+
+          echo "No credentials found for $registry, assuming public access"
+          return 0
+        }
+
+        # Parse mirror entries and pull images
+        SOURCES=()
+        TARGETS=()
+        TAR_FILES=()
+        TARGET_REGISTRIES=()
+
+        count=$(yq '.mirror | length' "$CONFIG_FILE")
+        echo "Found $count images to mirror"
+
+        for ((i=0; i<count; i++)); do
+          source=$(yq ".mirror[$i].source" "$CONFIG_FILE")
+          target=$(yq ".mirror[$i].target" "$CONFIG_FILE")
+
+          echo ""
+          echo "=== Processing image $((i+1))/$count ==="
+          echo "Source: $source"
+          echo "Target: $target"
+
+          # Get source registry and login if needed
+          source_registry=$(get_registry_host "$source")
+          echo "Source registry: $source_registry"
+          login_to_registry "$source_registry"
+
+          # Track target registry for later
+          target_registry=$(get_registry_host "$target")
+          if [[ ! " ${TARGET_REGISTRIES[*]:-} " =~ " ${target_registry} " ]]; then
+            TARGET_REGISTRIES+=("$target_registry")
+          fi
+
+          # Generate safe filename for tar
+          safe_name=$(echo "$source" | sed 's/[^a-zA-Z0-9._-]/_/g')
+          tar_file="${IMAGES_DIR}/${safe_name}.tar"
+
+          echo "Pulling image: $source"
+          docker pull "$source"
+
+          echo "Saving image to: $tar_file"
+          docker save -o "$tar_file" "$source"
+
+          SOURCES+=("$source")
+          TARGETS+=("$target")
+          TAR_FILES+=("$tar_file")
+
+          echo "Saved: $(ls -lh "$tar_file")"
+        done
+
+        # Store arrays as JSON for later steps
+        echo "sources=$(printf '%s\n' "${SOURCES[@]}" | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+        echo "targets=$(printf '%s\n' "${TARGETS[@]}" | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+        echo "tar_files=$(printf '%s\n' "${TAR_FILES[@]}" | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+        echo "target_registries=$(printf '%s\n' "${TARGET_REGISTRIES[@]}" | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+        echo "count=$count" >> "$GITHUB_OUTPUT"
+
+        echo ""
+        echo "=== All images pulled and saved ==="
+        ls -lh "$IMAGES_DIR"
+        echo ""
+        echo "Target registries that will need login: ${TARGET_REGISTRIES[*]}"
+
+    # Step 2: Provision Aliyun ECS
+    - name: Provision Aliyun ECS
+      id: provision
+      uses: repotea-workspace/kangumi/github-actions/ecs-github-runner@mirror-docker-aliyun
+      with:
+        mode: start
+        register_runner: "false"
+        ali_access_key: ${{ inputs.ali_access_key }}
+        ali_secret_key: ${{ inputs.ali_secret_key }}
+        ali_region: ${{ inputs.ali_region }}
+        vswitch_id: ${{ inputs.vswitch_id }}
+        availability_zone: ${{ inputs.availability_zone }}
+        security_group_id: ${{ inputs.security_group_id }}
+        image_id: ${{ inputs.image_id }}
+        ali_ecs_name: ${{ inputs.runner_name_prefix }}-${{ github.run_id }}-${{ github.run_attempt }}
+        ali_ecs_instance_type: ${{ inputs.instance_type }}
+        host_name: ${{ inputs.runner_name_prefix }}-${{ github.run_id }}-${{ github.run_attempt }}
+        system_disk_size: ${{ inputs.system_disk_size }}
+        key_pair_name: ${{ inputs.key_pair_name }}
+        spot_strategy: ${{ inputs.spot_strategy }}
+        post_ssh_wait_seconds: ${{ inputs.post_ssh_wait_seconds }}
+        custom_user_data: |
+          # Update package manager
+          apt-get update
+          # Add Docker package source
+          apt-get -y install apt-transport-https ca-certificates curl software-properties-common jq
+          curl -fsSL http://mirrors.cloud.aliyuncs.com/docker-ce/linux/ubuntu/gpg | apt-key add -
+          add-apt-repository -y "deb [arch=$(dpkg --print-architecture)] http://mirrors.cloud.aliyuncs.com/docker-ce/linux/ubuntu $(lsb_release -cs) stable"
+          # Install Docker
+          apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+          systemctl start docker
+          systemctl enable docker
+
+    # Step 3: Upload tar files to ECS via SCP
+    - name: Upload images to ECS
+      uses: appleboy/scp-action@v1
+      with:
+        host: ${{ steps.provision.outputs.public-ip }}
+        username: root
+        key: ${{ inputs.ssh_private_key }}
+        timeout: ${{ inputs.scp_timeout }}
+        source: ".mirror-images/*.tar"
+        target: /tmp/mirror-images/
+        strip_components: 1
+        debug: "true"
+
+    # Step 4: Execute docker load, tag, and push on ECS
+    - name: Load, tag and push images on ECS
+      id: push
+      uses: appleboy/ssh-action@v1
+      env:
+        REGISTRY_CREDENTIALS: ${{ inputs.registry_credentials }}
+        SOURCES_JSON: ${{ steps.pull.outputs.sources }}
+        TARGETS_JSON: ${{ steps.pull.outputs.targets }}
+        TARGET_REGISTRIES_JSON: ${{ steps.pull.outputs.target_registries }}
+      with:
+        host: ${{ steps.provision.outputs.public-ip }}
+        username: root
+        key: ${{ inputs.ssh_private_key }}
+        timeout: ${{ inputs.ssh_timeout }}
+        envs: REGISTRY_CREDENTIALS,SOURCES_JSON,TARGETS_JSON,TARGET_REGISTRIES_JSON
+        script: |
+          set -ex
+
+          echo "=== Docker Info ==="
+          docker version
+
+          # Function to extract registry host from image name
+          get_registry_host() {
+            local image="$1"
+            if [[ "$image" =~ ^([^/]+\.[^/]+)/ ]]; then
+              echo "${BASH_REMATCH[1]}"
+            elif [[ "$image" =~ ^([^/]+)/ ]] && [[ "${BASH_REMATCH[1]}" == *"."* || "${BASH_REMATCH[1]}" == *":"* ]]; then
+              echo "${BASH_REMATCH[1]}"
+            else
+              echo "docker.io"
+            fi
+          }
+
+          # Track logged in registries
+          declare -A LOGGED_IN_REGISTRIES
+
+          # Login to all target registries
+          echo "=== Login to target registries ==="
+          target_registries=$(echo "$TARGET_REGISTRIES_JSON" | jq -r '.[]')
+          for registry in $target_registries; do
+            if [[ -n "${LOGGED_IN_REGISTRIES[$registry]:-}" ]]; then
+              continue
+            fi
+
+            creds=$(echo "$REGISTRY_CREDENTIALS" | jq -r --arg reg "$registry" '.[$reg] // empty')
+            if [ -n "$creds" ]; then
+              username=$(echo "$creds" | jq -r '.username')
+              password=$(echo "$creds" | jq -r '.password')
+
+              if [ -n "$username" ] && [ -n "$password" ] && [ "$username" != "null" ] && [ "$password" != "null" ]; then
+                echo "Logging in to registry: $registry"
+                if [ "$registry" = "docker.io" ]; then
+                  echo "$password" | docker login -u "$username" --password-stdin
+                else
+                  echo "$password" | docker login "$registry" -u "$username" --password-stdin
+                fi
+                LOGGED_IN_REGISTRIES[$registry]=1
+                echo "Successfully logged in to $registry"
+              else
+                echo "::warning::No valid credentials for $registry"
+              fi
+            else
+              echo "::warning::No credentials found for $registry"
+            fi
+          done
+
+          echo "=== List uploaded tar files ==="
+          ls -lh /tmp/mirror-images/
+
+          echo "=== Processing images ==="
+
+          # Parse JSON arrays
+          sources=$(echo "$SOURCES_JSON" | jq -r '.[]')
+          targets=$(echo "$TARGETS_JSON" | jq -r '.[]')
+
+          # Convert to arrays
+          readarray -t source_arr <<< "$sources"
+          readarray -t target_arr <<< "$targets"
+
+          # Process each image
+          for ((i=0; i<${#source_arr[@]}; i++)); do
+            source="${source_arr[$i]}"
+            target="${target_arr[$i]}"
+
+            echo ""
+            echo "=== Image $((i+1))/${#source_arr[@]} ==="
+            echo "Source: $source"
+            echo "Target: $target"
+
+            # Find the tar file
+            safe_name=$(echo "$source" | sed 's/[^a-zA-Z0-9._-]/_/g')
+            tar_file="/tmp/mirror-images/${safe_name}.tar"
+
+            if [ ! -f "$tar_file" ]; then
+              echo "::warning::Tar file not found: $tar_file"
+              continue
+            fi
+
+            echo "Loading image from: $tar_file"
+            docker load -i "$tar_file"
+
+            echo "Tagging: $source -> $target"
+            docker tag "$source" "$target"
+
+            echo "Pushing: $target"
+            docker push "$target"
+
+            echo "Successfully mirrored: $target"
+
+            # Cleanup to save disk space
+            docker rmi "$source" "$target" || true
+            rm -f "$tar_file"
+          done
+
+          echo ""
+          echo "=== All images processed ==="
+
+    # Step 5: Cleanup - Destroy ECS instance
+    - name: Destroy ECS instance
+      if: always()
+      uses: repotea-workspace/kangumi/github-actions/ecs-github-runner@mirror-docker-aliyun
+      with:
+        mode: destroy
+        register_runner: "false"
+        ali_access_key: ${{ inputs.ali_access_key }}
+        ali_secret_key: ${{ inputs.ali_secret_key }}
+        ali_region: ${{ inputs.ali_region }}
+        vswitch_id: ${{ inputs.vswitch_id }}
+        availability_zone: ${{ inputs.availability_zone }}
+        security_group_id: ${{ inputs.security_group_id }}
+        image_id: ${{ inputs.image_id }}
+
+    # Step 6: Summary
+    - name: Generate summary
+      id: summary
+      if: always()
+      shell: bash
+      env:
+        SOURCES_JSON: ${{ steps.pull.outputs.sources }}
+        TARGETS_JSON: ${{ steps.pull.outputs.targets }}
+      run: |
+        echo "=== Mirror Summary ===" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Source | Target |" >> $GITHUB_STEP_SUMMARY
+        echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
+
+        sources=$(echo "$SOURCES_JSON" | jq -r '.[]' 2>/dev/null || echo "")
+        targets=$(echo "$TARGETS_JSON" | jq -r '.[]' 2>/dev/null || echo "")
+
+        if [ -n "$sources" ] && [ -n "$targets" ]; then
+          readarray -t source_arr <<< "$sources"
+          readarray -t target_arr <<< "$targets"
+
+          for ((i=0; i<${#source_arr[@]}; i++)); do
+            echo "| \`${source_arr[$i]}\` | \`${target_arr[$i]}\` |" >> $GITHUB_STEP_SUMMARY
+          done
+        fi
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "mirrored_images=$TARGETS_JSON" >> "$GITHUB_OUTPUT"
