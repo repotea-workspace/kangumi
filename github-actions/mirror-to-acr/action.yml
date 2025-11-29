@@ -141,11 +141,11 @@ runs:
           echo "=== Using single image mode ==="
           echo "Source: $SOURCE_IMAGE"
           echo "Target: $TARGET_IMAGE"
-          cat > "$EFFECTIVE_CONFIG" <<EOF
-          mirror:
-            - source: "$SOURCE_IMAGE"
-              target: "$TARGET_IMAGE"
-          EOF
+          {
+            echo "mirror:"
+            echo "  - source: \"$SOURCE_IMAGE\""
+            echo "    target: \"$TARGET_IMAGE\""
+          } > "$EFFECTIVE_CONFIG"
         elif [ -n "$CONFIG_CONTENT" ]; then
           # Method 2: Inline config content
           echo "=== Using inline config content ==="
