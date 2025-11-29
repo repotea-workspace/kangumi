@@ -254,15 +254,30 @@ runs:
         echo "target_registries=$(printf '%s\n' "${TARGET_REGISTRIES[@]}" | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
         echo "count=$count" >> "$GITHUB_OUTPUT"
 
+        # Check if there are images to mirror
+        images_to_mirror=${#SOURCES[@]}
+        if [ "$images_to_mirror" -gt 0 ]; then
+          echo "has_images=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "has_images=false" >> "$GITHUB_OUTPUT"
+        fi
+        echo "images_to_mirror=$images_to_mirror" >> "$GITHUB_OUTPUT"
+
         echo ""
         echo "=== All images pulled and saved ==="
+        echo "Images to mirror: $images_to_mirror"
         ls -lh "$IMAGES_DIR"
         echo ""
-        echo "Target registries that will need login: ${TARGET_REGISTRIES[*]}"
+        if [ "$images_to_mirror" -eq 0 ]; then
+          echo "✓ All images already exist in target registry, skipping ECS provisioning"
+        else
+          echo "Target registries that will need login: ${TARGET_REGISTRIES[*]}"
+        fi
 
-    # Step 2: Provision Aliyun ECS
+    # Step 2: Provision Aliyun ECS (skip if no images to mirror)
     - name: Provision Aliyun ECS
       id: provision
+      if: ${{ steps.pull.outputs.has_images == 'true' }}
       uses: repotea-workspace/kangumi/github-actions/ecs-github-runner@mirror-docker-aliyun
       with:
         mode: start
@@ -294,8 +309,9 @@ runs:
           systemctl start docker
           systemctl enable docker
 
-    # Step 3: Upload tar files to ECS via SCP
+    # Step 3: Upload tar files to ECS via SCP (skip if no images to mirror)
     - name: Upload images to ECS
+      if: ${{ steps.pull.outputs.has_images == 'true' }}
       uses: appleboy/scp-action@v1
       with:
         host: ${{ steps.provision.outputs.public-ip }}
@@ -307,9 +323,10 @@ runs:
         strip_components: 1
         debug: "true"
 
-    # Step 4: Execute docker load, tag, and push on ECS
+    # Step 4: Execute docker load, tag, and push on ECS (skip if no images to mirror)
     - name: Load, tag and push images on ECS
       id: push
+      if: ${{ steps.pull.outputs.has_images == 'true' }}
       uses: appleboy/ssh-action@v1
       env:
         REGISTRY_CREDENTIALS: ${{ inputs.registry_credentials }}
@@ -425,9 +442,9 @@ runs:
           echo ""
           echo "=== All images processed ==="
 
-    # Step 5: Cleanup - Destroy ECS instance
+    # Step 5: Cleanup - Destroy ECS instance (only if it was provisioned)
     - name: Destroy ECS instance
-      if: always()
+      if: ${{ always() && steps.pull.outputs.has_images == 'true' }}
       uses: repotea-workspace/kangumi/github-actions/ecs-github-runner@mirror-docker-aliyun
       with:
         mode: destroy
@@ -448,8 +465,20 @@ runs:
       env:
         SOURCES_JSON: ${{ steps.pull.outputs.sources }}
         TARGETS_JSON: ${{ steps.pull.outputs.targets }}
+        HAS_IMAGES: ${{ steps.pull.outputs.has_images }}
+        IMAGES_TO_MIRROR: ${{ steps.pull.outputs.images_to_mirror }}
       run: |
         echo "=== Mirror Summary ===" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        if [ "$HAS_IMAGES" != "true" ]; then
+          echo "✅ **No images needed to be mirrored** - all target images already exist." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "mirrored_images=[]" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        echo "**Images mirrored: $IMAGES_TO_MIRROR**" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "| Source | Target |" >> $GITHUB_STEP_SUMMARY
         echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
