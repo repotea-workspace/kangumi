@@ -111,6 +111,7 @@ runs:
           echo "* Source: ${{ github.event_name }}"
           echo "* Repository: https://github.com/${PROJECT_NAME}"
           echo "* Workflows: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "* Commit: https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
           echo ""
           echo "${COMMIT_MSG}"
           echo "EOF"
