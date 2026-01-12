@@ -135,12 +135,12 @@ runs:
         fi
 
         # build commit links
-        COMMIT_LINKS="  - https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
+        COMMIT_LINKS="    - https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
         if [ -n "${AC_GIT_REF}" ]; then
-          COMMIT_LINKS="${COMMIT_LINKS}"$'\n'"  - https://github.com/${SOURCE_REPOSITORY}/tree/${AC_GIT_REF}"
+          COMMIT_LINKS="${COMMIT_LINKS}"$'\n'"    - https://github.com/${SOURCE_REPOSITORY}/tree/${AC_GIT_REF}"
         fi
         if [ -n "${COMMIT_ID}" ]; then
-          COMMIT_LINKS="${COMMIT_LINKS}"$'\n'"  - https://github.com/${SOURCE_REPOSITORY}/commit/${COMMIT_ID}"
+          COMMIT_LINKS="${COMMIT_LINKS}"$'\n'"    - https://github.com/${SOURCE_REPOSITORY}/commit/${COMMIT_ID}"
         fi
 
         # extract first line of commit message as subject
