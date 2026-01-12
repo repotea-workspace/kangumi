@@ -163,7 +163,7 @@ runs:
           echo "${COMMIT_MSG}"
           echo ""
           echo "--- Actions Context ---"
-          echo "* Source Repository: https://github.com/${SOURCE_REPOSITORY}"
+          echo "* Repository: https://github.com/${SOURCE_REPOSITORY}"
           echo "* Git Ref: ${AC_GIT_REF}"
           if [ -n "${COMMIT_AUTHOR}" ]; then
             echo "* Author: ${COMMIT_AUTHOR}"
