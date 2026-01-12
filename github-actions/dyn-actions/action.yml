@@ -94,22 +94,21 @@ runs:
         echo "${COMMIT_SHA}" > .github/commit.txt
         echo "${REPOSITORY}" > .github/repository.txt
 
-        # write author info (collect all unique authors from commits)
-        AUTHORS_JSON='${{ toJSON(github.event.commits.*.author) }}'
+        # write author info (use @username format)
+        AUTHORS_JSON='${{ toJSON(github.event.commits.*.author.username) }}'
         if [ "${AUTHORS_JSON}" != "null" ] && [ "${AUTHORS_JSON}" != "[]" ] && [ -n "${AUTHORS_JSON}" ]; then
-          echo "${AUTHORS_JSON}" | jq -r '.[] | "\(.name) <\(.email)>"' 2>/dev/null | sort -u > .github/author.txt
+          echo "${AUTHORS_JSON}" | jq -r '.[] | "@\(.)"' 2>/dev/null | sort -u > .github/author.txt
         fi
-        # fallback to head_commit author if author.txt is empty
+        # fallback to head_commit author username if author.txt is empty
         if [ ! -s .github/author.txt ]; then
-          HEAD_AUTHOR_NAME="${{ github.event.head_commit.author.name }}"
-          HEAD_AUTHOR_EMAIL="${{ github.event.head_commit.author.email }}"
-          if [ -n "${HEAD_AUTHOR_NAME}" ]; then
-            echo "${HEAD_AUTHOR_NAME} <${HEAD_AUTHOR_EMAIL}>" > .github/author.txt
+          HEAD_AUTHOR_USERNAME="${{ github.event.head_commit.author.username }}"
+          if [ -n "${HEAD_AUTHOR_USERNAME}" ]; then
+            echo "@${HEAD_AUTHOR_USERNAME}" > .github/author.txt
           fi
         fi
         # fallback to actor if still empty
         if [ ! -s .github/author.txt ]; then
-          echo "${{ github.actor }}" > .github/author.txt
+          echo "@${{ github.actor }}" > .github/author.txt
         fi
 
         # push
