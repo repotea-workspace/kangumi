@@ -119,6 +119,12 @@ runs:
           COMMIT_ID="${INPUT_COMMIT_ID}"
         fi
 
+        # read commit_date if exists
+        COMMIT_DATE=""
+        if [ -f "__origin__/.github/date.txt" ]; then
+          COMMIT_DATE=$(cat __origin__/.github/date.txt)
+        fi
+
         # read source_repository, use input first, if not set use repository.txt
         if [ -n "${INPUT_SOURCE_REPOSITORY}" ]; then
           SOURCE_REPOSITORY="${INPUT_SOURCE_REPOSITORY}"
@@ -137,18 +143,30 @@ runs:
           COMMIT_LINKS="${COMMIT_LINKS}"$'\n'"  - https://github.com/${SOURCE_REPOSITORY}/commit/${COMMIT_ID}"
         fi
 
+        # extract first line of commit message as subject
+        COMMIT_MSG_SUBJECT=$(echo "${COMMIT_MSG}" | head -n 1 | cut -c 1-60)
+        if [ ${#COMMIT_MSG_SUBJECT} -ge 60 ]; then
+          COMMIT_MSG_SUBJECT="${COMMIT_MSG_SUBJECT}..."
+        fi
+
         {
           echo "message<<EOF"
-          echo "[${SOURCE_REPOSITORY}] :: Actions Context:"
+          echo "[${SOURCE_REPOSITORY}] ${AC_GIT_REF} :: ${COMMIT_MSG_SUBJECT}"
+          echo ""
+          echo "--- Commit Message ---"
+          echo "${COMMIT_MSG}"
+          echo ""
+          echo "--- Actions Context ---"
+          echo "* Source Repository: https://github.com/${SOURCE_REPOSITORY}"
           echo "* Git Ref: ${AC_GIT_REF}"
+          if [ -n "${COMMIT_DATE}" ]; then
+            echo "* Commit Date: ${COMMIT_DATE}"
+          fi
           echo "* Build started at: ${{ github.event.head_commit.timestamp }}"
           echo "* Source: ${{ github.event_name }}"
-          echo "* Repository: https://github.com/${SOURCE_REPOSITORY}"
           echo "* Workflows: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           echo "* Commits:"
           echo "${COMMIT_LINKS}"
-          echo ""
-          echo "${COMMIT_MSG}"
           echo "EOF"
         } >> "$GITHUB_OUTPUT"
 
