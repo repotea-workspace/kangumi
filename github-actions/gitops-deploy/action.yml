@@ -125,6 +125,12 @@ runs:
           COMMIT_DATE=$(cat __origin__/.github/date.txt)
         fi
 
+        # read author if exists
+        COMMIT_AUTHOR=""
+        if [ -f "__origin__/.github/author.txt" ]; then
+          COMMIT_AUTHOR=$(cat __origin__/.github/author.txt)
+        fi
+
         # read source_repository, use input first, if not set use repository.txt
         if [ -n "${INPUT_SOURCE_REPOSITORY}" ]; then
           SOURCE_REPOSITORY="${INPUT_SOURCE_REPOSITORY}"
@@ -159,6 +165,9 @@ runs:
           echo "--- Actions Context ---"
           echo "* Source Repository: https://github.com/${SOURCE_REPOSITORY}"
           echo "* Git Ref: ${AC_GIT_REF}"
+          if [ -n "${COMMIT_AUTHOR}" ]; then
+            echo "* Author: ${COMMIT_AUTHOR}"
+          fi
           if [ -n "${COMMIT_DATE}" ]; then
             echo "* Commit Date: ${COMMIT_DATE}"
           fi

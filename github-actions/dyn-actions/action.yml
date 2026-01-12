@@ -94,6 +94,10 @@ runs:
         echo "${COMMIT_SHA}" > .github/commit.txt
         echo "${REPOSITORY}" > .github/repository.txt
 
+        # write author info (collect all unique authors from commits)
+        AUTHORS_JSON='${{ toJSON(github.event.commits.*.author) }}'
+        echo "${AUTHORS_JSON}" | jq -r '.[] | "\(.name) <\(.email)>"' | sort -u > .github/author.txt
+
         # push
         git config user.name "${INPUT_GIT_NAME}"
         git config user.email "${INPUT_GIT_EMAIL}"
