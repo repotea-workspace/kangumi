@@ -96,7 +96,21 @@ runs:
 
         # write author info (collect all unique authors from commits)
         AUTHORS_JSON='${{ toJSON(github.event.commits.*.author) }}'
-        echo "${AUTHORS_JSON}" | jq -r '.[] | "\(.name) <\(.email)>"' | sort -u > .github/author.txt
+        if [ "${AUTHORS_JSON}" != "null" ] && [ "${AUTHORS_JSON}" != "[]" ] && [ -n "${AUTHORS_JSON}" ]; then
+          echo "${AUTHORS_JSON}" | jq -r '.[] | "\(.name) <\(.email)>"' 2>/dev/null | sort -u > .github/author.txt
+        fi
+        # fallback to head_commit author if author.txt is empty
+        if [ ! -s .github/author.txt ]; then
+          HEAD_AUTHOR_NAME="${{ github.event.head_commit.author.name }}"
+          HEAD_AUTHOR_EMAIL="${{ github.event.head_commit.author.email }}"
+          if [ -n "${HEAD_AUTHOR_NAME}" ]; then
+            echo "${HEAD_AUTHOR_NAME} <${HEAD_AUTHOR_EMAIL}>" > .github/author.txt
+          fi
+        fi
+        # fallback to actor if still empty
+        if [ ! -s .github/author.txt ]; then
+          echo "${{ github.actor }}" > .github/author.txt
+        fi
 
         # push
         git config user.name "${INPUT_GIT_NAME}"
