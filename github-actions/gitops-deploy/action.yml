@@ -22,15 +22,21 @@ inputs:
     description: 'Value to set'
     required: false
 
-  project_name:
-    description: 'project name'
+  source_repository:
+    description: 'source repository path, e.g. prtmax/endfather'
     required: false
   commit_message:
     description: 'commit message'
     required: false
+    default: '__origin__/.github/message.txt'
   ac_git_ref:
     description: 'action context: git ref'
     required: false
+    default: '__origin__/.github/ref.txt'
+  commit_id:
+    description: 'action context: commit id'
+    required: false
+    default: '__origin__/.github/commit.txt'
 
   argocd_server:
     description: 'ArgoCD server URL'
@@ -87,31 +93,60 @@ runs:
       id: generate-commit-message
       shell: bash
       run: |
-        INPUT_PROJECT_NAME=${{ inputs.project_name }}
+        INPUT_SOURCE_REPOSITORY="${{ inputs.source_repository }}"
         INPUT_COMMIT_MESSAGE="${{ inputs.commit_message }}"
-        INPUT_AC_GIT_REF=${{ inputs.ac_git_ref }}
+        INPUT_AC_GIT_REF="${{ inputs.ac_git_ref }}"
+        INPUT_COMMIT_ID="${{ inputs.commit_id }}"
 
+        # read commit_message
         if [ -f "${INPUT_COMMIT_MESSAGE}" ]; then
-          INPUT_COMMIT_MESSAGE=$(cat ${INPUT_COMMIT_MESSAGE})
+          COMMIT_MSG=$(cat ${INPUT_COMMIT_MESSAGE})
+        else
+          COMMIT_MSG="${INPUT_COMMIT_MESSAGE}"
         fi
 
+        # read ac_git_ref
         if [ -f "${INPUT_AC_GIT_REF}" ]; then
-          INPUT_AC_GIT_REF=$(cat ${INPUT_AC_GIT_REF})
+          AC_GIT_REF=$(cat ${INPUT_AC_GIT_REF})
+        else
+          AC_GIT_REF="${INPUT_AC_GIT_REF}"
         fi
 
-        PROJECT_NAME=${INPUT_PROJECT_NAME:-$DEFAULT_PROJECT_NAME}
-        COMMIT_MSG=${INPUT_COMMIT_MESSAGE:-$DEFAULT_COMMIT_MESSAGE}
-        AC_GIT_REF=${INPUT_AC_GIT_REF:-$DEFAULT_BRANCH_NAME}
+        # read commit_id
+        if [ -f "${INPUT_COMMIT_ID}" ]; then
+          COMMIT_ID=$(cat ${INPUT_COMMIT_ID})
+        else
+          COMMIT_ID="${INPUT_COMMIT_ID}"
+        fi
+
+        # read source_repository, use input first, if not set use repository.txt
+        if [ -n "${INPUT_SOURCE_REPOSITORY}" ]; then
+          SOURCE_REPOSITORY="${INPUT_SOURCE_REPOSITORY}"
+        elif [ -f "__origin__/.github/repository.txt" ]; then
+          SOURCE_REPOSITORY=$(cat __origin__/.github/repository.txt)
+        else
+          SOURCE_REPOSITORY="${{ github.repository }}"
+        fi
+
+        # build commit links
+        COMMIT_LINKS="  - https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
+        if [ -n "${AC_GIT_REF}" ]; then
+          COMMIT_LINKS="${COMMIT_LINKS}"$'\n'"  - https://github.com/${SOURCE_REPOSITORY}/tree/${AC_GIT_REF}"
+        fi
+        if [ -n "${COMMIT_ID}" ]; then
+          COMMIT_LINKS="${COMMIT_LINKS}"$'\n'"  - https://github.com/${SOURCE_REPOSITORY}/commit/${COMMIT_ID}"
+        fi
 
         {
           echo "message<<EOF"
-          echo "[${PROJECT_NAME}] :: Actions Context:"
+          echo "[${SOURCE_REPOSITORY}] :: Actions Context:"
           echo "* Git Ref: ${AC_GIT_REF}"
           echo "* Build started at: ${{ github.event.head_commit.timestamp }}"
           echo "* Source: ${{ github.event_name }}"
-          echo "* Repository: https://github.com/${PROJECT_NAME}"
+          echo "* Repository: https://github.com/${SOURCE_REPOSITORY}"
           echo "* Workflows: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          echo "* Commit: https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
+          echo "* Commits:"
+          echo "${COMMIT_LINKS}"
           echo ""
           echo "${COMMIT_MSG}"
           echo "EOF"
