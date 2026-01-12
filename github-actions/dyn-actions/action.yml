@@ -70,7 +70,7 @@ runs:
           exit 1
         fi
 
-        date > .github/date.txt
+        date -u +"%Y-%m-%dT%H:%M:%SZ" > .github/date.txt
 
         REPO_BRANCH=${{ steps.extract_branch.outputs.branch }}
         REPO_TAG=${{ env.GIT_TAG_NAME }}
