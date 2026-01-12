@@ -60,16 +60,16 @@ runs:
         # prepare changes
 
         rm -rf .github
-        mv ../$INPUT_DOT_GITHUB .github
+        mkdir -p .github
 
-        if [ ! -d ".github" ]; then
-          echo 'not found .github dir'
+        # only copy dyn-workflows as workflows, ignore other directories like instructions
+        if [ -d "../$INPUT_DOT_GITHUB/dyn-workflows" ]; then
+          mv ../$INPUT_DOT_GITHUB/dyn-workflows .github/workflows
+        else
+          echo 'not found dyn-workflows dir'
           exit 1
         fi
-        if [ -d ".github/dyn-workflows" ]; then
-          rm -rf .github/workflows
-          mv .github/dyn-workflows .github/workflows
-        fi
+
         date > .github/date.txt
 
         REPO_BRANCH=${{ steps.extract_branch.outputs.branch }}
