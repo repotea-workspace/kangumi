@@ -46,6 +46,8 @@ runs:
 
         # repository is the full github repo path, e.g. prtmax/endfather
         REPOSITORY=${{ github.repository }}
+        # project_name is just the repo name, e.g. endfather (used for git tag)
+        PROJECT_NAME=$(echo ${{ github.repository }} | cut -d'/' -f2)
 
         T_BRANCH=${{ github.repository }}
 
@@ -106,7 +108,7 @@ runs:
           exit 0
         fi
 
-        TAG_NAME=${REPO_TAG}-${REPOSITORY}
+        TAG_NAME=${REPO_TAG}-${PROJECT_NAME}
         git tag -d ${TAG_NAME} || true
         git push origin :${TAG_NAME} || true
 
