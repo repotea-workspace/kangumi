@@ -86,11 +86,13 @@ runs:
           rm -rf .github/tag.txt || true
         fi
 
-        LATEST_COMMIT_LOG="${{ github.event.head_commit.message }}"
-        COMMIT_MSG=${COMMIT_MSG:-${LATEST_COMMIT_LOG}}
-        COMMIT_MSG=${COMMIT_MSG:-${GIT_COMMIT_MESSAGE}}
+        # Write commit message safely without bash expansion
+        cat > .github/message.txt <<'COMMIT_MSG_EOF'
+${{ github.event.head_commit.message }}
+COMMIT_MSG_EOF
 
-        echo "${COMMIT_MSG}" > .github/message.txt
+        # Read commit message from file to avoid bash interpretation
+        COMMIT_MSG=$(cat .github/message.txt)
         echo "${COMMIT_SHA}" > .github/commit.txt
         echo "${REPOSITORY}" > .github/repository.txt
 
