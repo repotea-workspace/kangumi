@@ -117,7 +117,12 @@ runs:
 
         git status
         git add .
-        git commit -m "[${T_BRANCH}]: ${COMMIT_MSG}"
+
+        # Write commit message to temp file to handle special characters safely
+        printf "[%s]: %s" "${T_BRANCH}" "${COMMIT_MSG}" > /tmp/commit_message.txt
+        git commit -F /tmp/commit_message.txt
+        rm /tmp/commit_message.txt
+
         git push origin $T_BRANCH
 
         if [ -z "${REPO_TAG}" ]; then
