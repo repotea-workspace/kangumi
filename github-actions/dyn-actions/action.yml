@@ -88,8 +88,8 @@ runs:
 
         # Write commit message safely without bash expansion
         cat > .github/message.txt <<'COMMIT_MSG_EOF'
-${{ github.event.head_commit.message }}
-COMMIT_MSG_EOF
+        ${{ github.event.head_commit.message }}
+        COMMIT_MSG_EOF
 
         # Read commit message from file to avoid bash interpretation
         COMMIT_MSG=$(cat .github/message.txt)
