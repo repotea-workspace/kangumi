@@ -1,5 +1,4 @@
-#!/bin/sh
+#!/command/execlineb -S0
 #
 
-
-echo 'sshd died'
+/bin/echo "[sshd] Service stopped"

@@ -1,0 +1,37 @@
+services:
+  dev-toolchain:
+    image: dev-toolchain:local-test
+    container_name: dev-test
+    hostname: dev-test
+    ports:
+      - "2222:22"
+    volumes:
+      - dev-data:/data
+      - dev-code:/code
+    environment:
+      - DOCKER_HOST=tcp://dind:2375
+      - INSTALL_PACKAGES=nodejs,rust
+    depends_on:
+      - dind
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+  dind:
+    image: docker:27-dind
+    container_name: dev-dind
+    hostname: dev-dind
+    privileged: true
+    environment:
+      - DOCKER_TLS_CERTDIR=
+    volumes:
+      - dind-storage:/var/lib/docker
+    restart: unless-stopped
+
+volumes:
+  dev-data:
+    driver: local
+  dev-code:
+    driver: local
+  dind-storage:
+    driver: local

@@ -1,5 +1,13 @@
-#!/command/execlineb -P
+#!/bin/sh
 #
+# VSCode tunnel service - auto-starts when code CLI is installed
 
-s6-envdir /var/run/s6/container_environment
-/usr/local/bin/code tunnel --accept-server-license-terms
+# Wait for code CLI to be installed (check every 10 seconds)
+while [ ! -f /usr/local/bin/code ]; do
+  echo "[vscode] VSCode CLI not installed yet, waiting..."
+  echo "[vscode] Install it with: /opt/install-scripts/install-vscode.sh"
+  sleep 10
+done
+
+echo "[vscode] VSCode CLI detected, starting tunnel..."
+exec /usr/local/bin/code tunnel --accept-server-license-terms

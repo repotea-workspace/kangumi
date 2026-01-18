@@ -9,7 +9,6 @@ env:
   DOCKER_REGISTRY: ghcr.io
 
 jobs:
-
   build-stage-one:
     name: Build Stage One
     runs-on: ubuntu-latest
@@ -94,21 +93,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - package: appbox
-            context: docker-image/appbox
-            build-args: |
-              DOCKER_COMPOSE_VERSION=2.40.3
-              S6_OVERLAY_VERSION=3.2.1.0
           - package: dev-toolchain
             context: docker-image/dev-toolchain
-            build-args: |
-              FLUTTER_VERSION=3.35.1
-              NVM_VERSION=0.40.3
-              NODE_VERSION=22.15.1
-              DOCKER_COMPOSE_VERSION=2.40.3
-              S6_OVERLAY_VERSION=3.2.1.0
-              GCM_VERSION=2.6.1
-              HELM_DIFF_VERSION=v3.14.1
     steps:
       - uses: actions/checkout@v6
 
@@ -133,4 +119,3 @@ jobs:
             ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/${{ matrix.package }}:sha-${{ env.SHA }}
             ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/${{ matrix.package }}:latest
           build-args: ${{ matrix.build-args }}
-
