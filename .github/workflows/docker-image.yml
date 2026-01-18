@@ -33,7 +33,7 @@ jobs:
             context: docker-image/k8ops
             build-args: |
               KUBECTL_VERSION=v1.35.0
-              HELMFILE_VERSION=1.1.9-3.19.1
+              HELMFILE_VERSION=1.2.3
               KUSTOMIZE_VERSION=v5.8.0
               HELM_VERSION=v4.0.0
               HELM_DIFF_VERSION=v3.14.1
