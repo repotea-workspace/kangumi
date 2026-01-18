@@ -36,6 +36,19 @@ toolchains:
     # If not set, a random ID will be generated on first boot
     machineId: ""
 
+    # Development tools auto-installation (first startup only)
+    devTools:
+      # Enable auto-installation on first startup
+      autoInstall: false
+      # Tools to install (available: nodejs, rust, flutter, java, gcm, vscode, all)
+      packages: []
+      # Example:
+      # packages:
+      #   - nodejs
+      #   - rust
+      #   - gcm
+      #   - vscode
+
     # Port configuration
     ports:
       # SSH port (fixed allocation: 17000 + machine number)
@@ -174,6 +187,11 @@ toolchains:
     hostname: tch-bar
     image: repotea-workspace/kangumi/dev-toolchain:latest
     machineId: ""
+
+    # Development tools auto-installation (first startup only)
+    devTools:
+      autoInstall: false
+      packages: []
 
     ports:
       ssh:

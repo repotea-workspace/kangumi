@@ -46,6 +46,36 @@ spec:
         securityContext:
           {{- toYaml . | nindent 10 }}
         {{- end }}
+        {{- if or $config.devTools.autoInstall (gt (len $config.devTools.packages) 0) }}
+        lifecycle:
+          postStart:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  # Check marker file to avoid duplicate installation
+                  if [ -f /root/.dev-tools-installed ]; then
+                    echo "✓ Dev tools already installed"
+                    exit 0
+                  fi
+
+                  {{- if $config.devTools.autoInstall }}
+                  echo "→ Installing dev tools..."
+                  {{- range $config.devTools.packages }}
+                  if [ -f /opt/install-scripts/install-{{ . }}.sh ]; then
+                    echo "Installing {{ . }}..."
+                    /opt/install-scripts/install-{{ . }}.sh || echo "⚠ Failed to install {{ . }}"
+                  else
+                    echo "⚠ Script not found: /opt/install-scripts/install-{{ . }}.sh"
+                  fi
+                  {{- end }}
+                  touch /root/.dev-tools-installed
+                  echo "✓ Dev tools installation completed"
+                  {{- else }}
+                  echo "→ devTools.autoInstall is disabled, skipping installation"
+                  {{- end }}
+        {{- end }}
         env:
         # Docker host points to DinD sidecar
         - name: DOCKER_HOST

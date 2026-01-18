@@ -15,7 +15,16 @@ toolchains:
     enabled: true
     hostname: tch-alice
     image: repotea-workspace/kangumi/dev-toolchain:latest
-    
+
+    # Auto-install development tools on first startup
+    devTools:
+      autoInstall: true
+      packages:
+        - nodejs
+        - rust
+        - gcm
+        - vscode
+
     ports:
       ssh:
         containerPort: 22
@@ -27,7 +36,7 @@ toolchains:
         - name: https
           containerPort: 8443
           nodePort: 17101
-    
+
     storage:
       pvc:
         enabled: true
@@ -35,7 +44,7 @@ toolchains:
         size: 200Gi
         storageClassName: ""
         accessMode: ReadWriteOnce
-      
+
       # Mount specific directories from PVC
       volumes:
         root:
@@ -50,7 +59,7 @@ toolchains:
         code:
           mountPath: /code
           subPath: workspace/code
-      
+
       # Optional shared storage
       sharedPVC:
         enabled: true
@@ -58,13 +67,13 @@ toolchains:
         size: 50Gi
         accessMode: ReadWriteMany
         mountPath: /data/wwwroot
-    
+
     dind:
       enabled: true
       image: docker:27-dind
       storage:
         type: emptyDir
-    
+
     resources:
       limits:
         cpu: "8"
@@ -72,7 +81,7 @@ toolchains:
       requests:
         cpu: "2"
         memory: 4Gi
-    
+
     env:
       - name: TZ
         value: Asia/Shanghai
@@ -84,7 +93,17 @@ toolchains:
     enabled: true
     hostname: tch-bob
     image: repotea-workspace/kangumi/dev-toolchain:latest
-    
+
+    # Auto-install development tools on first startup
+    devTools:
+      autoInstall: true
+      packages:
+        - nodejs
+        - rust
+        # - flutter
+        # - java
+        # - all  # Install all available tools
+
     ports:
       ssh:
         containerPort: 22
@@ -93,13 +112,13 @@ toolchains:
         - name: web
           containerPort: 3000
           nodePort: 17102
-    
+
     storage:
       pvc:
         enabled: true
         name: tch-bob-data
         size: 150Gi
-      
+
       volumes:
         root:
           mountPath: /root
@@ -107,15 +126,15 @@ toolchains:
         code:
           mountPath: /code
           subPath: workspace/code
-      
+
       sharedPVC:
         enabled: true
         name: dev-shared-wwwroot
         mountPath: /data/wwwroot
-    
+
     dind:
       enabled: true
-    
+
     resources:
       limits:
         cpu: "4"

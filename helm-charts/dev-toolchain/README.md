@@ -10,6 +10,7 @@ A Helm chart for deploying development toolchain containers with Docker-in-Docke
 - 🌐 **NodePort Services**: SSH and custom ports in the 17000-18000 range
 - 🚀 **Multi-Instance**: Deploy multiple independent toolchain instances
 - 📦 **Flexible Configuration**: Comprehensive values.yaml with sensible defaults
+- 🛠️ **Auto-Install Dev Tools**: Automatically install development tools on first startup
 
 ## Prerequisites
 
@@ -106,6 +107,58 @@ Each toolchain instance supports the following configuration:
 | `hostname` | Container hostname | `tch-<name>` |
 | `image` | Container image | `repotea-workspace/kangumi/dev-toolchain:latest` |
 | `machineId` | Machine ID for SSH key generation | `""` |
+
+### Development Tools Auto-Installation
+
+Automatically install development tools on first container startup:
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `devTools.autoInstall` | Enable auto-installation | `false` |
+| `devTools.packages` | List of tools to install | `[]` |
+
+Available tools:
+- `nodejs` - Node.js and npm via nvm
+- `rust` - Rust toolchain via rustup
+- `flutter` - Flutter SDK
+- `java` - Java Development Kit
+- `gcm` - Git Credential Manager
+- `vscode` - VS Code CLI
+- `docker-compose` - Docker Compose
+- `k8s-tools` - kubectl, helm, kustomize, helmfile, argocd, kubeseal
+- `all` - Install all available tools
+
+**Example**:
+```yaml
+toolchains:
+  fewensa:
+    devTools:
+      autoInstall: true
+      packages:
+        - nodejs
+        - rust
+        - gcm
+        - vscode
+```
+
+**How it works**:
+1. On first container startup, a `postStart` lifecycle hook runs
+2. Checks for `/root/.dev-tools-installed` marker file
+3. If not found, runs installation scripts for specified packages
+4. Creates marker file to prevent duplicate installations
+5. Subsequent restarts skip installation
+
+**Manual installation**:
+If you prefer manual installation, keep `autoInstall: false` and run scripts inside the container:
+```bash
+# SSH into container
+ssh -p 17000 root@<NODE_IP>
+
+# Run installation scripts
+/opt/install-scripts/install-nodejs.sh
+/opt/install-scripts/install-rust.sh
+/opt/install-scripts/install-k8s-tools.sh
+```
 
 ### Port Configuration
 
@@ -242,15 +295,74 @@ Deploy two independent toolchains:
 toolchains:
   fewensa:
     enabled: true
+    devTools:
+      autoInstall: true
+      packages:
+        - nodejs
+        - rust
     ports:
       ssh:
         nodePort: 17000
   
   0xfe10:
     enabled: true
+    devTools:
+      autoInstall: true
+      packages:
+        - java
+        - flutter
     ports:
       ssh:
         nodePort: 17001
+```
+
+### Auto-Installing Development Tools
+
+Install tools automatically on first startup:
+```bash
+# Install with auto-install enabled
+helm install dev-tc ./dev-toolchain \
+  -n dev-toolchain \
+  --create-namespace \
+  --set toolchains.fewensa.devTools.autoInstall=true \
+  --set toolchains.fewensa.devTools.packages="{nodejs,rust,gcm,vscode}"
+```
+
+Or use a values file:
+```yaml
+# custom-values.yaml
+toolchains:
+  fewensa:
+    enabled: true
+    devTools:
+      autoInstall: true
+      packages:
+        - nodejs
+        - rust
+        - k8s-tools
+        - gcm
+        - vscode
+```
+
+```bash
+helm install dev-tc ./dev-toolchain \
+  -n dev-toolchain \
+  --create-namespace \
+  -f custom-values.yaml
+```
+
+**Check installation progress**:
+```bash
+# View container logs to see installation progress
+kubectl logs -f deployment/dev-toolchain-fewensa -n dev-toolchain
+
+# Expected output:
+# → Installing dev tools...
+# Installing nodejs...
+# ✓ Node.js installed
+# Installing rust...
+# ✓ Rust installed
+# ✓ Dev tools installation completed
 ```
 
 ## Troubleshooting
