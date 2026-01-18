@@ -3,15 +3,21 @@
 set -euo pipefail
 
 # Configuration
-KUSTOMIZE_VERSION="${KUSTOMIZE_VERSION:-5.5.0}"
-HELMFILE_VERSION="${HELMFILE_VERSION:-0.169.2}"
-ARGOCD_VERSION="${ARGOCD_VERSION:-2.13.2}"
-KUBESEAL_VERSION="${KUBESEAL_VERSION:-0.27.2}"
+KUBECTL_VERSION="${KUBECTL_VERSION:-1.35.0}"
+HELM_VERSION="${HELM_VERSION:-4.0.5}"
+HELM_DIFF_VERSION="${HELM_DIFF_VERSION:-3.14.1}"
+HELMFILE_VERSION="${HELMFILE_VERSION:-1.2.3}"
+KUSTOMIZE_VERSION="${KUSTOMIZE_VERSION:-5.8.0}"
+ARGOCD_VERSION="${ARGOCD_VERSION:-3.2.5}"
+KUBESEAL_VERSION="${KUBESEAL_VERSION:-0.34.0}"
 INSTALL_DIR="/usr/local/bin"
 
 echo "=========================================="
 echo "Installing Kubernetes Tools"
 echo "=========================================="
+echo "Kubectl: ${KUBECTL_VERSION}"
+echo "Helm: ${HELM_VERSION}"
+echo "Helm Diff Plugin: ${HELM_DIFF_VERSION}"
 echo "Kustomize: ${KUSTOMIZE_VERSION}"
 echo "Helmfile: ${HELMFILE_VERSION}"
 echo "ArgoCD CLI: ${ARGOCD_VERSION}"
@@ -31,7 +37,7 @@ check_installed() {
 
 # Check if all tools are already installed
 ALL_INSTALLED=true
-for tool in kustomize helmfile argocd kubeseal; do
+for tool in kubectl helm kustomize helmfile argocd kubeseal; do
   if ! check_installed "${tool}"; then
     ALL_INSTALLED=false
   fi
@@ -47,6 +53,27 @@ fi
 echo ""
 echo "Installing missing tools..."
 echo ""
+
+# Install Kubectl
+if ! check_installed kubectl; then
+  echo "Installing Kubectl ${KUBECTL_VERSION}..."
+  KUBECTL_URL="https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+  curl -SL "${KUBECTL_URL}" -o "${INSTALL_DIR}/kubectl"
+  chmod +x "${INSTALL_DIR}/kubectl"
+  echo "✓ Kubectl installed"
+fi
+
+# Install Helm
+if ! check_installed helm; then
+  echo ""
+  echo "Installing Helm ${HELM_VERSION}..."
+  HELM_URL="https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz"
+  curl -SL "${HELM_URL}" -o /tmp/helm.tar.gz
+  tar -xzf /tmp/helm.tar.gz -C /tmp
+  install -m 755 /tmp/linux-amd64/helm "${INSTALL_DIR}/helm"
+  rm -rf /tmp/helm.tar.gz /tmp/linux-amd64
+  echo "✓ Helm installed"
+fi
 
 # Install Kustomize
 if ! check_installed kustomize; then
@@ -95,9 +122,9 @@ fi
 
 # Install helm-diff plugin
 echo ""
-echo "Installing helm-diff plugin..."
+echo "Installing helm-diff plugin ${HELM_DIFF_VERSION}..."
 if ! helm plugin list | grep -q "^diff"; then
-  helm plugin install https://github.com/databus23/helm-diff --version=v3.1.3 --verify=false
+  helm plugin install https://github.com/databus23/helm-diff --version=v${HELM_DIFF_VERSION} --verify=false
   echo "✓ helm-diff plugin installed"
 else
   echo "✓ helm-diff plugin is already installed"
@@ -110,6 +137,8 @@ echo "Installation completed!"
 echo "=========================================="
 echo ""
 echo "Installed tools:"
+kubectl version --client 2>/dev/null | head -1 || echo "  - Kubectl: installed"
+helm version 2>/dev/null | head -1 || echo "  - Helm: installed"
 kustomize version 2>/dev/null || echo "  - Kustomize: installed"
 helmfile version 2>/dev/null | head -1 || echo "  - Helmfile: installed"
 argocd version --client 2>/dev/null | head -1 || echo "  - ArgoCD CLI: installed"

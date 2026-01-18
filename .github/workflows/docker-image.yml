@@ -32,13 +32,13 @@ jobs:
           - package: k8ops
             context: docker-image/k8ops
             build-args: |
-              KUBECTL_VERSION=v1.35.0
+              KUBECTL_VERSION=1.35.0
+              HELM_VERSION=4.0.5
               HELMFILE_VERSION=1.2.3
-              KUSTOMIZE_VERSION=v5.8.0
-              HELM_VERSION=v4.0.0
-              HELM_DIFF_VERSION=v3.14.1
-              ARGOCD_VERSION=v3.2.0
-              KUBESEAL_VERSION=0.33.1
+              KUSTOMIZE_VERSION=5.8.0
+              ARGOCD_VERSION=3.2.5
+              KUBESEAL_VERSION=0.34.0
+              HELM_DIFF_VERSION=3.14.1
 
           # - package: fat-android-sdk
           #   context: docker-image/fat-android-sdk
