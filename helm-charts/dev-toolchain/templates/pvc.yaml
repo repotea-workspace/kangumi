@@ -1,0 +1,46 @@
+{{- range $name, $config := .Values.toolchains }}
+{{- if and $config.enabled $config.storage.pvc.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "dev-toolchain.pvcName" (dict "root" $ "name" $name "config" $config) }}
+  labels:
+    {{- include "dev-toolchain.instanceLabels" (dict "root" $ "name" $name) | nindent 4 }}
+    dev-toolchain/storage-type: main
+spec:
+  accessModes:
+    - {{ $config.storage.pvc.accessMode | default "ReadWriteOnce" }}
+  {{- if $config.storage.pvc.storageClassName }}
+  storageClassName: {{ $config.storage.pvc.storageClassName }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $config.storage.pvc.size }}
+{{- end }}
+{{- end }}
+
+{{- /* Create shared PVC only once (from first enabled toolchain that has it enabled) */ -}}
+{{- $sharedPvcCreated := false }}
+{{- range $name, $config := .Values.toolchains }}
+{{- if and $config.enabled $config.storage.sharedPVC.enabled (not $sharedPvcCreated) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "dev-toolchain.sharedPvcName" (dict "root" $ "config" $config) }}
+  labels:
+    {{- include "dev-toolchain.labels" $ | nindent 4 }}
+    dev-toolchain/storage-type: shared
+spec:
+  accessModes:
+    - {{ $config.storage.sharedPVC.accessMode | default "ReadWriteMany" }}
+  {{- if $config.storage.sharedPVC.storageClassName }}
+  storageClassName: {{ $config.storage.sharedPVC.storageClassName }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $config.storage.sharedPVC.size }}
+{{- $sharedPvcCreated = true }}
+{{- end }}
+{{- end }}

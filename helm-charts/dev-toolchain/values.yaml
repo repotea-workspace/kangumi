@@ -1,0 +1,290 @@
+# Default values for dev-toolchain.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global settings
+global:
+  # Image registry (can be overridden per toolchain)
+  imageRegistry: ghcr.io
+  # Default image pull policy
+  imagePullPolicy: Always
+  # Image pull secrets for private registries
+  imagePullSecrets: []
+  # Example:
+  # imagePullSecrets:
+  #   - name: ghcr-secret
+
+# Toolchain instances configuration
+# Each entry creates a separate deployment with its own PVC and services
+toolchains:
+  # First toolchain instance - example
+  foo:
+    # Enable/disable this toolchain
+    enabled: true
+
+    # Hostname for the container
+    hostname: tch-foo
+
+    # Container image configuration
+    image: repotea-workspace/kangumi/dev-toolchain:latest
+    # Override global registry if needed
+    # imageRegistry: ghcr.io
+    # Override global pull policy if needed
+    # imagePullPolicy: Always
+
+    # Machine ID for SSH host key generation (optional)
+    # If not set, a random ID will be generated on first boot
+    machineId: ""
+
+    # Port configuration
+    ports:
+      # SSH port (fixed allocation: 17000 + machine number)
+      ssh:
+        # Container port (SSH daemon listens on this port inside container)
+        containerPort: 22
+        # NodePort (external port for SSH access)
+        nodePort: 17000
+
+      # Additional ports (shared pool: 17100-18000)
+      # Add more ports as needed for your services
+      extra: []
+      # Example:
+      # extra:
+      #   - name: http
+      #     containerPort: 8080
+      #     nodePort: 17100
+      #     protocol: TCP
+      #   - name: https
+      #     containerPort: 8443
+      #     nodePort: 17101
+      #     protocol: TCP
+      #   - name: custom
+      #     containerPort: 3000
+      #     nodePort: 17102
+      #     protocol: TCP
+
+    # Storage configuration
+    storage:
+      # Main PVC for this toolchain
+      pvc:
+        # Enable PVC creation
+        enabled: true
+        # PVC name (auto-generated if not set)
+        name: ""
+        # Storage class (use cluster default if not set)
+        storageClassName: ""
+        # PVC size
+        size: 100Gi
+        # Access mode
+        accessMode: ReadWriteOnce
+
+      # Volume mount configuration
+      # Maps PVC subdirectories to container paths
+      # Example volume mounts (customize as needed):
+      volumes: {}
+      # Example configuration:
+      # volumes:
+      #   config:
+      #     mountPath: /etc/profile.d/env.sh
+      #     subPath: config/env.sh
+      #   sshConfig:
+      #     mountPath: /etc/ssh/sshd_config.d
+      #     subPath: config/sshd_config.d
+      #   root:
+      #     mountPath: /root
+      #     subPath: home/root
+      #   home:
+      #     mountPath: /home
+      #     subPath: home/users
+      #   data:
+      #     mountPath: /data
+      #     subPath: workspace/data
+      #   opt:
+      #     mountPath: /opt
+      #     subPath: workspace/opt
+      #   code:
+      #     mountPath: /code
+      #     subPath: workspace/code
+
+      # Shared PVC (optional, for /data/wwwroot)
+      sharedPVC:
+        # Enable shared PVC mounting
+        enabled: false
+        # Shared PVC name (must be created separately or by another toolchain)
+        name: dev-shared-wwwroot
+        # Storage class for shared PVC (must support ReadWriteMany)
+        storageClassName: ""
+        # Size (only used if this is the first toolchain to create it)
+        size: 50Gi
+        # Access mode (must be ReadWriteMany for sharing)
+        accessMode: ReadWriteMany
+        # Mount path
+        mountPath: /data/wwwroot
+
+    # Docker-in-Docker (DinD) sidecar configuration
+    dind:
+      # Enable DinD sidecar
+      enabled: true
+      # DinD image
+      image: docker:27-dind
+      # Override DinD image pull policy
+      # pullPolicy: IfNotPresent
+      # DinD storage (for /var/lib/docker)
+      # Can be emptyDir or PVC
+      storage:
+        # Use emptyDir (ephemeral, faster)
+        type: emptyDir
+        # If using PVC, specify size
+        # type: pvc
+        # size: 50Gi
+
+    # Container resources
+    resources:
+      limits:
+        cpu: "8"
+        memory: 32Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+
+    # Environment variables for the main container
+    env: []
+    # Example:
+    # env:
+    #   - name: TZ
+    #     value: Asia/Shanghai
+    #   - name: LANG
+    #     value: en_US.UTF-8
+
+    # Node selector
+    nodeSelector: {}
+    # Example:
+    # nodeSelector:
+    #   kubernetes.io/hostname: node1
+
+    # Tolerations
+    tolerations: []
+
+    # Affinity rules
+    affinity: {}
+
+  # Second toolchain instance - example (disabled by default)
+  bar:
+    enabled: false
+    hostname: tch-bar
+    image: repotea-workspace/kangumi/dev-toolchain:latest
+    machineId: ""
+
+    ports:
+      ssh:
+        containerPort: 22
+        nodePort: 17001
+      extra: []
+
+    storage:
+      pvc:
+        enabled: true
+        name: ""
+        storageClassName: ""
+        size: 100Gi
+        accessMode: ReadWriteOnce
+
+      volumes: {}
+
+      sharedPVC:
+        enabled: false
+        name: dev-shared-wwwroot
+        storageClassName: ""
+        size: 50Gi
+        accessMode: ReadWriteMany
+        mountPath: /data/wwwroot
+
+    dind:
+      enabled: true
+      image: docker:27-dind
+      storage:
+        type: emptyDir
+
+    resources:
+      limits:
+        cpu: "8"
+        memory: 32Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+
+    env: []
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+
+# Default DinD configuration
+# These values are used for all toolchains unless overridden
+dindDefaults:
+  # DinD image
+  image: docker:27-dind
+  # Pull policy
+  pullPolicy: IfNotPresent
+
+  # Environment variables for DinD container
+  env:
+    # Disable TLS for simplicity (containers communicate via localhost)
+    DOCKER_TLS_CERTDIR: ""
+
+  # DinD container resources
+  resources:
+    limits:
+      cpu: "4"
+      memory: 8Gi
+    requests:
+      cpu: "1"
+      memory: 2Gi
+
+# Service account configuration
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod security context
+podSecurityContext: {}
+  # fsGroup: 2000
+
+# Security context for main container
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+# Liveness probe configuration (optional)
+livenessProbe:
+  enabled: false
+  # exec:
+  #   command:
+  #     - /bin/sh
+  #     - -c
+  #     - pgrep sshd
+  # initialDelaySeconds: 30
+  # periodSeconds: 10
+  # timeoutSeconds: 5
+  # failureThreshold: 3
+
+# Readiness probe configuration (optional)
+readinessProbe:
+  enabled: false
+  # tcpSocket:
+  #   port: 22
+  # initialDelaySeconds: 10
+  # periodSeconds: 5
+  # timeoutSeconds: 3
+  # failureThreshold: 3

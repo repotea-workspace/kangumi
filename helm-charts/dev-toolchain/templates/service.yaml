@@ -1,0 +1,28 @@
+{{- range $name, $config := .Values.toolchains }}
+{{- if $config.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dev-toolchain.serviceName" (dict "root" $ "name" $name) }}
+  labels:
+    {{- include "dev-toolchain.instanceLabels" (dict "root" $ "name" $name) | nindent 4 }}
+spec:
+  type: NodePort
+  selector:
+    {{- include "dev-toolchain.instanceSelectorLabels" (dict "root" $ "name" $name) | nindent 4 }}
+  ports:
+  - name: ssh
+    port: {{ $config.ports.ssh.containerPort }}
+    targetPort: ssh
+    nodePort: {{ $config.ports.ssh.nodePort }}
+    protocol: TCP
+  {{- range $config.ports.extra }}
+  - name: {{ .name }}
+    port: {{ .containerPort }}
+    targetPort: {{ .name }}
+    nodePort: {{ .nodePort }}
+    protocol: {{ .protocol | default "TCP" }}
+  {{- end }}
+{{- end }}
+{{- end }}

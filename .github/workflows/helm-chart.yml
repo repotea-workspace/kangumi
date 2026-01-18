@@ -14,8 +14,10 @@ jobs:
     strategy:
       matrix:
         include:
-          - package: any-cors
+          - package: any-cors-helm
             path: helm-charts/any-cors
+          - package: dev-toolchain-helm
+            path: helm-charts/dev-toolchain
     steps:
       - uses: actions/checkout@v6
 
@@ -36,4 +38,3 @@ jobs:
           registry_username: "0xfe10"
           registry_password: ${{ github.token }}
           update_dependencies: "true" # Defaults to false
-

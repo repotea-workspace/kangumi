@@ -1,0 +1,139 @@
+# Example production values for dev-toolchain
+# Copy this file and customize for your needs
+
+global:
+  imageRegistry: ghcr.io
+  imagePullPolicy: Always
+  imagePullSecrets: []
+  # Example with private registry:
+  # imagePullSecrets:
+  #   - name: ghcr-secret
+
+toolchains:
+  # Developer 1's toolchain
+  alice:
+    enabled: true
+    hostname: tch-alice
+    image: repotea-workspace/kangumi/dev-toolchain:latest
+    
+    ports:
+      ssh:
+        containerPort: 22
+        nodePort: 17000
+      extra:
+        - name: http
+          containerPort: 8080
+          nodePort: 17100
+        - name: https
+          containerPort: 8443
+          nodePort: 17101
+    
+    storage:
+      pvc:
+        enabled: true
+        name: tch-alice-data
+        size: 200Gi
+        storageClassName: ""
+        accessMode: ReadWriteOnce
+      
+      # Mount specific directories from PVC
+      volumes:
+        root:
+          mountPath: /root
+          subPath: home/root
+        home:
+          mountPath: /home
+          subPath: home/users
+        data:
+          mountPath: /data
+          subPath: workspace/data
+        code:
+          mountPath: /code
+          subPath: workspace/code
+      
+      # Optional shared storage
+      sharedPVC:
+        enabled: true
+        name: dev-shared-wwwroot
+        size: 50Gi
+        accessMode: ReadWriteMany
+        mountPath: /data/wwwroot
+    
+    dind:
+      enabled: true
+      image: docker:27-dind
+      storage:
+        type: emptyDir
+    
+    resources:
+      limits:
+        cpu: "8"
+        memory: 32Gi
+      requests:
+        cpu: "2"
+        memory: 4Gi
+    
+    env:
+      - name: TZ
+        value: Asia/Shanghai
+      - name: LANG
+        value: en_US.UTF-8
+
+  # Developer 2's toolchain
+  bob:
+    enabled: true
+    hostname: tch-bob
+    image: repotea-workspace/kangumi/dev-toolchain:latest
+    
+    ports:
+      ssh:
+        containerPort: 22
+        nodePort: 17001
+      extra:
+        - name: web
+          containerPort: 3000
+          nodePort: 17102
+    
+    storage:
+      pvc:
+        enabled: true
+        name: tch-bob-data
+        size: 150Gi
+      
+      volumes:
+        root:
+          mountPath: /root
+          subPath: home/root
+        code:
+          mountPath: /code
+          subPath: workspace/code
+      
+      sharedPVC:
+        enabled: true
+        name: dev-shared-wwwroot
+        mountPath: /data/wwwroot
+    
+    dind:
+      enabled: true
+    
+    resources:
+      limits:
+        cpu: "4"
+        memory: 16Gi
+      requests:
+        cpu: "1"
+        memory: 2Gi
+
+# DinD defaults
+dindDefaults:
+  image: docker:27-dind
+  pullPolicy: IfNotPresent
+  env:
+    DOCKER_TLS_CERTDIR: ""
+  resources:
+    limits:
+      cpu: "4"
+      memory: 8Gi
+    requests:
+      cpu: "1"
+      memory: 2Gi

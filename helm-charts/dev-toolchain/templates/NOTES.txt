@@ -1,0 +1,98 @@
+{{- $nodeIP := "NODE_IP" }}
+Development Toolchain has been deployed!
+
+================================================================================
+DEPLOYED INSTANCES
+================================================================================
+{{- range $name, $config := .Values.toolchains }}
+{{- if $config.enabled }}
+
+Instance: {{ $name }}
+  Hostname: {{ $config.hostname | default $name }}
+  SSH Port: {{ $config.ports.ssh.nodePort }}
+
+  Connection:
+    ssh -p {{ $config.ports.ssh.nodePort }} root@{{ $nodeIP }}
+
+  {{- if $config.ports.extra }}
+  Additional Ports:
+  {{- range $config.ports.extra }}
+    - {{ .name }}: {{ .nodePort }} (container: {{ .containerPort }})
+  {{- end }}
+  {{- end }}
+
+  Storage:
+    {{- if $config.storage.pvc.enabled }}
+    Main PVC: {{ include "dev-toolchain.pvcName" (dict "root" $ "name" $name "config" $config) }} ({{ $config.storage.pvc.size }})
+    {{- end }}
+    {{- if $config.storage.sharedPVC.enabled }}
+    Shared PVC: {{ include "dev-toolchain.sharedPvcName" (dict "root" $ "config" $config) }}
+    {{- end }}
+
+  Docker-in-Docker: {{ if $config.dind.enabled }}✓ Enabled{{ else }}✗ Disabled{{ end }}
+{{- end }}
+{{- end }}
+
+================================================================================
+QUICK START
+================================================================================
+
+1. Get the node IP address:
+   kubectl get nodes -o wide
+
+2. Connect via SSH (replace NODE_IP with actual node IP):
+{{- range $name, $config := .Values.toolchains }}
+{{- if $config.enabled }}
+   ssh -p {{ $config.ports.ssh.nodePort }} root@NODE_IP  # {{ $name }}
+{{- end }}
+{{- end }}
+
+3. Test Docker-in-Docker (inside container):
+   docker run hello-world
+   docker ps
+
+4. Check mounted directories:
+   ls -la /root /home /data /code /opt
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Check pod status:
+  kubectl get pods -l app.kubernetes.io/name=dev-toolchain -n {{ $.Release.Namespace }}
+
+View logs:
+{{- range $name, $config := .Values.toolchains }}
+{{- if $config.enabled }}
+  kubectl logs -f deployment/{{ include "dev-toolchain.deploymentName" (dict "root" $ "name" $name) }} -n {{ $.Release.Namespace }}
+{{- end }}
+{{- end }}
+
+Describe resources:
+  kubectl describe deployment -l app.kubernetes.io/name=dev-toolchain -n {{ $.Release.Namespace }}
+  kubectl describe pvc -l app.kubernetes.io/name=dev-toolchain -n {{ $.Release.Namespace }}
+
+Access container shell:
+{{- range $name, $config := .Values.toolchains }}
+{{- if $config.enabled }}
+  kubectl exec -it deployment/{{ include "dev-toolchain.deploymentName" (dict "root" $ "name" $name) }} -n {{ $.Release.Namespace }} -- /bin/bash
+{{- end }}
+{{- end }}
+
+Check DinD sidecar:
+{{- range $name, $config := .Values.toolchains }}
+{{- if and $config.enabled $config.dind.enabled }}
+  kubectl logs deployment/{{ include "dev-toolchain.deploymentName" (dict "root" $ "name" $name) }} -c dind -n {{ $.Release.Namespace }}
+{{- end }}
+{{- end }}
+
+================================================================================
+DOCUMENTATION
+================================================================================
+
+For more information, see:
+  https://github.com/repotea-workspace/kangumi
+
+Port Range: 17000-18000
+  - SSH ports: 17000 + instance number (fixed)
+  - Extra ports: 17100-18000 (shared pool)
