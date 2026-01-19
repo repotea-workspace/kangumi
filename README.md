@@ -63,7 +63,7 @@ Reusable GitHub Actions for CI/CD automation:
 | [clone-any](github-actions/clone-any) | Clone any repository with authentication |
 | [clone-dyn](github-actions/clone-dyn) | Dynamic repository cloning |
 | [dyn-actions](github-actions/dyn-actions) | Dynamic GitHub Actions workflows |
-| [ecs-github-runner](github-actions/ecs-github-runner) | Self-hosted GitHub runner on AWS ECS |
+| [ecs-github-runner](github-actions/ecs-github-runner) | Self-hosted GitHub runner on AliCloud ECS |
 | [fast-substrate](github-actions/fast-substrate) | Fast Substrate blockchain builds |
 | [gen-android-sign](github-actions/gen-android-sign) | Generate Android signing keys |
 | [gitops-deploy](github-actions/gitops-deploy) | GitOps-based deployment workflows |
