@@ -5,6 +5,8 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: {{ include "dev-toolchain.pvcName" (dict "root" $ "name" $name "config" $config) }}
+  annotations:
+    helm.sh/resource-policy: keep
   labels:
     {{- include "dev-toolchain.instanceLabels" (dict "root" $ "name" $name) | nindent 4 }}
     dev-toolchain/storage-type: main
@@ -29,6 +31,8 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: {{ include "dev-toolchain.sharedPvcName" (dict "root" $ "config" $config) }}
+  annotations:
+    helm.sh/resource-policy: keep
   labels:
     {{- include "dev-toolchain.labels" $ | nindent 4 }}
     dev-toolchain/storage-type: shared
@@ -56,6 +60,8 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: {{ printf "%s-%s-dind" (include "dev-toolchain.fullname" $) $name }}
+  annotations:
+    helm.sh/resource-policy: keep
   labels:
     {{- include "dev-toolchain.instanceLabels" (dict "root" $ "name" $name) | nindent 4 }}
     dev-toolchain/storage-type: dind
