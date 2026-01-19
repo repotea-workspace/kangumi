@@ -45,15 +45,16 @@ RUN mkdir -p /run/sshd \
     && echo "PermitRootLogin prohibit-password" >> /etc/ssh/sshd_config \
     && echo "Include /etc/ssh/sshd_config.d/*.conf" >> /etc/ssh/sshd_config
 
-## Homebrew will be installed at runtime to /opt/homebrew (PVC persistent)
+## Homebrew will be installed at runtime to /home/linuxbrew/.linuxbrew (PVC persistent)
+## Using standard Linux Homebrew path for x86_64 compatibility
 ## Using root for simplified access (requires HOMEBREW_ALLOW_ROOT=1)
 
 ## Setup Homebrew environment for all users
-## Homebrew will be installed by postStart to /opt/homebrew
-ENV PATH="/opt/homebrew/bin:/opt/homebrew/sbin:${PATH}" \
-    HOMEBREW_PREFIX="/opt/homebrew" \
-    HOMEBREW_CELLAR="/opt/homebrew/Cellar" \
-    HOMEBREW_REPOSITORY="/opt/homebrew" \
+## Homebrew will be installed by postStart to /home/linuxbrew/.linuxbrew
+ENV PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}" \
+    HOMEBREW_PREFIX="/home/linuxbrew/.linuxbrew" \
+    HOMEBREW_CELLAR="/home/linuxbrew/.linuxbrew/Cellar" \
+    HOMEBREW_REPOSITORY="/home/linuxbrew/.linuxbrew" \
     HOMEBREW_ALLOW_ROOT=1 \
     HOMEBREW_NO_ENV_HINTS=1 \
     HOMEBREW_NO_AUTO_UPDATE=1 \
