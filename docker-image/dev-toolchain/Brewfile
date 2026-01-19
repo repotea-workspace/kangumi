@@ -1,0 +1,48 @@
+# Brewfile for dev-toolchain
+# This is a REFERENCE file showing available tools via Homebrew
+# Tools are installed on-demand via install-brew-tools.sh, not pre-installed in the image
+
+# Usage in Helm values.yaml:
+# devTools:
+#   packages:
+#     - golang
+#     - nodejs
+#     - k8s-tools
+
+# Development Languages
+# brew "go"           # install via: install-brew-tools.sh golang
+# brew "node"         # install via: install-brew-tools.sh nodejs
+# brew "rust"         # install via: install-brew-tools.sh rust
+
+# Mobile Development
+# brew "flutter"      # install via: install-brew-tools.sh flutter
+
+# Database Migration Tools
+# brew "flyway"           # install via: install-brew-tools.sh flyway
+# brew "liquibase"        # install via: install-brew-tools.sh liquibase
+# brew "golang-migrate"   # install via: install-brew-tools.sh golang-migrate
+
+# Java Development
+# brew "openjdk@17"   # install via: install-brew-tools.sh java
+# brew "maven"        # install via: install-brew-tools.sh maven
+
+# Infrastructure as Code
+# brew "terraform"    # install via: install-brew-tools.sh terraform
+
+# Kubernetes Tools (installed together)
+# brew "kubectl"      # install via: install-brew-tools.sh k8s-tools
+# brew "helm"         # (installs all k8s tools)
+# brew "kustomize"
+# brew "helmfile"
+# brew "argocd"
+# brew "kubeseal"
+
+# Docker Tools
+# brew "docker-compose"  # install via: install-brew-tools.sh docker-compose
+
+# Git Tools
+# brew "git-credential-manager"  # install via: install-brew-tools.sh gcm
+
+# Talos Linux (requires tap)
+# tap "siderolabs/tap"
+# brew "siderolabs/tap/talosctl"  # install via: install-brew-tools.sh talosctl

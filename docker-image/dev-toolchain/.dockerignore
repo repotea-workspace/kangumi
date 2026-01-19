@@ -1,0 +1,27 @@
+# Backup directory
+install-scripts.backup/
+
+# Old Dockerfile
+Dockerfile.old
+
+# Docker Compose test files
+docker-compose.test.yml
+
+# Build artifacts
+*.log
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+*.md
+!README.md

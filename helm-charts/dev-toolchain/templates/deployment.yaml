@@ -60,13 +60,29 @@ spec:
                 - -c
                 - |
                   {{- if $config.devTools.autoInstall }}
-                  echo "→ Installing dev tools..."
+                  echo "→ Installing dev tools via Homebrew..."
+
+                  # Ensure Homebrew is in PATH
+                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
                   {{- range $config.devTools.packages }}
-                  if [ -f /usr/local/lib/dev-tools/install-scripts/install-{{ . }}.sh ]; then
-                    echo "Installing {{ . }}..."
-                    /usr/local/lib/dev-tools/install-scripts/install-{{ . }}.sh || echo "⚠ Failed to install {{ . }}"
+                  echo "Installing {{ . }}..."
+
+                  # Check if it's a custom tool (not in brew)
+                  if [ "{{ . }}" = "devtools" ] || [ "{{ . }}" = "harmonytools" ] || [ "{{ . }}" = "vscode" ]; then
+                    # Use custom install script
+                    if [ -f /usr/local/lib/dev-tools/install-scripts/install-{{ . }}.sh ]; then
+                      /usr/local/lib/dev-tools/install-scripts/install-{{ . }}.sh || echo "⚠ Failed to install {{ . }}"
+                    else
+                      echo "⚠ Script not found: /usr/local/lib/dev-tools/install-scripts/install-{{ . }}.sh"
+                    fi
                   else
-                    echo "⚠ Script not found: /usr/local/lib/dev-tools/install-scripts/install-{{ . }}.sh"
+                    # Use Homebrew install script
+                    if [ -f /usr/local/lib/dev-tools/install-scripts/install-brew-tools.sh ]; then
+                      /usr/local/lib/dev-tools/install-scripts/install-brew-tools.sh {{ . }} || echo "⚠ Failed to install {{ . }}"
+                    else
+                      echo "⚠ Homebrew install script not found"
+                    fi
                   fi
                   {{- end }}
                   echo "✓ Dev tools installation completed"

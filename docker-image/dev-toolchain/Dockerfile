@@ -1,5 +1,5 @@
 ##
-# MAIN STAGE - Minimal base image
+# MAIN STAGE - Minimal base image with Homebrew
 ##
 FROM ubuntu:24.04 AS runner
 
@@ -9,7 +9,6 @@ ARG S6_OVERLAY_VERSION=3.2.1.0
 SHELL ["/bin/bash", "-c"]
 
 ## Install minimal base dependencies
-## Skip unminimize to save ~70MB and reduce size by ~1.2GB
 RUN apt-get update -y \
     && apt-get install --no-install-recommends -y \
     # Core utilities
@@ -19,12 +18,14 @@ RUN apt-get update -y \
     openssh-server \
     # Essential editors and terminal tools
     vim nano git \
-    # Basic build tools (commonly needed)
-    build-essential \
+    # Build tools (required by Homebrew)
+    build-essential procps file \
     # Network tools (essential for debugging)
     iputils-ping iproute2 dnsutils \
     # Process tools
     procps \
+    # Sudo (for linuxbrew user)
+    sudo \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -48,10 +49,30 @@ RUN mkdir -p /run/sshd \
     && echo "PermitRootLogin prohibit-password" >> /etc/ssh/sshd_config \
     && echo "Include /etc/ssh/sshd_config.d/*.conf" >> /etc/ssh/sshd_config
 
-## Create install scripts directory
+## Create linuxbrew user for Homebrew installation
+RUN useradd -m -s /bin/bash linuxbrew \
+    && echo 'linuxbrew ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+## Install Homebrew as linuxbrew user
+COPY install-scripts/install-homebrew.sh /tmp/
+RUN chown linuxbrew:linuxbrew /tmp/install-homebrew.sh \
+    && su - linuxbrew -c "bash /tmp/install-homebrew.sh" \
+    && rm /tmp/install-homebrew.sh
+
+## Configure Homebrew environment and allow root access
+RUN chgrp -R root /home/linuxbrew/.linuxbrew \
+    && chmod -R g+rwX /home/linuxbrew/.linuxbrew
+ENV PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}" \
+    HOMEBREW_NO_ENV_HINTS=1 \
+    HOMEBREW_NO_AUTO_UPDATE=1 \
+    HOMEBREW_NO_INSTALL_FROM_API=1 \
+    HOME=/root \
+    USER=root
+
+## Create install scripts directory for custom tools
 RUN mkdir -p /usr/local/lib/dev-tools/install-scripts
 
-## Copy install scripts
+## Copy remaining install scripts (custom tools)
 COPY install-scripts/ /usr/local/lib/dev-tools/install-scripts/
 RUN chmod +x /usr/local/lib/dev-tools/install-scripts/*.sh
 
@@ -59,7 +80,7 @@ RUN chmod +x /usr/local/lib/dev-tools/install-scripts/*.sh
 COPY cont-init.d/ /etc/cont-init.d/
 RUN chmod +x /etc/cont-init.d/*
 
-## Copy bashrc snippets and create env script directory
+## Create env script directory and configure bashrc
 RUN mkdir -p /etc/profile.d
 COPY bashrc.d/dev-tools-env.sh /tmp/bashrc-snippet.sh
 RUN cat /tmp/bashrc-snippet.sh >> /root/.bashrc && rm /tmp/bashrc-snippet.sh
