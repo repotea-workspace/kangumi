@@ -37,7 +37,7 @@ if ! curl -fsSL "${HOMEBREW_INSTALL_URL}" | bash; then
 fi
 
 # Set up Homebrew environment
-BREW_PREFIX="/home/linuxbrew/.linuxbrew"
+BREW_PREFIX="/opt/homebrew"
 if [ -d "${BREW_PREFIX}" ] && [ -f "${BREW_PREFIX}/bin/brew" ]; then
   eval "$(${BREW_PREFIX}/bin/brew shellenv)"
 else

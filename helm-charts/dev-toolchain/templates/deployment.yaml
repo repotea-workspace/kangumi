@@ -51,7 +51,7 @@ spec:
         securityContext:
           {{- toYaml . | nindent 10 }}
         {{- end }}
-        {{- if or $config.devTools.autoInstall (gt (len $config.devTools.packages) 0) }}
+        {{- if or $config.devTools.autoInstall (gt (len $config.devTools.packages) 0) $config.devTools.users }}
         lifecycle:
           postStart:
             exec:
@@ -59,8 +59,22 @@ spec:
                 - /bin/bash
                 - -c
                 - |
-                  # Create users first (if configured)
+                  # Step 1: Initialize Homebrew in persistent storage
+                  echo "→ Initializing Homebrew..."
+                  if /usr/local/lib/dev-tools/install-scripts/init-homebrew.sh; then
+                    echo "✓ Homebrew ready"
+                  else
+                    echo "⚠ Failed to initialize Homebrew"
+                    exit 1
+                  fi
+
+                  # Ensure Homebrew is in PATH
+                  export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:${PATH}"
+                  eval "$(/opt/homebrew/bin/brew shellenv)"
+
+                  # Step 2: Create users (if configured)
                   {{- if $config.devTools.users }}
+                  echo ""
                   echo "→ Creating runtime users..."
                   {{- range $config.devTools.users }}
                   echo "Creating user: {{ .name }}"
@@ -73,12 +87,10 @@ spec:
                   echo "✓ User creation completed"
                   {{- end }}
 
-                  # Install dev tools via Homebrew
+                  # Step 3: Install dev tools via Homebrew
                   {{- if $config.devTools.autoInstall }}
-                  echo "→ Installing dev tools via Homebrew..."
-
-                  # Ensure Homebrew is in PATH
-                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+                  echo ""
+                  echo "→ Installing dev tools..."
 
                   {{- range $config.devTools.packages }}
                   echo "Installing {{ . }}..."

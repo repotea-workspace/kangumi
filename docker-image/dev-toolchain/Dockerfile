@@ -45,30 +45,18 @@ RUN mkdir -p /run/sshd \
     && echo "PermitRootLogin prohibit-password" >> /etc/ssh/sshd_config \
     && echo "Include /etc/ssh/sshd_config.d/*.conf" >> /etc/ssh/sshd_config
 
-## Create brew group and linuxbrew user for Homebrew installation
+## Create brew group and brewuser for Homebrew installation
+## Homebrew will be installed at runtime to /opt/homebrew (PVC persistent)
 RUN groupadd -g 999 brew \
-    && useradd -m -u 999 -g brew -s /bin/bash linuxbrew \
-    && echo 'linuxbrew ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-
-## Install Homebrew as linuxbrew user
-COPY install-scripts/install-homebrew.sh /tmp/
-RUN chown linuxbrew:brew /tmp/install-homebrew.sh \
-    && su - linuxbrew -c "bash /tmp/install-homebrew.sh" \
-    && rm /tmp/install-homebrew.sh
-
-## Configure Homebrew for group sharing
-## - linuxbrew user owns the installation
-## - brew group members can read and execute
-## - brew group members can write to var/homebrew (for locks/cache)
-RUN chown -R linuxbrew:brew /home/linuxbrew/.linuxbrew \
-    && chmod -R g+rX /home/linuxbrew/.linuxbrew \
-    && chmod -R g+w /home/linuxbrew/.linuxbrew/var/homebrew 2>/dev/null || true
-
-## Install yq (required for tools.yaml parsing)
-RUN su - linuxbrew -c "eval \"\$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\" && brew install yq"
+    && useradd -r -u 999 -g brew -d /nonexistent -s /bin/bash brewuser \
+    && echo 'brewuser ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 ## Setup Homebrew environment for all users
-ENV PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}" \
+## Homebrew will be installed by postStart to /opt/homebrew
+ENV PATH="/opt/homebrew/bin:/opt/homebrew/sbin:${PATH}" \
+    HOMEBREW_PREFIX="/opt/homebrew" \
+    HOMEBREW_CELLAR="/opt/homebrew/Cellar" \
+    HOMEBREW_REPOSITORY="/opt/homebrew" \
     HOMEBREW_NO_ENV_HINTS=1 \
     HOMEBREW_NO_AUTO_UPDATE=1 \
     HOMEBREW_NO_INSTALL_FROM_API=1

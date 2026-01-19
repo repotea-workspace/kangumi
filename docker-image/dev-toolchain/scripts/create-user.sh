@@ -3,7 +3,7 @@
 # create-user.sh - Create runtime user with Homebrew access
 #
 # This script creates a new user and adds them to the brew group,
-# allowing them to use Homebrew packages installed by linuxbrew user.
+# allowing them to use Homebrew packages installed by brewuser user.
 #
 # Usage:
 #   create-user.sh <username> [uid] [gid]
@@ -123,7 +123,7 @@ if [ -f "${BASHRC}" ]; then
         cat >> "${BASHRC}" << 'EOF'
 
 # Homebrew environment
-eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+eval "$(/opt/homebrew/bin/brew shellenv)"
 
 # Aliases for development
 alias ll='ls -lah'
@@ -131,19 +131,19 @@ alias k='kubectl'
 alias d='docker'
 alias dc='docker-compose'
 
-# Brew install wrapper (installs as linuxbrew user)
+# Brew install wrapper (installs as brewuser user)
 brew-install() {
-    sudo -u linuxbrew -H bash -c "eval \"\$(brew shellenv)\" && brew install $*"
+    sudo -u brewuser -H bash -c "eval \"\$(brew shellenv)\" && brew install $*"
 }
 
 # Brew upgrade wrapper
 brew-upgrade() {
-    sudo -u linuxbrew -H bash -c "eval \"\$(brew shellenv)\" && brew upgrade $*"
+    sudo -u brewuser -H bash -c "eval \"\$(brew shellenv)\" && brew upgrade $*"
 }
 
 # Brew uninstall wrapper
 brew-uninstall() {
-    sudo -u linuxbrew -H bash -c "eval \"\$(brew shellenv)\" && brew uninstall $*"
+    sudo -u brewuser -H bash -c "eval \"\$(brew shellenv)\" && brew uninstall $*"
 }
 
 # Install dev tools wrapper

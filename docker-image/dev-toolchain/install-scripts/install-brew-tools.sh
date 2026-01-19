@@ -65,19 +65,19 @@ fi
 brew_cmd() {
     local current_user=$(whoami)
 
-    if [ "${current_user}" = "linuxbrew" ]; then
-        # Native execution as linuxbrew user
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+    if [ "${current_user}" = "brewuser" ]; then
+        # Native execution as brewuser user
+        eval "$(/opt/homebrew/bin/brew shellenv)"
         brew "$@"
     else
-        # Execute as linuxbrew user via sudo for other users
-        sudo -u linuxbrew -H bash -c "eval \"\$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\" && brew $*"
+        # Execute as brewuser user via sudo for other users
+        sudo -u brewuser -H bash -c "eval \"\$(/opt/homebrew/bin/brew shellenv)\" && brew $*"
     fi
 }
 
 # Check if Homebrew is installed
 check_homebrew() {
-    if ! command -v brew &> /dev/null && [ ! -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+    if ! command -v brew &> /dev/null && [ ! -x /opt/homebrew/bin/brew ]; then
         print_error "Homebrew is not installed. Please run install-homebrew.sh first."
         exit 1
     fi
