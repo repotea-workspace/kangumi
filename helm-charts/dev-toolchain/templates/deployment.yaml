@@ -69,7 +69,7 @@ spec:
         securityContext:
           {{- toYaml . | nindent 10 }}
         {{- end }}
-        {{- if or $config.devTools.autoInstall (gt (len $config.devTools.packages) 0) }}
+        {{- if $config.devTools.autoInstall }}
         lifecycle:
           postStart:
             exec:
