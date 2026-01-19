@@ -86,6 +86,10 @@ COPY services.d /etc/services.d
 ## Set DOCKER_HOST to connect to DinD sidecar
 ENV DOCKER_HOST=tcp://localhost:2375
 
+## Create container marker file for Homebrew
+## Homebrew checks for /.dockerenv to allow running as root in containers
+RUN touch /.dockerenv
+
 ## Create workspace directory
 RUN mkdir -p /code
 WORKDIR /code
