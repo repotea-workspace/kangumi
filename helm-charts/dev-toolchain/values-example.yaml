@@ -19,11 +19,19 @@ toolchains:
     # Auto-install development tools on first startup
     devTools:
       autoInstall: true
+
+      # Runtime users (recreated on every pod restart)
+      users:
+        - name: alice
+          uid: 1000
+          gid: 1000
+
+      # Tools to install via Homebrew
       packages:
+        - golang
         - nodejs
-        - rust
-        - gcm
-        - vscode
+        - k8s-tools
+        - docker-compose
 
     ports:
       ssh:

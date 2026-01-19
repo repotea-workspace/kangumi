@@ -59,6 +59,21 @@ spec:
                 - /bin/bash
                 - -c
                 - |
+                  # Create users first (if configured)
+                  {{- if $config.devTools.users }}
+                  echo "→ Creating runtime users..."
+                  {{- range $config.devTools.users }}
+                  echo "Creating user: {{ .name }}"
+                  if /usr/local/bin/create-user {{ .name }} {{ .uid | default 1000 }} {{ .gid | default .uid | default 1000 }}; then
+                    echo "✓ User {{ .name }} created successfully"
+                  else
+                    echo "⚠ Failed to create user {{ .name }}"
+                  fi
+                  {{- end }}
+                  echo "✓ User creation completed"
+                  {{- end }}
+
+                  # Install dev tools via Homebrew
                   {{- if $config.devTools.autoInstall }}
                   echo "→ Installing dev tools via Homebrew..."
 

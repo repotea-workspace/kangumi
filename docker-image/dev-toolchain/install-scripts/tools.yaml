@@ -1,0 +1,112 @@
+# tools.yaml - Development Tools Configuration
+#
+# This file defines tool groups and tools that need special handling.
+# You can also install any Homebrew formula directly without defining it here.
+#
+# Use this file for:
+# - Tool groups (multiple packages installed together)
+# - Tools requiring taps
+# - Tools needing post-install configuration
+# - Tools with custom metadata you want to document
+
+tools:
+  # ==========================================
+  # Tool Groups (multiple packages)
+  # ==========================================
+
+  k8s-tools:
+    brew:
+      - kubectl
+      - helm
+      - kustomize
+      - helmfile
+      - argocd
+      - kubeseal
+    description: Kubernetes essential toolchain
+    binaries:
+      - kubectl
+      - helm
+      - kustomize
+      - helmfile
+      - argocd
+      - kubeseal
+
+  # ==========================================
+  # Tools requiring taps
+  # ==========================================
+
+  talosctl:
+    tap: siderolabs/tap
+    brew: siderolabs/tap/talosctl
+    description: Talos Linux CLI tool
+    binaries:
+      - talosctl
+
+  # ==========================================
+  # Tools with post-install configuration
+  # ==========================================
+
+  gcm:
+    brew: git-credential-manager
+    description: Git Credential Manager
+    binaries:
+      - git-credential-manager
+    post_install: |
+      git config --global credential.helper manager
+
+  git-lfs:
+    brew: git-lfs
+    description: Git Large File Storage
+    binaries:
+      - git-lfs
+    post_install: |
+      git lfs install
+
+  # ==========================================
+  # Common tool aliases (for convenience)
+  # ==========================================
+
+  golang:
+    brew: go
+    description: Go programming language
+    binaries:
+      - go
+      - gofmt
+
+  nodejs:
+    brew: node
+    description: Node.js JavaScript runtime
+    binaries:
+      - node
+      - npm
+      - npx
+
+  java:
+    brew: openjdk@17
+    description: OpenJDK 17 (LTS)
+    binaries:
+      - java
+      - javac
+    env:
+      JAVA_HOME: "$(brew --prefix openjdk@17)"
+
+  # ==========================================
+  # Database migration tools
+  # ==========================================
+
+  golang-migrate:
+    brew: golang-migrate
+    description: Database migrations written in Go
+    binaries:
+      - migrate
+
+  # ==========================================
+  # For any other tool, just use the brew formula name directly:
+  #   install-brew-tools.sh <formula-name>
+  #
+  # Examples:
+  #   install-brew-tools.sh rust
+  #   install-brew-tools.sh terraform
+  #   install-brew-tools.sh htop tmux jq yq
+  #   install-brew-tools.sh neovim ripgrep fd bat
+  # ==========================================

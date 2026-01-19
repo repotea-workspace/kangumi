@@ -49,14 +49,28 @@ toolchains:
     devTools:
       # Enable auto-installation on first startup
       autoInstall: false
-      # Tools to install (available: nodejs, rust, flutter, java, gcm, vscode, all)
+
+      # Runtime users to create (with Homebrew access)
+      # These users will be recreated on every pod restart to ensure they exist
+      users: []
+      # Example:
+      # users:
+      #   - name: foo
+      #     uid: 1000
+      #     gid: 1000
+      #   - name: bar
+      #     uid: 1001
+      #     # gid defaults to uid if not specified
+
+      # Tools to install via Homebrew (from tools.yaml)
       packages: []
       # Example:
       # packages:
+      #   - golang
       #   - nodejs
-      #   - rust
-      #   - gcm
-      #   - vscode
+      #   - k8s-tools
+      #   - terraform
+      #   - docker-compose
 
     # Port configuration
     ports:
