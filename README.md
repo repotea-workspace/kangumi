@@ -67,7 +67,7 @@ Reusable GitHub Actions for CI/CD automation:
 | [fast-substrate](github-actions/fast-substrate) | Fast Substrate blockchain builds |
 | [gen-android-sign](github-actions/gen-android-sign) | Generate Android signing keys |
 | [gitops-deploy](github-actions/gitops-deploy) | GitOps-based deployment workflows |
-| [mirror-to-acr](github-actions/mirror-to-acr) | Mirror images to Azure Container Registry |
+| [mirror-to-acr](github-actions/mirror-to-acr) | Mirror images to AliCloud Container Registry |
 | [railway-deploy](github-actions/railway-deploy) | Deploy to Railway platform |
 | [railway-redeploy](github-actions/railway-redeploy) | Redeploy Railway applications |
 | [read-files](github-actions/read-files) | Read and process files in workflows |
