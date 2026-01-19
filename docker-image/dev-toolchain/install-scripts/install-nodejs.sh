@@ -2,36 +2,55 @@
 
 set -euo pipefail
 
+# Load common functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/common.sh"
+
 # Configuration
 NVM_VERSION="${NVM_VERSION:-0.40.3}"
 NODE_VERSION="${NODE_VERSION:-22.15.1}"
 INSTALL_DIR="${HOME}/.nvm"
 
-echo "=========================================="
-echo "Installing Node.js via nvm"
-echo "=========================================="
+print_header "Installing Node.js via nvm"
 echo "NVM Version: ${NVM_VERSION}"
 echo "Node Version: ${NODE_VERSION}"
 echo "Install Directory: ${INSTALL_DIR}"
 echo ""
 
-# Check if already installed
+# Check if already installed with same version
+if check_installed "nodejs" "${NODE_VERSION}"; then
+  if [ -d "${INSTALL_DIR}" ] && [ -s "${INSTALL_DIR}/nvm.sh" ]; then
+    source "${INSTALL_DIR}/nvm.sh"
+    if nvm list | grep -q "${NODE_VERSION}"; then
+      nvm use "${NODE_VERSION}"
+      echo "Node version: $(node --version)"
+      echo "npm version: $(npm --version)"
+      exit 0
+    fi
+  fi
+fi
+
+# Check if nvm is already installed (but maybe different node version)
 if [ -d "${INSTALL_DIR}" ] && [ -s "${INSTALL_DIR}/nvm.sh" ]; then
-  echo "nvm is already installed at ${INSTALL_DIR}"
+  print_info "nvm is already installed at ${INSTALL_DIR}"
   source "${INSTALL_DIR}/nvm.sh"
 
   if nvm list | grep -q "${NODE_VERSION}"; then
-    echo "Node.js ${NODE_VERSION} is already installed"
+    print_success "Node.js ${NODE_VERSION} is already installed"
     nvm use "${NODE_VERSION}"
     node --version
     npm --version
+    mark_installed "nodejs" "${NODE_VERSION}"
     exit 0
   fi
 fi
 
 # Install nvm
-echo "Installing nvm ${NVM_VERSION}..."
-curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/v${NVM_VERSION}/install.sh" | bash
+print_info "Installing nvm ${NVM_VERSION}..."
+if ! curl -fsSL "https://raw.githubusercontent.com/nvm-sh/nvm/v${NVM_VERSION}/install.sh" | bash; then
+  print_error "Failed to install nvm"
+  exit 1
+fi
 
 # Load nvm
 export NVM_DIR="${INSTALL_DIR}"
@@ -40,27 +59,39 @@ export NVM_DIR="${INSTALL_DIR}"
 
 # Install Node.js
 echo ""
-echo "Installing Node.js ${NODE_VERSION}..."
+print_info "Installing Node.js ${NODE_VERSION}..."
 nvm install "${NODE_VERSION}"
 nvm use "${NODE_VERSION}"
 nvm alias default "${NODE_VERSION}"
 
 # Configure npm
 echo ""
-echo "Configuring npm..."
+print_info "Configuring npm..."
 npm config set registry https://registry.npmjs.org/
+
+# Add to PATH via env script
+append_to_env ""
+append_to_env "# Node.js (nvm)"
+append_to_env 'export NVM_DIR="/root/.nvm"'
+append_to_env '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
+append_to_env '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"'
+
+# Mark as installed
+mark_installed "nodejs" "${NODE_VERSION}"
 
 # Verify installation
 echo ""
-echo "=========================================="
-echo "Installation completed!"
-echo "=========================================="
+print_header "Installation completed!"
 echo "Node version: $(node --version)"
 echo "npm version: $(npm --version)"
 echo ""
-echo "nvm has been installed to: ${NVM_DIR}"
+print_success "nvm has been installed to: ${NVM_DIR}"
+print_success "Node.js ${NODE_VERSION} is set as default"
 echo ""
-echo "To use nvm in your shell, add to your profile:"
+echo "To use nvm in your shell, run:"
+echo "  source /etc/profile.d/99-dev-tools-env.sh"
+echo ""
+echo "Or add to your shell profile:"
 echo "  export NVM_DIR=\"${NVM_DIR}\""
 echo "  [ -s \"\$NVM_DIR/nvm.sh\" ] && \. \"\$NVM_DIR/nvm.sh\""
 echo ""

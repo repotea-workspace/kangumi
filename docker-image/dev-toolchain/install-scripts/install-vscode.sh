@@ -2,48 +2,53 @@
 
 set -euo pipefail
 
+# Load common functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/common.sh"
+
 # Configuration
 INSTALL_DIR="/usr/local/bin"
+VSCODE_CLI="code"
 
-echo "=========================================="
-echo "Installing VSCode CLI"
-echo "=========================================="
+print_header "Installing VSCode CLI"
 echo "Install Directory: ${INSTALL_DIR}"
 echo ""
 
 # Check if already installed
-if [ -f "${INSTALL_DIR}/code" ]; then
-  echo "VSCode CLI is already installed at ${INSTALL_DIR}/code"
-  "${INSTALL_DIR}/code" --version 2>/dev/null || true
-
-  echo ""
-  echo "Use --force to reinstall"
-  exit 0
+if check_installed "vscode"; then
+  if [ -f "${INSTALL_DIR}/${VSCODE_CLI}" ]; then
+    "${INSTALL_DIR}/${VSCODE_CLI}" --version 2>/dev/null || print_warning "Unable to get version"
+    exit 0
+  fi
 fi
 
 # Download VSCode CLI
-echo "Downloading VSCode CLI (latest stable)..."
+print_info "Downloading VSCode CLI (latest stable)..."
 DOWNLOAD_URL="https://code.visualstudio.com/sha/download?build=stable&os=cli-alpine-x64"
 TMP_FILE="/tmp/vscode-cli.tar.gz"
 
-curl -Lk "${DOWNLOAD_URL}" -o "${TMP_FILE}"
+if ! curl -fsSLk "${DOWNLOAD_URL}" -o "${TMP_FILE}"; then
+  print_error "Failed to download VSCode CLI"
+  exit 1
+fi
 
 # Extract VSCode CLI
 echo ""
-echo "Extracting VSCode CLI..."
+print_info "Extracting VSCode CLI..."
 tar -xzf "${TMP_FILE}" -C "${INSTALL_DIR}"
 
 # Clean up
 rm -f "${TMP_FILE}"
 
+# Mark as installed
+mark_installed "vscode" "latest"
+
 # Verify installation
 echo ""
-echo "=========================================="
-echo "Installation completed!"
-echo "=========================================="
-"${INSTALL_DIR}/code" --version
+print_header "Installation completed!"
+"${INSTALL_DIR}/${VSCODE_CLI}" --version
 echo ""
-echo "VSCode CLI has been installed to: ${INSTALL_DIR}/code"
+print_success "VSCode CLI has been installed to: ${INSTALL_DIR}/${VSCODE_CLI}"
 echo ""
 echo "Usage:"
 echo "  Start tunnel: code tunnel"

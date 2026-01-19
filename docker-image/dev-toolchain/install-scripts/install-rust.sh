@@ -2,54 +2,89 @@
 
 set -euo pipefail
 
+# Load common functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/common.sh"
+
 # Configuration
 RUSTUP_INIT_VERSION="${RUSTUP_INIT_VERSION:-latest}"
 RUST_TOOLCHAIN="${RUST_TOOLCHAIN:-stable}"
-INSTALL_DIR="${CARGO_HOME:-${HOME}/.cargo}"
+CARGO_HOME="${CARGO_HOME:-${HOME}/.cargo}"
+RUSTUP_HOME="${RUSTUP_HOME:-${HOME}/.rustup}"
 
-echo "=========================================="
-echo "Installing Rust via rustup"
-echo "=========================================="
+print_header "Installing Rust via rustup"
 echo "Toolchain: ${RUST_TOOLCHAIN}"
-echo "Install Directory: ${INSTALL_DIR}"
+echo "Cargo Home: ${CARGO_HOME}"
+echo "Rustup Home: ${RUSTUP_HOME}"
 echo ""
 
-# Check if already installed
-if [ -f "${INSTALL_DIR}/bin/rustc" ]; then
-  echo "Rust is already installed at ${INSTALL_DIR}"
-  "${INSTALL_DIR}/bin/rustc" --version
-  "${INSTALL_DIR}/bin/cargo" --version
+# Check if already installed with same toolchain
+if check_installed "rust" "${RUST_TOOLCHAIN}"; then
+  if [ -f "${CARGO_HOME}/bin/rustc" ]; then
+    source "${CARGO_HOME}/env"
+    echo "Rust version: $(rustc --version)"
+    echo "Cargo version: $(cargo --version)"
+
+    # Optional: Update rustup
+    print_info "Updating rustup..."
+    "${CARGO_HOME}/bin/rustup" update || print_warning "Rustup update failed, continuing..."
+    exit 0
+  fi
+fi
+
+# Check if rustup is already installed (but maybe different toolchain)
+if [ -f "${CARGO_HOME}/bin/rustc" ]; then
+  print_info "Rust is already installed at ${CARGO_HOME}"
+  source "${CARGO_HOME}/env"
+
+  "${CARGO_HOME}/bin/rustc" --version
+  "${CARGO_HOME}/bin/cargo" --version
 
   # Update rustup
   echo ""
-  echo "Updating rustup..."
-  "${INSTALL_DIR}/bin/rustup" update
+  print_info "Updating rustup..."
+  "${CARGO_HOME}/bin/rustup" update
 
+  mark_installed "rust" "${RUST_TOOLCHAIN}"
   exit 0
 fi
 
 # Install rustup
-echo "Installing rustup..."
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain "${RUST_TOOLCHAIN}"
+print_info "Installing rustup..."
+export CARGO_HOME="${CARGO_HOME}"
+export RUSTUP_HOME="${RUSTUP_HOME}"
+
+if ! curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain "${RUST_TOOLCHAIN}"; then
+  print_error "Failed to install rustup"
+  exit 1
+fi
 
 # Source cargo env
-source "${INSTALL_DIR}/env"
+source "${CARGO_HOME}/env"
 
 # Install rust-src component (for IDE support)
 echo ""
-echo "Installing rust-src component..."
-rustup component add rust-src
+print_info "Installing rust-src component..."
+rustup component add rust-src || print_warning "Failed to add rust-src component"
 
 # Install commonly used components
 echo ""
-echo "Installing additional components..."
-rustup component add rustfmt clippy
+print_info "Installing additional components..."
+rustup component add rustfmt clippy || print_warning "Failed to add some components"
+
+# Add to PATH via env script
+append_to_env ""
+append_to_env "# Rust (cargo)"
+append_to_env 'export CARGO_HOME="/root/.cargo"'
+append_to_env 'export RUSTUP_HOME="/root/.rustup"'
+append_to_env '[ -s "$CARGO_HOME/env" ] && \. "$CARGO_HOME/env"'
+
+# Mark as installed
+mark_installed "rust" "${RUST_TOOLCHAIN}"
 
 # Verify installation
 echo ""
-echo "=========================================="
-echo "Installation completed!"
-echo "=========================================="
+print_header "Installation completed!"
 echo "Rust version: $(rustc --version)"
 echo "Cargo version: $(cargo --version)"
 echo "Rustup version: $(rustup --version)"
@@ -57,9 +92,14 @@ echo ""
 echo "Installed components:"
 rustup component list --installed
 echo ""
-echo "Cargo has been installed to: ${INSTALL_DIR}"
+print_success "Cargo has been installed to: ${CARGO_HOME}"
+print_success "Rustup has been installed to: ${RUSTUP_HOME}"
 echo ""
-echo "To use Rust in your shell, add to your profile:"
-echo "  export PATH=\"${INSTALL_DIR}/bin:\$PATH\""
-echo "  source \"${INSTALL_DIR}/env\""
+echo "To use Rust in your shell, run:"
+echo "  source /etc/profile.d/99-dev-tools-env.sh"
+echo ""
+echo "Or add to your shell profile:"
+echo "  export CARGO_HOME=\"${CARGO_HOME}\""
+echo "  export RUSTUP_HOME=\"${RUSTUP_HOME}\""
+echo "  source \"\$CARGO_HOME/env\""
 echo ""

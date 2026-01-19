@@ -5,7 +5,7 @@
 # Wait for code CLI to be installed (check every 10 seconds)
 while [ ! -f /usr/local/bin/code ]; do
   echo "[vscode] VSCode CLI not installed yet, waiting..."
-  echo "[vscode] Install it with: /opt/install-scripts/install-vscode.sh"
+  echo "[vscode] Install it with: /usr/local/lib/dev-tools/install-scripts/install-vscode.sh"
   sleep 10
 done
 

@@ -49,11 +49,14 @@ RUN mkdir -p /run/sshd \
     && echo "Include /etc/ssh/sshd_config.d/*.conf" >> /etc/ssh/sshd_config
 
 ## Create install scripts directory
-RUN mkdir -p /opt/install-scripts
+RUN mkdir -p /usr/local/lib/dev-tools/install-scripts
 
 ## Copy install scripts
-COPY install-scripts/ /opt/install-scripts/
-RUN chmod +x /opt/install-scripts/*.sh
+COPY install-scripts/ /usr/local/lib/dev-tools/install-scripts/
+RUN chmod +x /usr/local/lib/dev-tools/install-scripts/*.sh
+
+## Create env script directory
+RUN mkdir -p /etc/profile.d
 
 ## Copy s6 service definitions
 COPY services.d /etc/services.d

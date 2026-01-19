@@ -2,19 +2,22 @@
 
 set -euo pipefail
 
-echo "=========================================="
-echo "Installing Development Tools"
-echo "=========================================="
+# Load common functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/common.sh"
+
+print_header "Installing Development Tools"
 echo ""
 
-# Check if already installed (by checking marker or tools)
-if command -v htop &> /dev/null && command -v jq &> /dev/null && command -v tree &> /dev/null; then
-  echo "Development tools appear to be already installed"
-  echo "Use --force to reinstall"
-  exit 0
+# Check if already installed via marker
+if check_installed "devtools"; then
+  if command -v htop &> /dev/null && command -v jq &> /dev/null && command -v tree &> /dev/null; then
+    print_success "Development tools are already installed"
+    exit 0
+  fi
 fi
 
-echo "Installing additional packages via apt..."
+print_info "Installing additional packages via apt..."
 
 apt-get update -y
 
@@ -56,10 +59,11 @@ fi
 apt-get clean
 rm -rf /var/lib/apt/lists/*
 
+# Mark as installed
+mark_installed "devtools" "latest"
+
 echo ""
-echo "=========================================="
-echo "Installation completed!"
-echo "=========================================="
+print_header "Installation completed!"
 echo "Installed tools:"
 echo "  - Editors: emacs"
 echo "  - Terminal: htop, ncdu, tmux, screen"

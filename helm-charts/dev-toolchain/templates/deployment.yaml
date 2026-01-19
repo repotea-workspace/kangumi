@@ -59,23 +59,16 @@ spec:
                 - /bin/bash
                 - -c
                 - |
-                  # Check marker file to avoid duplicate installation
-                  if [ -f /root/.dev-tools-installed ]; then
-                    echo "✓ Dev tools already installed"
-                    exit 0
-                  fi
-
                   {{- if $config.devTools.autoInstall }}
                   echo "→ Installing dev tools..."
                   {{- range $config.devTools.packages }}
-                  if [ -f /opt/install-scripts/install-{{ . }}.sh ]; then
+                  if [ -f /usr/local/lib/dev-tools/install-scripts/install-{{ . }}.sh ]; then
                     echo "Installing {{ . }}..."
-                    /opt/install-scripts/install-{{ . }}.sh || echo "⚠ Failed to install {{ . }}"
+                    /usr/local/lib/dev-tools/install-scripts/install-{{ . }}.sh || echo "⚠ Failed to install {{ . }}"
                   else
-                    echo "⚠ Script not found: /opt/install-scripts/install-{{ . }}.sh"
+                    echo "⚠ Script not found: /usr/local/lib/dev-tools/install-scripts/install-{{ . }}.sh"
                   fi
                   {{- end }}
-                  touch /root/.dev-tools-installed
                   echo "✓ Dev tools installation completed"
                   {{- else }}
                   echo "→ devTools.autoInstall is disabled, skipping installation"
