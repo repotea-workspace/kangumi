@@ -23,6 +23,11 @@ spec:
       labels:
         {{- include "dev-toolchain.instanceSelectorLabels" (dict "root" $ "name" $name) | nindent 8 }}
     spec:
+      {{- if eq ($config.network.mode | default "nodePort") "hostNetwork" }}
+      # hostNetwork mode configuration
+      hostNetwork: true
+      dnsPolicy: {{ $config.network.dnsPolicy | default "ClusterFirstWithHostNet" }}
+      {{- end }}
       {{- with $.Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -88,6 +93,13 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
         ports:
+        {{- if eq ($config.network.mode | default "nodePort") "hostNetwork" }}
+        # hostNetwork mode: declare actual listening port
+        - name: ssh
+          containerPort: {{ $config.ports.ssh.nodePort }}
+          protocol: TCP
+        {{- else }}
+        # nodePort mode: standard port declaration
         - name: ssh
           containerPort: {{ $config.ports.ssh.containerPort }}
           protocol: TCP
@@ -95,6 +107,7 @@ spec:
         - name: {{ .name }}
           containerPort: {{ .containerPort }}
           protocol: {{ .protocol | default "TCP" }}
+        {{- end }}
         {{- end }}
         {{- if $.Values.livenessProbe.enabled }}
         livenessProbe:
@@ -109,6 +122,12 @@ spec:
           {{- toYaml . | nindent 10 }}
         {{- end }}
         volumeMounts:
+        {{- if eq ($config.network.mode | default "nodePort") "hostNetwork" }}
+        # hostNetwork mode: mount SSH port configuration
+        - name: sshd-config
+          mountPath: /etc/ssh/sshd_config.d/port.conf
+          subPath: port.conf
+        {{- end }}
         {{- if $config.storage.pvc.enabled }}
         {{- range $volName, $volConfig := $config.storage.volumes }}
         - name: toolchain-data
@@ -118,7 +137,7 @@ spec:
           {{- end }}
         {{- end }}
         {{- end }}
-        {{- if $config.storage.sharedPVC.enabled }}
+        {{- if and $config.storage.sharedPVC $config.storage.sharedPVC.enabled }}
         - name: shared-wwwroot
           mountPath: {{ $config.storage.sharedPVC.mountPath }}
         {{- end }}
@@ -147,12 +166,18 @@ spec:
           mountPath: /var/lib/docker
       {{- end }}
       volumes:
+      {{- if eq ($config.network.mode | default "nodePort") "hostNetwork" }}
+      # hostNetwork mode: SSH port configuration
+      - name: sshd-config
+        configMap:
+          name: {{ include "dev-toolchain.configMapName" (dict "root" $ "name" $name) }}
+      {{- end }}
       {{- if $config.storage.pvc.enabled }}
       - name: toolchain-data
         persistentVolumeClaim:
           claimName: {{ include "dev-toolchain.pvcName" (dict "root" $ "name" $name "config" $config) }}
       {{- end }}
-      {{- if $config.storage.sharedPVC.enabled }}
+      {{- if and $config.storage.sharedPVC $config.storage.sharedPVC.enabled }}
       - name: shared-wwwroot
         persistentVolumeClaim:
           claimName: {{ include "dev-toolchain.sharedPvcName" (dict "root" $ "config" $config) }}

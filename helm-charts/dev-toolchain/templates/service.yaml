@@ -1,5 +1,6 @@
 {{- range $name, $config := .Values.toolchains }}
 {{- if $config.enabled }}
+{{- if ne ($config.network.mode | default "nodePort") "hostNetwork" }}
 ---
 apiVersion: v1
 kind: Service
@@ -24,5 +25,6 @@ spec:
     nodePort: {{ .nodePort }}
     protocol: {{ .protocol | default "TCP" }}
   {{- end }}
+{{- end }}
 {{- end }}
 {{- end }}

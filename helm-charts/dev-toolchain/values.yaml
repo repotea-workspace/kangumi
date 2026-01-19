@@ -36,6 +36,15 @@ toolchains:
     # If not set, a random ID will be generated on first boot
     machineId: ""
 
+    # Network mode configuration
+    network:
+      # Network mode: "nodePort" or "hostNetwork"
+      # - nodePort (default): Uses Service with NodePort, requires port pre-configuration
+      # - hostNetwork: Pod uses host network, all ports automatically exposed
+      mode: nodePort
+      # DNS policy for hostNetwork mode (only effective when mode is hostNetwork)
+      dnsPolicy: ClusterFirstWithHostNet
+
     # Development tools auto-installation (first startup only)
     devTools:
       # Enable auto-installation on first startup
@@ -51,17 +60,18 @@ toolchains:
 
     # Port configuration
     ports:
-      # SSH port (fixed allocation: 17000 + machine number)
+      # SSH port configuration
       ssh:
-        # Container port (SSH daemon listens on this port inside container)
+        # nodePort mode: container internal port (default 22)
         containerPort: 22
-        # NodePort (external port for SSH access)
+        # nodePort mode: external NodePort
+        # hostNetwork mode: actual port sshd listens on
         nodePort: 17000
 
-      # Additional ports (shared pool: 17100-18000)
-      # Add more ports as needed for your services
+      # Additional ports (for nodePort mode only)
+      # hostNetwork mode: no need to configure, all ports are automatically exposed
       extra: []
-      # Example:
+      # nodePort mode example:
       # extra:
       #   - name: http
       #     containerPort: 8080
@@ -70,10 +80,6 @@ toolchains:
       #   - name: https
       #     containerPort: 8443
       #     nodePort: 17101
-      #     protocol: TCP
-      #   - name: custom
-      #     containerPort: 3000
-      #     nodePort: 17102
       #     protocol: TCP
 
     # Storage configuration
@@ -187,6 +193,11 @@ toolchains:
     hostname: tch-bar
     image: repotea-workspace/kangumi/dev-toolchain:latest
     machineId: ""
+
+    # Network mode configuration
+    network:
+      mode: nodePort
+      dnsPolicy: ClusterFirstWithHostNet
 
     # Development tools auto-installation (first startup only)
     devTools:

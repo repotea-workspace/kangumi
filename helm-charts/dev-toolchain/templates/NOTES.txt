@@ -25,7 +25,7 @@ Instance: {{ $name }}
     {{- if $config.storage.pvc.enabled }}
     Main PVC: {{ include "dev-toolchain.pvcName" (dict "root" $ "name" $name "config" $config) }} ({{ $config.storage.pvc.size }})
     {{- end }}
-    {{- if $config.storage.sharedPVC.enabled }}
+    {{- if and $config.storage.sharedPVC $config.storage.sharedPVC.enabled }}
     Shared PVC: {{ include "dev-toolchain.sharedPvcName" (dict "root" $ "config" $config) }}
     {{- end }}
 

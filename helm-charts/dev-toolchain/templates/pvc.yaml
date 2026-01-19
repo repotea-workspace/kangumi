@@ -23,7 +23,7 @@ spec:
 {{- /* Create shared PVC only once (from first enabled toolchain that has it enabled) */ -}}
 {{- $sharedPvcCreated := false }}
 {{- range $name, $config := .Values.toolchains }}
-{{- if and $config.enabled $config.storage.sharedPVC.enabled (not $sharedPvcCreated) }}
+{{- if and $config.enabled $config.storage.sharedPVC (and $config.storage.sharedPVC.enabled (not $sharedPvcCreated)) }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

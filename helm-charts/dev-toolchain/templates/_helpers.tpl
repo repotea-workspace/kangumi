@@ -159,3 +159,11 @@ Usage: include "dev-toolchain.serviceName" (dict "root" $ "name" "fewensa")
 {{- define "dev-toolchain.serviceName" -}}
 {{- printf "%s-%s" (include "dev-toolchain.fullname" .root) .name }}
 {{- end }}
+
+{{/*
+Generate ConfigMap name for a toolchain instance
+Usage: include "dev-toolchain.configMapName" (dict "root" $ "name" "fewensa")
+*/}}
+{{- define "dev-toolchain.configMapName" -}}
+{{- printf "%s-%s-sshd-config" (include "dev-toolchain.fullname" .root) .name }}
+{{- end }}
