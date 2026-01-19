@@ -22,7 +22,7 @@ RUN apt-get update -y \
     # Basic build tools (commonly needed)
     build-essential \
     # Network tools (essential for debugging)
-    iputils-ping iproute2 \
+    iputils-ping iproute2 dnsutils \
     # Process tools
     procps \
     && apt-get clean \
