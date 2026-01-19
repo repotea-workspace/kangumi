@@ -36,6 +36,14 @@ toolchains:
     # If not set, a random ID will be generated on first boot
     machineId: ""
 
+    # SSH authorized keys configuration
+    # List of SSH public keys to add to /root/.ssh/authorized_keys
+    authorizedKeys: []
+    # Example:
+    # authorizedKeys:
+    #   - "ssh-ed25519 AAAAC3Nza... user@hostname"
+    #   - "ssh-rsa AAAAB3Nza... another@host"
+
     # Network mode configuration
     network:
       # Network mode: "nodePort" or "hostNetwork"
@@ -206,6 +214,9 @@ toolchains:
     hostname: tch-bar
     image: repotea-workspace/kangumi/dev-toolchain:latest
     machineId: ""
+
+    # SSH authorized keys configuration
+    authorizedKeys: []
 
     # Network mode configuration
     network:
