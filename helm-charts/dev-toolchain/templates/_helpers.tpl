@@ -56,8 +56,8 @@ Usage: include "dev-toolchain.instanceLabels" (dict "root" $ "name" "fewensa")
 */}}
 {{- define "dev-toolchain.instanceLabels" -}}
 {{ include "dev-toolchain.labels" .root }}
-app.kubernetes.io/component: {{ .name }}
-dev-toolchain/instance: {{ .name }}
+app.kubernetes.io/component: {{ .name | quote }}
+dev-toolchain/instance: {{ .name | quote }}
 {{- end }}
 
 {{/*
@@ -66,8 +66,8 @@ Usage: include "dev-toolchain.instanceSelectorLabels" (dict "root" $ "name" "few
 */}}
 {{- define "dev-toolchain.instanceSelectorLabels" -}}
 {{ include "dev-toolchain.selectorLabels" .root }}
-app.kubernetes.io/component: {{ .name }}
-dev-toolchain/instance: {{ .name }}
+app.kubernetes.io/component: {{ .name | quote }}
+dev-toolchain/instance: {{ .name | quote }}
 {{- end }}
 
 {{/*
