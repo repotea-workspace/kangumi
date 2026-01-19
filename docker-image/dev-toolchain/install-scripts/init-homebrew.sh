@@ -56,10 +56,19 @@ export NONINTERACTIVE=1
 # Install Homebrew as root
 print_info "Downloading and installing Homebrew..."
 
-if curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash -s -- --prefix="${HOMEBREW_PREFIX}"; then
-    print_success "Homebrew installed successfully"
+# Use git clone method for custom prefix installation
+if git clone --depth=1 https://github.com/Homebrew/brew "${HOMEBREW_PREFIX}"; then
+    print_success "Homebrew cloned successfully"
+
+    # Verify installation
+    if "${HOMEBREW_PREFIX}/bin/brew" --version &>/dev/null; then
+        print_success "Homebrew installed successfully"
+    else
+        print_error "Homebrew installation verification failed"
+        exit 1
+    fi
 else
-    print_error "Failed to install Homebrew"
+    print_error "Failed to clone Homebrew"
     exit 1
 fi
 
