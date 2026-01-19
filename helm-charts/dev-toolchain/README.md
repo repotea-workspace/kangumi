@@ -226,7 +226,7 @@ storage:
 ```yaml
 dind:
   enabled: true
-  image: docker:27-dind
+  image: docker:29-dind
   storage:
     type: emptyDir  # or 'pvc' for persistence
     # size: 50Gi    # only if type: pvc

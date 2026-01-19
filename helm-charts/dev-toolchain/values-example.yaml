@@ -70,7 +70,7 @@ toolchains:
 
     dind:
       enabled: true
-      image: docker:27-dind
+      image: docker:29-dind
       storage:
         type: emptyDir
 
@@ -145,7 +145,7 @@ toolchains:
 
 # DinD defaults
 dindDefaults:
-  image: docker:27-dind
+  image: docker:29-dind
   pullPolicy: IfNotPresent
   env:
     DOCKER_TLS_CERTDIR: ""

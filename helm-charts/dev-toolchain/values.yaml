@@ -145,7 +145,7 @@ toolchains:
       # Enable DinD sidecar
       enabled: true
       # DinD image
-      image: docker:27-dind
+      image: docker:29-dind
       # Override DinD image pull policy
       # pullPolicy: IfNotPresent
       # DinD storage (for /var/lib/docker)
@@ -230,7 +230,7 @@ toolchains:
 
     dind:
       enabled: true
-      image: docker:27-dind
+      image: docker:29-dind
       storage:
         type: emptyDir
 
@@ -251,7 +251,7 @@ toolchains:
 # These values are used for all toolchains unless overridden
 dindDefaults:
   # DinD image
-  image: docker:27-dind
+  image: docker:29-dind
   # Pull policy
   pullPolicy: IfNotPresent
 

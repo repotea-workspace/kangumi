@@ -18,7 +18,7 @@ services:
     restart: unless-stopped
 
   dind:
-    image: docker:27-dind
+    image: docker:29-dind
     container_name: dev-dind
     hostname: dev-dind
     privileged: true

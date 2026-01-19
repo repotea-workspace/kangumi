@@ -44,3 +44,31 @@ spec:
 {{- $sharedPvcCreated = true }}
 {{- end }}
 {{- end }}
+
+{{- /* Create DinD PVC for each toolchain that has it enabled */ -}}
+{{- range $name, $config := .Values.toolchains }}
+{{- if $config.enabled }}
+{{- if and $config.dind.enabled $config.dind.storage }}
+{{- $storageType := $config.dind.storage.type | default "emptyDir" }}
+{{- if eq $storageType "pvc" }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ printf "%s-%s-dind" (include "dev-toolchain.fullname" $) $name }}
+  labels:
+    {{- include "dev-toolchain.instanceLabels" (dict "root" $ "name" $name) | nindent 4 }}
+    dev-toolchain/storage-type: dind
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if $config.dind.storage.storageClassName }}
+  storageClassName: {{ $config.dind.storage.storageClassName }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $config.dind.storage.size | default "50Gi" }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
