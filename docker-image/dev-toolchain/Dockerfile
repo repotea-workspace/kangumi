@@ -55,14 +55,14 @@ RUN mkdir -p /usr/local/lib/dev-tools/install-scripts
 COPY install-scripts/ /usr/local/lib/dev-tools/install-scripts/
 RUN chmod +x /usr/local/lib/dev-tools/install-scripts/*.sh
 
-## Create s6 init script to run init-env.sh
-RUN mkdir -p /etc/cont-init.d && \
-    echo '#!/usr/bin/with-contenv bash' > /etc/cont-init.d/01-init-env && \
-    echo '/usr/local/lib/dev-tools/install-scripts/init-env.sh' >> /etc/cont-init.d/01-init-env && \
-    chmod +x /etc/cont-init.d/01-init-env
+## Copy s6 init scripts
+COPY cont-init.d/ /etc/cont-init.d/
+RUN chmod +x /etc/cont-init.d/*
 
-## Create env script directory
+## Copy bashrc snippets and create env script directory
 RUN mkdir -p /etc/profile.d
+COPY bashrc.d/dev-tools-env.sh /tmp/bashrc-snippet.sh
+RUN cat /tmp/bashrc-snippet.sh >> /root/.bashrc && rm /tmp/bashrc-snippet.sh
 
 ## Copy s6 service definitions
 COPY services.d /etc/services.d
