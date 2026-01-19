@@ -11,24 +11,34 @@ FLUTTER_VERSION="${FLUTTER_VERSION:-3.38.7}"
 BASE_DIR="/opt/flutter"
 FLUTTER_CHANNEL="${FLUTTER_CHANNEL:-stable}"
 
-print_header "Installing Flutter SDK"
-echo "Version: ${FLUTTER_VERSION}"
-echo "Channel: ${FLUTTER_CHANNEL}"
-echo "Install Directory: ${BASE_DIR}"
+# Environment variable block
+ENV_BLOCK='# Flutter
+if [ -d "/opt/flutter/current" ]; then
+  export FLUTTER_HOME="/opt/flutter/current"
+  export PATH="$FLUTTER_HOME/bin:$PATH"
+fi'
+
+print_header "Installing Flutter"
+echo "Flutter Version: ${FLUTTER_VERSION}"
+echo "Base Directory: ${BASE_DIR}"
+echo "Architecture: ${ARCH}"
 echo ""
 
 # Check if already installed with same version
 if check_installed "flutter" "${FLUTTER_VERSION}"; then
   CURRENT_DIR="${BASE_DIR}/current"
   if [ -d "${CURRENT_DIR}" ] && [ -f "${CURRENT_DIR}/bin/flutter" ]; then
+    # Ensure env vars are present even if already installed
+    ensure_env_block "# Flutter" "${ENV_BLOCK}"
+    print_success "Flutter environment variables ensured in ${ENV_SCRIPT}"
     "${CURRENT_DIR}/bin/flutter" --version
 
     # Optional: Update Flutter
     echo ""
     print_info "Updating Flutter..."
     "${CURRENT_DIR}/bin/flutter" upgrade || print_warning "Flutter upgrade failed, continuing..."
+    exit 0
   fi
-  exit 0
 fi
 
 # Setup version directory structure
@@ -84,14 +94,7 @@ print_info "Precaching Flutter artifacts..."
 "${CURRENT_LINK}/bin/flutter" precache || print_warning "Precache failed, continuing..."
 
 # Add to PATH via env script
-cat >> "${ENV_SCRIPT}" << 'EOF'
-
-# Flutter
-if [ -d "/opt/flutter/current" ]; then
-  export FLUTTER_HOME="/opt/flutter/current"
-  export PATH="$FLUTTER_HOME/bin:$PATH"
-fi
-EOF
+ensure_env_block "# Flutter" "${ENV_BLOCK}"
 
 # Mark as installed
 mark_installed "flutter" "${FLUTTER_VERSION}"

@@ -10,6 +10,11 @@ source "${SCRIPT_DIR}/common.sh"
 GCM_VERSION="${GCM_VERSION:-2.6.1}"
 INSTALL_DIR="/usr/local/bin"
 GCM_BIN="git-credential-manager"
+ARCH="${ARCH:-amd64}"
+
+# Environment variable block
+ENV_BLOCK='# Git Credential Manager
+export GCM_CREDENTIAL_STORE=gpg'
 
 print_header "Installing Git Credential Manager"
 echo "Version: ${GCM_VERSION}"
@@ -19,6 +24,9 @@ echo ""
 # Check if already installed
 if check_installed "gcm" "${GCM_VERSION}"; then
   if [ -f "${INSTALL_DIR}/${GCM_BIN}" ]; then
+    # Ensure env vars are present even if already installed
+    ensure_env_block "# Git Credential Manager" "${ENV_BLOCK}"
+    print_success "Git Credential Manager environment variables ensured in ${ENV_SCRIPT}"
     "${INSTALL_DIR}/${GCM_BIN}" --version 2>/dev/null || print_warning "Unable to get version"
     exit 0
   fi
@@ -47,11 +55,7 @@ print_info "Configuring git credential helper..."
 git config --global credential.helper manager || print_warning "Failed to configure git credential helper"
 
 # Add env variable
-cat >> "${ENV_SCRIPT}" << 'EOF'
-
-# Git Credential Manager
-export GCM_CREDENTIAL_STORE=gpg
-EOF
+ensure_env_block "# Git Credential Manager" "${ENV_BLOCK}"
 
 # Mark as installed
 mark_installed "gcm" "${GCM_VERSION}"

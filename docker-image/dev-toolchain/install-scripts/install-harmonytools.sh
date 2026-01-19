@@ -9,7 +9,14 @@ source "${SCRIPT_DIR}/common.sh"
 # Configuration
 HARMONY_VERSION="${HARMONY_VERSION:-5.0.3.500}"
 BASE_DIR="/opt/harmony"
-DOWNLOAD_URL="https://github.com/0xfe10/dynamic-actions/releases/download/v0.0.1-ohtools/commandline-tools-linux-x64-5.0.3.500.tar.gz"
+ARCH="${ARCH:-linux}"
+
+# Environment variable block
+ENV_BLOCK='# HarmonyOS Command-Line Tools
+if [ -d "/opt/harmony/current" ]; then
+  export HARMONYOS_HOME="/opt/harmony/current"
+  export PATH="$HARMONYOS_HOME/bin:$PATH"
+fi'
 
 print_header "Installing HarmonyOS Command-Line Tools"
 echo "Version: ${HARMONY_VERSION}"
@@ -20,6 +27,9 @@ echo ""
 if check_installed "harmonytools" "${HARMONY_VERSION}"; then
   CURRENT_DIR="${BASE_DIR}/current"
   if [ -d "${CURRENT_DIR}" ] && [ -d "${CURRENT_DIR}/bin" ]; then
+    # Ensure env vars are present even if already installed
+    ensure_env_block "# HarmonyOS Command-Line Tools" "${ENV_BLOCK}"
+    print_success "HarmonyOS environment variables ensured in ${ENV_SCRIPT}"
     print_success "HarmonyOS tools are ready at: ${CURRENT_DIR}"
     exit 0
   fi
@@ -70,14 +80,7 @@ if [ ! -d "${VERSION_DIR}/bin" ]; then
 fi
 
 # Add to PATH via env script
-cat >> "${ENV_SCRIPT}" << 'EOF'
-
-# HarmonyOS Command-Line Tools
-if [ -d "/opt/harmony/current" ]; then
-  export HARMONYOS_HOME="/opt/harmony/current"
-  export PATH="$HARMONYOS_HOME/bin:$PATH"
-fi
-EOF
+ensure_env_block "# HarmonyOS Command-Line Tools" "${ENV_BLOCK}"
 
 # Mark as installed
 mark_installed "harmonytools" "${HARMONY_VERSION}"

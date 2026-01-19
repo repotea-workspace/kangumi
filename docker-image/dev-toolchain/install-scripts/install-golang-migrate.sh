@@ -9,7 +9,12 @@ source "${SCRIPT_DIR}/common.sh"
 # Configuration
 MIGRATE_VERSION="${MIGRATE_VERSION:-4.19.1}"
 BASE_DIR="/opt/migrate"
-INSTALL_DIR="/usr/local/bin"
+
+# Environment variable block
+ENV_BLOCK='# golang-migrate
+if [ -d "/opt/migrate/current" ]; then
+  export PATH="/opt/migrate/current:$PATH"
+fi'
 
 print_header "Installing golang-migrate"
 echo "Version: ${MIGRATE_VERSION}"
@@ -19,8 +24,12 @@ echo ""
 
 # Check if already installed with same version
 if check_installed "golang-migrate" "${MIGRATE_VERSION}"; then
-  if command -v migrate &> /dev/null; then
-    migrate -version
+  CURRENT_DIR="${BASE_DIR}/current"
+  if [ -d "${CURRENT_DIR}" ] && [ -f "${CURRENT_DIR}/migrate" ]; then
+    # Ensure env vars are present even if already installed
+    ensure_env_block "# golang-migrate" "${ENV_BLOCK}"
+    print_success "golang-migrate environment variables ensured in ${ENV_SCRIPT}"
+    "${CURRENT_DIR}/migrate" -version
     exit 0
   fi
 fi
@@ -60,8 +69,8 @@ fi
 # Make binary executable
 chmod +x "${VERSION_DIR}/migrate"
 
-# Create symlink in /usr/local/bin
-ln -sf "${CURRENT_LINK}/migrate" "${INSTALL_DIR}/migrate"
+# Add to PATH via env script
+ensure_env_block "# golang-migrate" "${ENV_BLOCK}"
 
 # Mark as installed
 mark_installed "golang-migrate" "${MIGRATE_VERSION}"
@@ -73,7 +82,9 @@ migrate -version
 echo ""
 print_success "golang-migrate ${MIGRATE_VERSION} has been installed to: ${VERSION_DIR}"
 print_success "Current version symlink: ${CURRENT_LINK}"
-print_success "Binary symlinked to: ${INSTALL_DIR}/migrate"
+echo ""
+echo "To use golang-migrate in your shell, run:"
+echo "  source /etc/profile.d/99-dev-tools-env.sh"
 echo ""
 echo "Usage examples:"
 echo "  migrate -version"

@@ -11,6 +11,15 @@ GOLANG_VERSION="${GOLANG_VERSION:-1.25.6}"
 BASE_DIR="/opt/golang"
 ARCH="${ARCH:-amd64}"
 
+# Environment variable block
+ENV_BLOCK='# Go Programming Language
+if [ -d "/opt/golang/current" ]; then
+  export GOROOT="/opt/golang/current"
+  export PATH="$GOROOT/bin:$PATH"
+  # GOPATH defaults to $HOME/go, users can override if needed
+  export PATH="$HOME/go/bin:$PATH"
+fi'
+
 print_header "Installing Go Programming Language"
 echo "Go Version: ${GOLANG_VERSION}"
 echo "Base Directory: ${BASE_DIR}"
@@ -21,6 +30,9 @@ echo ""
 if check_installed "golang" "${GOLANG_VERSION}"; then
   CURRENT_DIR="${BASE_DIR}/current"
   if [ -d "${CURRENT_DIR}" ] && [ -f "${CURRENT_DIR}/bin/go" ]; then
+    # Ensure env vars are present even if already installed
+    ensure_env_block "# Go Programming Language" "${ENV_BLOCK}"
+    print_success "Go environment variables ensured in ${ENV_SCRIPT}"
     "${CURRENT_DIR}/bin/go" version
     exit 0
   fi
@@ -59,16 +71,7 @@ if [ ! -f "${VERSION_DIR}/bin/go" ]; then
 fi
 
 # Add to PATH via env script
-cat >> "${ENV_SCRIPT}" << 'EOF'
-
-# Go Programming Language
-if [ -d "/opt/golang/current" ]; then
-  export GOROOT="/opt/golang/current"
-  export PATH="$GOROOT/bin:$PATH"
-  # GOPATH defaults to $HOME/go, users can override if needed
-  export PATH="$HOME/go/bin:$PATH"
-fi
-EOF
+ensure_env_block "# Go Programming Language" "${ENV_BLOCK}"
 
 # Mark as installed
 mark_installed "golang" "${GOLANG_VERSION}"

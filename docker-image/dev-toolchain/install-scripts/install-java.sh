@@ -12,6 +12,13 @@ JDK_BUILD="${JDK_BUILD:-17.0.16+8}"
 BASE_DIR="/opt/java"
 ARCH="${ARCH:-x64}"
 
+# Environment variable block
+ENV_BLOCK='# Java
+if [ -d "/opt/java/current" ]; then
+  export JAVA_HOME="/opt/java/current"
+  export PATH="$JAVA_HOME/bin:$PATH"
+fi'
+
 print_header "Installing Java JDK (Adoptium Temurin)"
 echo "JDK Version: ${JDK_VERSION}"
 echo "JDK Build: ${JDK_BUILD}"
@@ -23,6 +30,9 @@ echo ""
 if check_installed "java" "${JDK_BUILD}"; then
   CURRENT_DIR="${BASE_DIR}/current"
   if [ -d "${CURRENT_DIR}" ] && [ -f "${CURRENT_DIR}/bin/java" ]; then
+    # Ensure env vars are present even if already installed
+    ensure_env_block "# Java" "${ENV_BLOCK}"
+    print_success "Java environment variables ensured in ${ENV_SCRIPT}"
     "${CURRENT_DIR}/bin/java" -version
     exit 0
   fi
@@ -76,14 +86,7 @@ rm -rf "${TMP_EXTRACT}"
 rm -f "${TMP_FILE}"
 
 # Add to PATH via env script
-cat >> "${ENV_SCRIPT}" << 'EOF'
-
-# Java
-if [ -d "/opt/java/current" ]; then
-  export JAVA_HOME="/opt/java/current"
-  export PATH="$JAVA_HOME/bin:$PATH"
-fi
-EOF
+ensure_env_block "# Java" "${ENV_BLOCK}"
 
 # Mark as installed
 mark_installed "java" "${JDK_BUILD}"

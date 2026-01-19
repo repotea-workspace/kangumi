@@ -12,6 +12,12 @@ RUST_TOOLCHAIN="${RUST_TOOLCHAIN:-stable}"
 CARGO_HOME="${CARGO_HOME:-${HOME}/.cargo}"
 RUSTUP_HOME="${RUSTUP_HOME:-${HOME}/.rustup}"
 
+# Environment variable block
+ENV_BLOCK='# Rust (cargo)
+export CARGO_HOME="/root/.cargo"
+export RUSTUP_HOME="/root/.rustup"
+[ -s "$CARGO_HOME/env" ] && \. "$CARGO_HOME/env"'
+
 print_header "Installing Rust via rustup"
 echo "Toolchain: ${RUST_TOOLCHAIN}"
 echo "Cargo Home: ${CARGO_HOME}"
@@ -21,6 +27,9 @@ echo ""
 # Check if already installed with same toolchain
 if check_installed "rust" "${RUST_TOOLCHAIN}"; then
   if [ -f "${CARGO_HOME}/bin/rustc" ]; then
+    # Ensure env vars are present even if already installed
+    ensure_env_block "# Rust (cargo)" "${ENV_BLOCK}"
+    print_success "Rust environment variables ensured in ${ENV_SCRIPT}"
     source "${CARGO_HOME}/env"
     echo "Rust version: $(rustc --version)"
     echo "Cargo version: $(cargo --version)"
@@ -73,13 +82,7 @@ print_info "Installing additional components..."
 rustup component add rustfmt clippy || print_warning "Failed to add some components"
 
 # Add to PATH via env script
-cat >> "${ENV_SCRIPT}" << 'EOF'
-
-# Rust (cargo)
-export CARGO_HOME="/root/.cargo"
-export RUSTUP_HOME="/root/.rustup"
-[ -s "$CARGO_HOME/env" ] && \. "$CARGO_HOME/env"
-EOF
+ensure_env_block "# Rust (cargo)" "${ENV_BLOCK}"
 
 # Mark as installed
 mark_installed "rust" "${RUST_TOOLCHAIN}"

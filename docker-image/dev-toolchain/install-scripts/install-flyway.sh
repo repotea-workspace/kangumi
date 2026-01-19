@@ -9,6 +9,14 @@ source "${SCRIPT_DIR}/common.sh"
 # Configuration
 FLYWAY_VERSION="${FLYWAY_VERSION:-11.20.2}"
 BASE_DIR="/opt/flyway"
+ARCH="${ARCH:-linux-x64}"
+
+# Environment variable block
+ENV_BLOCK='# Flyway
+if [ -d "/opt/flyway/current" ]; then
+  export FLYWAY_HOME="/opt/flyway/current"
+  export PATH="$FLYWAY_HOME:$PATH"
+fi'
 
 print_header "Installing Flyway"
 echo "Flyway Version: ${FLYWAY_VERSION}"
@@ -26,6 +34,9 @@ fi
 if check_installed "flyway" "${FLYWAY_VERSION}"; then
   CURRENT_DIR="${BASE_DIR}/current"
   if [ -d "${CURRENT_DIR}" ] && [ -f "${CURRENT_DIR}/flyway" ]; then
+    # Ensure env vars are present even if already installed
+    ensure_env_block "# Flyway" "${ENV_BLOCK}"
+    print_success "Flyway environment variables ensured in ${ENV_SCRIPT}"
     "${CURRENT_DIR}/flyway" --version
     exit 0
   fi
@@ -76,14 +87,7 @@ rm -f "${TMP_FILE}"
 chmod +x "${VERSION_DIR}/flyway"
 
 # Add to PATH via env script
-cat >> "${ENV_SCRIPT}" << 'EOF'
-
-# Flyway
-if [ -d "/opt/flyway/current" ]; then
-  export FLYWAY_HOME="/opt/flyway/current"
-  export PATH="$FLYWAY_HOME:$PATH"
-fi
-EOF
+ensure_env_block "# Flyway" "${ENV_BLOCK}"
 
 # Mark as installed
 mark_installed "flyway" "${FLYWAY_VERSION}"

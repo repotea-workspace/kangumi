@@ -11,6 +11,12 @@ NVM_VERSION="${NVM_VERSION:-0.40.3}"
 NODE_VERSION="${NODE_VERSION:-22.15.1}"
 INSTALL_DIR="${HOME}/.nvm"
 
+# Environment variable block
+ENV_BLOCK='# Node.js (nvm)
+export NVM_DIR="/root/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"'
+
 print_header "Installing Node.js via nvm"
 echo "NVM Version: ${NVM_VERSION}"
 echo "Node Version: ${NODE_VERSION}"
@@ -22,6 +28,9 @@ if check_installed "nodejs" "${NODE_VERSION}"; then
   if [ -d "${INSTALL_DIR}" ] && [ -s "${INSTALL_DIR}/nvm.sh" ]; then
     source "${INSTALL_DIR}/nvm.sh"
     if nvm list | grep -q "${NODE_VERSION}"; then
+      # Ensure env vars are present even if already installed
+      ensure_env_block "# Node.js (nvm)" "${ENV_BLOCK}"
+      print_success "Node.js environment variables ensured in ${ENV_SCRIPT}"
       nvm use "${NODE_VERSION}"
       echo "Node version: $(node --version)"
       echo "npm version: $(npm --version)"
@@ -70,13 +79,7 @@ print_info "Configuring npm..."
 npm config set registry https://registry.npmjs.org/
 
 # Add to PATH via env script
-cat >> "${ENV_SCRIPT}" << 'EOF'
-
-# Node.js (nvm)
-export NVM_DIR="/root/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-EOF
+ensure_env_block "# Node.js (nvm)" "${ENV_BLOCK}"
 
 # Mark as installed
 mark_installed "nodejs" "${NODE_VERSION}"

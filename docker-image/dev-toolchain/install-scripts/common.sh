@@ -78,10 +78,12 @@ mark_installed() {
   print_success "Marked ${tool_name} ${version} as installed"
 }
 
-# Append line to env script if not already present
-# Usage: append_to_env 'export PATH="/opt/flutter/current/bin:$PATH"'
-append_to_env() {
-  local line="$1"
+# Ensure environment block exists in env script (idempotent)
+# Usage: ensure_env_block "marker_comment" "env_block_content"
+# Example: ensure_env_block "# Go Programming Language" "export GOROOT=/opt/golang/current"
+ensure_env_block() {
+  local marker="$1"
+  local block="$2"
 
   # Create env script if it doesn't exist
   if [ ! -f "${ENV_SCRIPT}" ]; then
@@ -94,13 +96,17 @@ EOF
     chmod +x "${ENV_SCRIPT}"
   fi
 
-  # Check if line already exists
-  if grep -qF "${line}" "${ENV_SCRIPT}" 2>/dev/null; then
+  # Check if marker already exists
+  if grep -qF "${marker}" "${ENV_SCRIPT}" 2>/dev/null; then
     return 0
   fi
 
-  echo "${line}" >> "${ENV_SCRIPT}"
+  # Append the block
+  echo "" >> "${ENV_SCRIPT}"
+  echo "${block}" >> "${ENV_SCRIPT}"
 }
+
+
 
 # Create version directory structure and symlink
 # Usage: setup_version_dir "/opt/flutter" "3.35.1"

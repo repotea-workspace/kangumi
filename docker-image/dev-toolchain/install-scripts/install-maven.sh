@@ -9,7 +9,15 @@ source "${SCRIPT_DIR}/common.sh"
 # Configuration
 MAVEN_VERSION="${MAVEN_VERSION:-3.9.12}"
 BASE_DIR="/opt/maven"
-ARCH="${ARCH:-amd64}"
+ARCH="${ARCH:-x64}"
+
+# Environment variable block
+ENV_BLOCK='# Apache Maven
+if [ -d "/opt/maven/current" ]; then
+  export MAVEN_HOME="/opt/maven/current"
+  export M2_HOME="/opt/maven/current"
+  export PATH="$MAVEN_HOME/bin:$PATH"
+fi'
 
 print_header "Installing Apache Maven"
 echo "Maven Version: ${MAVEN_VERSION}"
@@ -27,6 +35,9 @@ fi
 if check_installed "maven" "${MAVEN_VERSION}"; then
   CURRENT_DIR="${BASE_DIR}/current"
   if [ -d "${CURRENT_DIR}" ] && [ -f "${CURRENT_DIR}/bin/mvn" ]; then
+    # Ensure env vars are present even if already installed
+    ensure_env_block "# Apache Maven" "${ENV_BLOCK}"
+    print_success "Maven environment variables ensured in ${ENV_SCRIPT}"
     "${CURRENT_DIR}/bin/mvn" --version
     exit 0
   fi
@@ -75,15 +86,7 @@ rm -rf "${TMP_EXTRACT}"
 rm -f "${TMP_FILE}"
 
 # Add to PATH via env script
-cat >> "${ENV_SCRIPT}" << 'EOF'
-
-# Apache Maven
-if [ -d "/opt/maven/current" ]; then
-  export MAVEN_HOME="/opt/maven/current"
-  export M2_HOME="/opt/maven/current"
-  export PATH="$MAVEN_HOME/bin:$PATH"
-fi
-EOF
+ensure_env_block "# Apache Maven" "${ENV_BLOCK}"
 
 # Mark as installed
 mark_installed "maven" "${MAVEN_VERSION}"

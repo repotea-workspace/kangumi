@@ -7,8 +7,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
 # Configuration
-LIQUIBASE_VERSION="${LIQUIBASE_VERSION:-5.0.1}"
+LIQUIBASE_VERSION="${LIQUIBASE_VERSION:-4.30.0}"
 BASE_DIR="/opt/liquibase"
+
+# Environment variable block
+ENV_BLOCK='# Liquibase
+if [ -d "/opt/liquibase/current" ]; then
+  export LIQUIBASE_HOME="/opt/liquibase/current"
+  export PATH="$LIQUIBASE_HOME:$PATH"
+fi'
 
 print_header "Installing Liquibase"
 echo "Liquibase Version: ${LIQUIBASE_VERSION}"
@@ -26,6 +33,9 @@ fi
 if check_installed "liquibase" "${LIQUIBASE_VERSION}"; then
   CURRENT_DIR="${BASE_DIR}/current"
   if [ -d "${CURRENT_DIR}" ] && [ -f "${CURRENT_DIR}/liquibase" ]; then
+    # Ensure env vars are present even if already installed
+    ensure_env_block "# Liquibase" "${ENV_BLOCK}"
+    print_success "Liquibase environment variables ensured in ${ENV_SCRIPT}"
     "${CURRENT_DIR}/liquibase" --version
     exit 0
   fi
@@ -67,14 +77,7 @@ fi
 chmod +x "${VERSION_DIR}/liquibase"
 
 # Add to PATH via env script
-cat >> "${ENV_SCRIPT}" << 'EOF'
-
-# Liquibase
-if [ -d "/opt/liquibase/current" ]; then
-  export LIQUIBASE_HOME="/opt/liquibase/current"
-  export PATH="$LIQUIBASE_HOME:$PATH"
-fi
-EOF
+ensure_env_block "# Liquibase" "${ENV_BLOCK}"
 
 # Mark as installed
 mark_installed "liquibase" "${LIQUIBASE_VERSION}"

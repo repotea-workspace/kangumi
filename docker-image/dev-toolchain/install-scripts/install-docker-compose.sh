@@ -10,6 +10,9 @@ source "${SCRIPT_DIR}/common.sh"
 DOCKER_COMPOSE_VERSION="${DOCKER_COMPOSE_VERSION:-5.0.1}"
 INSTALL_DIR="/usr/local/bin"
 
+# Note: docker-compose is installed directly to /usr/local/bin which is already in PATH
+# No need to add environment variables for PATH modification
+
 print_header "Installing Docker Compose"
 echo "Version: ${DOCKER_COMPOSE_VERSION}"
 echo "Install Directory: ${INSTALL_DIR}"
@@ -18,6 +21,7 @@ echo ""
 # Check if already installed with same version
 if check_installed "docker-compose" "${DOCKER_COMPOSE_VERSION}"; then
   if [ -f "${INSTALL_DIR}/docker-compose" ]; then
+    print_success "Docker Compose ${DOCKER_COMPOSE_VERSION} is already installed"
     "${INSTALL_DIR}/docker-compose" version || print_warning "Unable to get version"
     exit 0
   fi
