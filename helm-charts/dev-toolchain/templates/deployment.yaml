@@ -70,8 +70,8 @@ spec:
                   fi
 
                   # Ensure Homebrew is in PATH
-                  export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:${PATH}"
-                  eval "$(/opt/homebrew/bin/brew shellenv)"
+                  export PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}"
+                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 
                   # Step 2: Install dev tools via Homebrew
                   {{- if $config.devTools.autoInstall }}

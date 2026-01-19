@@ -9,7 +9,10 @@
 
 set -euo pipefail
 
-HOMEBREW_PREFIX="/opt/homebrew"
+# Use standard Linux Homebrew prefix to avoid architecture conflicts
+# On Linux x86_64, /opt/homebrew is reserved for ARM architecture
+# We use /home/linuxbrew/.linuxbrew which will be mounted from PVC
+HOMEBREW_PREFIX="/home/linuxbrew/.linuxbrew"
 
 # Colors
 RED='\033[0;31m'
@@ -54,6 +57,9 @@ export NONINTERACTIVE=1
 
 # Install Homebrew as root
 print_info "Downloading and installing Homebrew..."
+
+# Create parent directory if needed
+mkdir -p "$(dirname "${HOMEBREW_PREFIX}")"
 
 # Use git clone method for custom prefix installation
 if git clone --depth=1 https://github.com/Homebrew/brew "${HOMEBREW_PREFIX}"; then
