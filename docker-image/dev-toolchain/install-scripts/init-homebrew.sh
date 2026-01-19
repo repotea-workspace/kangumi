@@ -33,9 +33,8 @@ if [ -x "${HOMEBREW_PREFIX}/bin/brew" ]; then
     print_success "Homebrew is already installed at ${HOMEBREW_PREFIX}"
 
     # Verify it works
-    if ${HOMEBREW_PREFIX}/bin/brew --version &>/dev/null; then
-        BREW_VERSION=$(${HOMEBREW_PREFIX}/bin/brew --version | head -1)
-        print_success "Homebrew version: ${BREW_VERSION}"
+    if ${HOMEBREW_PREFIX}/bin/brew --version >/dev/null 2>&1; then
+        print_success "Homebrew is working correctly"
         echo ""
         print_info "Skipping installation, using existing Homebrew"
         exit 0
