@@ -1,6 +1,6 @@
 # Kangumi
 
-> A comprehensive collection of Helm charts, Docker images, and GitLab CI/CD workflows for Kubernetes and containerized application deployment and management.
+> A comprehensive collection of Helm charts, Docker images, GitHub Actions, and GitLab CI/CD workflows for Kubernetes and containerized application deployment and management.
 
 ## 📁 Project Structure
 
@@ -10,9 +10,10 @@ This repository serves as a centralized hub for reusable infrastructure componen
 
 Ready-to-deploy Kubernetes applications distributed via OCI registry with customizable configurations:
 
-| Chart    | Description                 | OCI Address                                        | Version |
-| -------- | --------------------------- | -------------------------------------------------- | ------- |
-| any-cors | CORS-anywhere proxy service | `oci://ghcr.io/repotea-workspace/kangumi/any-cors` | v0.1.13 |
+| Chart          | Description                              | OCI Address                                                    | Version |
+| -------------- | ---------------------------------------- | -------------------------------------------------------------- | ------- |
+| any-cors       | CORS-anywhere proxy service              | `oci://ghcr.io/repotea-workspace/kangumi/any-cors-helm`        | v0.1.13 |
+| dev-toolchain  | Development toolchain with Docker-in-Docker | `oci://ghcr.io/repotea-workspace/kangumi/dev-toolchain-helm` | v0.1.1  |
 
 #### Installation
 
@@ -20,13 +21,16 @@ Install Helm charts using OCI registry:
 
 ```bash
 # Install any-cors
-helm install my-cors oci://ghcr.io/repotea-workspace/kangumi/any-cors
+helm install my-cors oci://ghcr.io/repotea-workspace/kangumi/any-cors-helm
+
+# Install dev-toolchain
+helm install my-devtools oci://ghcr.io/repotea-workspace/kangumi/dev-toolchain-helm
 
 # Use custom values file
-helm install my-cors oci://ghcr.io/repotea-workspace/kangumi/any-cors -f values.yaml
+helm install my-cors oci://ghcr.io/repotea-workspace/kangumi/any-cors-helm -f values.yaml
 
 # Upgrade existing deployment
-helm upgrade my-cors oci://ghcr.io/repotea-workspace/kangumi/any-cors
+helm upgrade my-cors oci://ghcr.io/repotea-workspace/kangumi/any-cors-helm
 ```
 
 ### 🐳 Docker Images
@@ -35,7 +39,6 @@ Optimized container images for various use cases:
 
 | Image                                                       | Description                                   |
 | ----------------------------------------------------------- | --------------------------------------------- |
-| [appbox](docker-image/appbox)                               | Application sandbox environment               |
 | [artelad](docker-image/artelad)                             | Artelad blockchain node                       |
 | [cypress-browsers-edge](docker-image/cypress-browsers-edge) | Cypress testing environment with Edge browser |
 | [dev-toolchain](docker-image/dev-toolchain)                 | Development tools container                   |
@@ -48,6 +51,52 @@ Optimized container images for various use cases:
 | [nubit](docker-image/nubit)                                 | Nubit blockchain node                         |
 | [srtool](docker-image/srtool)                               | Substrate runtime building tools              |
 | [terraform](docker-image/terraform)                         | Terraform infrastructure automation           |
+| [wait-for-port](docker-image/wait-for-port)                 | Wait for port availability utility            |
+
+### 🎬 GitHub Actions
+
+Reusable GitHub Actions for CI/CD automation:
+
+| Action                    | Description                                    |
+| ------------------------- | ---------------------------------------------- |
+| [ansible-deploy](github-actions/ansible-deploy) | Ansible-based deployment automation |
+| [clone-any](github-actions/clone-any) | Clone any repository with authentication |
+| [clone-dyn](github-actions/clone-dyn) | Dynamic repository cloning |
+| [dyn-actions](github-actions/dyn-actions) | Dynamic GitHub Actions workflows |
+| [ecs-github-runner](github-actions/ecs-github-runner) | Self-hosted GitHub runner on AWS ECS |
+| [fast-substrate](github-actions/fast-substrate) | Fast Substrate blockchain builds |
+| [gen-android-sign](github-actions/gen-android-sign) | Generate Android signing keys |
+| [gitops-deploy](github-actions/gitops-deploy) | GitOps-based deployment workflows |
+| [mirror-to-acr](github-actions/mirror-to-acr) | Mirror images to Azure Container Registry |
+| [railway-deploy](github-actions/railway-deploy) | Deploy to Railway platform |
+| [railway-redeploy](github-actions/railway-redeploy) | Redeploy Railway applications |
+| [read-files](github-actions/read-files) | Read and process files in workflows |
+| [remove-self-hosted-runner](github-actions/remove-self-hosted-runner) | Clean up self-hosted runners |
+| [smart-vercel](github-actions/smart-vercel) | Smart Vercel deployment with caching |
+| [tepusher](github-actions/tepusher) | Telegram notification pusher |
+| [weplusbot](github-actions/weplusbot) | WeChat/WeCom bot integration |
+| [wxpusher](github-actions/wxpusher) | WeChat pusher notifications |
+
+#### Usage
+
+Use GitHub Actions in your workflows:
+
+```yaml
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: repotea-workspace/kangumi/github-actions/gitops-deploy@main
+        with:
+          repository: my-gitops-repo
+          token: ${{ secrets.GITHUB_TOKEN }}
+```
 
 ### ⚙️ GitLab Workflows
 
@@ -71,13 +120,13 @@ Install directly from OCI registry:
 
 ```bash
 # Install with default configuration
-helm install my-cors oci://ghcr.io/repotea-workspace/kangumi/any-cors
+helm install my-cors oci://ghcr.io/repotea-workspace/kangumi/any-cors-helm
 
 # Install with custom configuration
-helm install my-cors oci://ghcr.io/repotea-workspace/kangumi/any-cors --set service.port=8080
+helm install my-cors oci://ghcr.io/repotea-workspace/kangumi/any-cors-helm --set service.port=8080
 
 # View available configuration options
-helm show values oci://ghcr.io/repotea-workspace/kangumi/any-cors
+helm show values oci://ghcr.io/repotea-workspace/kangumi/any-cors-helm
 ```
 
 ### Using Docker Images
@@ -86,6 +135,17 @@ helm show values oci://ghcr.io/repotea-workspace/kangumi/any-cors
 # Pull and run pre-built images
 docker pull ghcr.io/repotea-workspace/kangumi/<image-name>:<tag>
 docker run ghcr.io/repotea-workspace/kangumi/<image-name>:<tag>
+```
+
+### Using GitHub Actions
+
+Include actions in your `.github/workflows/*.yml`:
+
+```yaml
+steps:
+  - uses: repotea-workspace/kangumi/github-actions/<action-name>@main
+    with:
+      # action-specific parameters
 ```
 
 ### Using GitLab CI Workflows
@@ -114,6 +174,11 @@ include:
 - Docker 20.10+
 - Or compatible container runtime
 
+### GitHub Actions
+
+- GitHub Actions runner
+- Appropriate secrets and permissions configured
+
 ### GitLab Workflows
 
 - GitLab CI/CD 14.0+
@@ -127,6 +192,7 @@ This project includes maintenance scripts for multiple components:
 - **Docker image build automation**
 - **Helm chart version management**
 - **CI/CD pipeline templates**
+- **GitHub Actions development and testing**
 
 ### Contributing
 
@@ -141,10 +207,15 @@ This project includes maintenance scripts for multiple components:
 ```
 kangumi/
 ├── docker-image/          # Docker image source code
+├── github-actions/        # GitHub Actions reusable workflows
 ├── gitlab-workflow/       # GitLab CI workflow templates
 ├── helm-charts/          # Helm chart source code
 └── scripts/              # Maintenance and build scripts
 ```
+
+## 📝 License
+
+Please refer to the project repository for licensing information.
 
 ---
 
