@@ -28,15 +28,22 @@ print_info "Installing system packages via apt..."
 
 apt-get update -y
 
+# Install system packages
+# - Build system dependencies (not in Homebrew or needed for compilation)
+# - System libraries (dev headers)
+# - Python (system Python for tools that depend on it)
+# - Git security (gnupg for GPG, pass for password store)
 apt-get install --no-install-recommends -y \
-  # Build system dependencies (not in Homebrew or needed for compilation)
-  autoconf automake libtool pkg-config \
-  # System libraries (dev headers)
+  autoconf \
+  automake \
+  libtool \
+  pkg-config \
   libssl-dev \
-  # Python (system Python for tools that depend on it)
-  python3-pip python3-dev python3-venv \
-  # Git security (gnupg for GPG, pass for password store)
-  gnupg pass
+  python3-pip \
+  python3-dev \
+  python3-venv \
+  gnupg \
+  pass
 
 # Create python symlink
 if [ ! -e /usr/bin/python ]; then
