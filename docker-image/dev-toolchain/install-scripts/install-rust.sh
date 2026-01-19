@@ -73,11 +73,13 @@ print_info "Installing additional components..."
 rustup component add rustfmt clippy || print_warning "Failed to add some components"
 
 # Add to PATH via env script
-append_to_env ""
-append_to_env "# Rust (cargo)"
-append_to_env 'export CARGO_HOME="/root/.cargo"'
-append_to_env 'export RUSTUP_HOME="/root/.rustup"'
-append_to_env '[ -s "$CARGO_HOME/env" ] && \. "$CARGO_HOME/env"'
+cat >> "${ENV_SCRIPT}" << 'EOF'
+
+# Rust (cargo)
+export CARGO_HOME="/root/.cargo"
+export RUSTUP_HOME="/root/.rustup"
+[ -s "$CARGO_HOME/env" ] && \. "$CARGO_HOME/env"
+EOF
 
 # Mark as installed
 mark_installed "rust" "${RUST_TOOLCHAIN}"

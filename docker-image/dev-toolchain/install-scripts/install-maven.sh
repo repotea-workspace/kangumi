@@ -75,13 +75,15 @@ rm -rf "${TMP_EXTRACT}"
 rm -f "${TMP_FILE}"
 
 # Add to PATH via env script
-append_to_env ""
-append_to_env "# Apache Maven"
-append_to_env 'if [ -d "/opt/maven/current" ]; then'
-append_to_env '  export MAVEN_HOME="/opt/maven/current"'
-append_to_env '  export M2_HOME="/opt/maven/current"'
-append_to_env '  export PATH="$MAVEN_HOME/bin:$PATH"'
-append_to_env 'fi'
+cat >> "${ENV_SCRIPT}" << 'EOF'
+
+# Apache Maven
+if [ -d "/opt/maven/current" ]; then
+  export MAVEN_HOME="/opt/maven/current"
+  export M2_HOME="/opt/maven/current"
+  export PATH="$MAVEN_HOME/bin:$PATH"
+fi
+EOF
 
 # Mark as installed
 mark_installed "maven" "${MAVEN_VERSION}"

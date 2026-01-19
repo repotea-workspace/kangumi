@@ -76,12 +76,14 @@ rm -rf "${TMP_EXTRACT}"
 rm -f "${TMP_FILE}"
 
 # Add to PATH via env script
-append_to_env ""
-append_to_env "# Java"
-append_to_env 'if [ -d "/opt/java/current" ]; then'
-append_to_env '  export JAVA_HOME="/opt/java/current"'
-append_to_env '  export PATH="$JAVA_HOME/bin:$PATH"'
-append_to_env 'fi'
+cat >> "${ENV_SCRIPT}" << 'EOF'
+
+# Java
+if [ -d "/opt/java/current" ]; then
+  export JAVA_HOME="/opt/java/current"
+  export PATH="$JAVA_HOME/bin:$PATH"
+fi
+EOF
 
 # Mark as installed
 mark_installed "java" "${JDK_BUILD}"

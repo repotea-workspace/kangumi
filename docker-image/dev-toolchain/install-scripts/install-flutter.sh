@@ -84,12 +84,14 @@ print_info "Precaching Flutter artifacts..."
 "${CURRENT_LINK}/bin/flutter" precache || print_warning "Precache failed, continuing..."
 
 # Add to PATH via env script
-append_to_env ""
-append_to_env "# Flutter"
-append_to_env 'if [ -d "/opt/flutter/current" ]; then'
-append_to_env '  export FLUTTER_HOME="/opt/flutter/current"'
-append_to_env '  export PATH="$FLUTTER_HOME/bin:$PATH"'
-append_to_env 'fi'
+cat >> "${ENV_SCRIPT}" << 'EOF'
+
+# Flutter
+if [ -d "/opt/flutter/current" ]; then
+  export FLUTTER_HOME="/opt/flutter/current"
+  export PATH="$FLUTTER_HOME/bin:$PATH"
+fi
+EOF
 
 # Mark as installed
 mark_installed "flutter" "${FLUTTER_VERSION}"

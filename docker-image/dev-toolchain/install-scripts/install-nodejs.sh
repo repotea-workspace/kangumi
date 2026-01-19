@@ -70,11 +70,13 @@ print_info "Configuring npm..."
 npm config set registry https://registry.npmjs.org/
 
 # Add to PATH via env script
-append_to_env ""
-append_to_env "# Node.js (nvm)"
-append_to_env 'export NVM_DIR="/root/.nvm"'
-append_to_env '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
-append_to_env '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"'
+cat >> "${ENV_SCRIPT}" << 'EOF'
+
+# Node.js (nvm)
+export NVM_DIR="/root/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+EOF
 
 # Mark as installed
 mark_installed "nodejs" "${NODE_VERSION}"

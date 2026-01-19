@@ -78,6 +78,11 @@ spec:
         # Docker host points to DinD sidecar
         - name: DOCKER_HOST
           value: tcp://localhost:{{ $config.dind.port | default 2375 }}
+        {{- if $config.hostname }}
+        # Custom hostname for shell prompt (used in hostNetwork mode)
+        - name: CUSTOM_HOSTNAME
+          value: {{ $config.hostname | quote }}
+        {{- end }}
         {{- if $config.machineId }}
         - name: MACHINE_ID
           value: {{ $config.machineId | quote }}

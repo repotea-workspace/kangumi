@@ -67,12 +67,14 @@ fi
 chmod +x "${VERSION_DIR}/liquibase"
 
 # Add to PATH via env script
-append_to_env ""
-append_to_env "# Liquibase"
-append_to_env 'if [ -d "/opt/liquibase/current" ]; then'
-append_to_env '  export LIQUIBASE_HOME="/opt/liquibase/current"'
-append_to_env '  export PATH="$LIQUIBASE_HOME:$PATH"'
-append_to_env 'fi'
+cat >> "${ENV_SCRIPT}" << 'EOF'
+
+# Liquibase
+if [ -d "/opt/liquibase/current" ]; then
+  export LIQUIBASE_HOME="/opt/liquibase/current"
+  export PATH="$LIQUIBASE_HOME:$PATH"
+fi
+EOF
 
 # Mark as installed
 mark_installed "liquibase" "${LIQUIBASE_VERSION}"

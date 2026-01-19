@@ -76,12 +76,14 @@ rm -f "${TMP_FILE}"
 chmod +x "${VERSION_DIR}/flyway"
 
 # Add to PATH via env script
-append_to_env ""
-append_to_env "# Flyway"
-append_to_env 'if [ -d "/opt/flyway/current" ]; then'
-append_to_env '  export FLYWAY_HOME="/opt/flyway/current"'
-append_to_env '  export PATH="$FLYWAY_HOME:$PATH"'
-append_to_env 'fi'
+cat >> "${ENV_SCRIPT}" << 'EOF'
+
+# Flyway
+if [ -d "/opt/flyway/current" ]; then
+  export FLYWAY_HOME="/opt/flyway/current"
+  export PATH="$FLYWAY_HOME:$PATH"
+fi
+EOF
 
 # Mark as installed
 mark_installed "flyway" "${FLYWAY_VERSION}"

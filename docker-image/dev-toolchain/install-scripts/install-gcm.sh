@@ -47,9 +47,11 @@ print_info "Configuring git credential helper..."
 git config --global credential.helper manager || print_warning "Failed to configure git credential helper"
 
 # Add env variable
-append_to_env ""
-append_to_env "# Git Credential Manager"
-append_to_env 'export GCM_CREDENTIAL_STORE=gpg'
+cat >> "${ENV_SCRIPT}" << 'EOF'
+
+# Git Credential Manager
+export GCM_CREDENTIAL_STORE=gpg
+EOF
 
 # Mark as installed
 mark_installed "gcm" "${GCM_VERSION}"

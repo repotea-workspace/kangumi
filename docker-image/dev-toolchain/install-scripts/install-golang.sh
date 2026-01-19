@@ -59,14 +59,16 @@ if [ ! -f "${VERSION_DIR}/bin/go" ]; then
 fi
 
 # Add to PATH via env script
-append_to_env ""
-append_to_env "# Go Programming Language"
-append_to_env 'if [ -d "/opt/golang/current" ]; then'
-append_to_env '  export GOROOT="/opt/golang/current"'
-append_to_env '  export PATH="$GOROOT/bin:$PATH"'
-append_to_env '  # GOPATH defaults to $HOME/go, users can override if needed'
-append_to_env '  export PATH="$HOME/go/bin:$PATH"'
-append_to_env 'fi'
+cat >> "${ENV_SCRIPT}" << 'EOF'
+
+# Go Programming Language
+if [ -d "/opt/golang/current" ]; then
+  export GOROOT="/opt/golang/current"
+  export PATH="$GOROOT/bin:$PATH"
+  # GOPATH defaults to $HOME/go, users can override if needed
+  export PATH="$HOME/go/bin:$PATH"
+fi
+EOF
 
 # Mark as installed
 mark_installed "golang" "${GOLANG_VERSION}"

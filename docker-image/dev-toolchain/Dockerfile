@@ -55,6 +55,12 @@ RUN mkdir -p /usr/local/lib/dev-tools/install-scripts
 COPY install-scripts/ /usr/local/lib/dev-tools/install-scripts/
 RUN chmod +x /usr/local/lib/dev-tools/install-scripts/*.sh
 
+## Create s6 init script to run init-env.sh
+RUN mkdir -p /etc/cont-init.d && \
+    echo '#!/usr/bin/with-contenv bash' > /etc/cont-init.d/01-init-env && \
+    echo '/usr/local/lib/dev-tools/install-scripts/init-env.sh' >> /etc/cont-init.d/01-init-env && \
+    chmod +x /etc/cont-init.d/01-init-env
+
 ## Create env script directory
 RUN mkdir -p /etc/profile.d
 

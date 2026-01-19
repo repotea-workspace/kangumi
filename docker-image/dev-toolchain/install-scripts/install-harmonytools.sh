@@ -70,12 +70,14 @@ if [ ! -d "${VERSION_DIR}/bin" ]; then
 fi
 
 # Add to PATH via env script
-append_to_env ""
-append_to_env "# HarmonyOS Command-Line Tools"
-append_to_env 'if [ -d "/opt/harmony/current" ]; then'
-append_to_env '  export HARMONYOS_HOME="/opt/harmony/current"'
-append_to_env '  export PATH="$HARMONYOS_HOME/bin:$PATH"'
-append_to_env 'fi'
+cat >> "${ENV_SCRIPT}" << 'EOF'
+
+# HarmonyOS Command-Line Tools
+if [ -d "/opt/harmony/current" ]; then
+  export HARMONYOS_HOME="/opt/harmony/current"
+  export PATH="$HARMONYOS_HOME/bin:$PATH"
+fi
+EOF
 
 # Mark as installed
 mark_installed "harmonytools" "${HARMONY_VERSION}"
