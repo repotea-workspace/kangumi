@@ -4,11 +4,12 @@
 #
 # This script is called during postStart to install Homebrew to /opt/homebrew
 # which is mounted from PVC and persists across pod restarts.
+#
+# Homebrew is installed and managed by root for simplified access.
 
 set -euo pipefail
 
 HOMEBREW_PREFIX="/opt/homebrew"
-BREW_USER="brewuser"
 
 # Colors
 RED='\033[0;31m'
@@ -30,10 +31,10 @@ echo ""
 # Check if Homebrew is already installed
 if [ -x "${HOMEBREW_PREFIX}/bin/brew" ]; then
     print_success "Homebrew is already installed at ${HOMEBREW_PREFIX}"
-    
+
     # Verify it works
-    if su - ${BREW_USER} -c "${HOMEBREW_PREFIX}/bin/brew --version" &>/dev/null; then
-        BREW_VERSION=$(su - ${BREW_USER} -c "${HOMEBREW_PREFIX}/bin/brew --version" | head -1)
+    if ${HOMEBREW_PREFIX}/bin/brew --version &>/dev/null; then
+        BREW_VERSION=$(${HOMEBREW_PREFIX}/bin/brew --version | head -1)
         print_success "Homebrew version: ${BREW_VERSION}"
         echo ""
         print_info "Skipping installation, using existing Homebrew"
@@ -45,30 +46,27 @@ fi
 
 print_info "Installing Homebrew to ${HOMEBREW_PREFIX}..."
 
-# Ensure directory exists with correct ownership
+# Ensure directory exists
 mkdir -p "${HOMEBREW_PREFIX}"
-chown ${BREW_USER}:brew "${HOMEBREW_PREFIX}"
 
-# Install Homebrew as brewuser
+# Set environment for Homebrew installation
+export HOMEBREW_ALLOW_ROOT=1
+export NONINTERACTIVE=1
+
+# Install Homebrew as root
 print_info "Downloading and installing Homebrew..."
 
-# Run the install script
-if su - ${BREW_USER} -c "cd ${HOMEBREW_PREFIX} && curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash -s -- --prefix=${HOMEBREW_PREFIX}"; then
+if curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash -s -- --prefix="${HOMEBREW_PREFIX}"; then
     print_success "Homebrew installed successfully"
 else
     print_error "Failed to install Homebrew"
     exit 1
 fi
 
-# Set correct permissions for group sharing
-print_info "Configuring permissions for group sharing..."
-chown -R ${BREW_USER}:brew "${HOMEBREW_PREFIX}"
-chmod -R g+rX "${HOMEBREW_PREFIX}"
-chmod -R g+w "${HOMEBREW_PREFIX}/var" 2>/dev/null || true
-
 # Install yq (required for tools.yaml parsing)
 print_info "Installing yq..."
-if su - ${BREW_USER} -c "eval \"\$(${HOMEBREW_PREFIX}/bin/brew shellenv)\" && brew install yq"; then
+export PATH="${HOMEBREW_PREFIX}/bin:${PATH}"
+if ${HOMEBREW_PREFIX}/bin/brew install yq; then
     print_success "yq installed successfully"
 else
     print_warning "Failed to install yq, continuing anyway"
@@ -78,6 +76,6 @@ echo ""
 print_success "Homebrew initialization completed!"
 echo ""
 echo "Location: ${HOMEBREW_PREFIX}"
-echo "User: ${BREW_USER}"
-echo "Group: brew"
+echo "Managed by: root"
+echo "All users can use: brew commands directly"
 echo ""

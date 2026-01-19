@@ -61,24 +61,10 @@ if [ -f "${SCRIPT_DIR}/common.sh" ]; then
     source "${SCRIPT_DIR}/common.sh"
 fi
 
-# Brew command wrapper - intelligently handle different users
-brew_cmd() {
-    local current_user=$(whoami)
-
-    if [ "${current_user}" = "brewuser" ]; then
-        # Native execution as brewuser user
-        eval "$(/opt/homebrew/bin/brew shellenv)"
-        brew "$@"
-    else
-        # Execute as brewuser user via sudo for other users
-        sudo -u brewuser -H bash -c "eval \"\$(/opt/homebrew/bin/brew shellenv)\" && brew $*"
-    fi
-}
-
 # Check if Homebrew is installed
 check_homebrew() {
     if ! command -v brew &> /dev/null && [ ! -x /opt/homebrew/bin/brew ]; then
-        print_error "Homebrew is not installed. Please run install-homebrew.sh first."
+        print_error "Homebrew is not installed. Please run init-homebrew.sh first."
         exit 1
     fi
 }
@@ -118,10 +104,10 @@ add_tap() {
 
     if [ "${tap_name}" != "null" ] && [ -n "${tap_name}" ]; then
         print_info "Adding tap: ${tap_name}"
-        if brew_cmd tap | grep -q "^${tap_name}$"; then
+        if brew tap | grep -q "^${tap_name}$"; then
             print_success "Tap ${tap_name} already added"
         else
-            brew_cmd tap "${tap_name}" || print_warning "Failed to add tap ${tap_name}"
+            brew tap "${tap_name}" || print_warning "Failed to add tap ${tap_name}"
         fi
     fi
 }
@@ -131,14 +117,14 @@ install_formula() {
     local formula="$1"
 
     # Check if already installed
-    if brew_cmd list "${formula}" &> /dev/null; then
+    if brew list "${formula}" &> /dev/null; then
         print_success "${formula} is already installed"
         return 0
     fi
 
     print_info "Installing ${formula}..."
 
-    if brew_cmd install "${formula}"; then
+    if brew install "${formula}"; then
         print_success "${formula} installed successfully"
         return 0
     else

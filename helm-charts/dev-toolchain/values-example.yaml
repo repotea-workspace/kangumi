@@ -20,12 +20,6 @@ toolchains:
     devTools:
       autoInstall: true
 
-      # Runtime users (recreated on every pod restart)
-      users:
-        - name: alice
-          uid: 1000
-          gid: 1000
-
       # Tools to install via Homebrew
       packages:
         - golang

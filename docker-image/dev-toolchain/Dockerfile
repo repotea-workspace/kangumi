@@ -45,11 +45,8 @@ RUN mkdir -p /run/sshd \
     && echo "PermitRootLogin prohibit-password" >> /etc/ssh/sshd_config \
     && echo "Include /etc/ssh/sshd_config.d/*.conf" >> /etc/ssh/sshd_config
 
-## Create brew group and brewuser for Homebrew installation
 ## Homebrew will be installed at runtime to /opt/homebrew (PVC persistent)
-RUN groupadd -g 999 brew \
-    && useradd -r -u 999 -g brew -d /nonexistent -s /bin/bash brewuser \
-    && echo 'brewuser ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+## Using root for simplified access (requires HOMEBREW_ALLOW_ROOT=1)
 
 ## Setup Homebrew environment for all users
 ## Homebrew will be installed by postStart to /opt/homebrew
@@ -57,6 +54,7 @@ ENV PATH="/opt/homebrew/bin:/opt/homebrew/sbin:${PATH}" \
     HOMEBREW_PREFIX="/opt/homebrew" \
     HOMEBREW_CELLAR="/opt/homebrew/Cellar" \
     HOMEBREW_REPOSITORY="/opt/homebrew" \
+    HOMEBREW_ALLOW_ROOT=1 \
     HOMEBREW_NO_ENV_HINTS=1 \
     HOMEBREW_NO_AUTO_UPDATE=1 \
     HOMEBREW_NO_INSTALL_FROM_API=1
@@ -69,10 +67,6 @@ RUN mkdir -p /usr/local/lib/dev-tools/install-scripts \
 ## Copy install scripts (including tools.yaml)
 COPY install-scripts/ /usr/local/lib/dev-tools/install-scripts/
 RUN chmod +x /usr/local/lib/dev-tools/install-scripts/*.sh
-
-## Copy system scripts to /usr/local/bin
-COPY scripts/create-user.sh /usr/local/bin/create-user
-RUN chmod +x /usr/local/bin/create-user
 
 ## Symlink install-brew-tools.sh to /usr/local/bin for easy access
 RUN ln -s /usr/local/lib/dev-tools/install-scripts/install-brew-tools.sh /usr/local/bin/install-brew-tools.sh

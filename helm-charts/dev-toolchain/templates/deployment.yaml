@@ -51,7 +51,7 @@ spec:
         securityContext:
           {{- toYaml . | nindent 10 }}
         {{- end }}
-        {{- if or $config.devTools.autoInstall (gt (len $config.devTools.packages) 0) $config.devTools.users }}
+        {{- if or $config.devTools.autoInstall (gt (len $config.devTools.packages) 0) }}
         lifecycle:
           postStart:
             exec:
@@ -72,22 +72,7 @@ spec:
                   export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:${PATH}"
                   eval "$(/opt/homebrew/bin/brew shellenv)"
 
-                  # Step 2: Create users (if configured)
-                  {{- if $config.devTools.users }}
-                  echo ""
-                  echo "→ Creating runtime users..."
-                  {{- range $config.devTools.users }}
-                  echo "Creating user: {{ .name }}"
-                  if /usr/local/bin/create-user {{ .name }} {{ .uid | default 1000 }} {{ .gid | default .uid | default 1000 }}; then
-                    echo "✓ User {{ .name }} created successfully"
-                  else
-                    echo "⚠ Failed to create user {{ .name }}"
-                  fi
-                  {{- end }}
-                  echo "✓ User creation completed"
-                  {{- end }}
-
-                  # Step 3: Install dev tools via Homebrew
+                  # Step 2: Install dev tools via Homebrew
                   {{- if $config.devTools.autoInstall }}
                   echo ""
                   echo "→ Installing dev tools..."
