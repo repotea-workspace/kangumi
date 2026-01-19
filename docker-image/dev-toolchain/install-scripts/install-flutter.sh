@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
 # Configuration
-FLUTTER_VERSION="${FLUTTER_VERSION:-3.35.1}"
+FLUTTER_VERSION="${FLUTTER_VERSION:-3.38.7}"
 BASE_DIR="/opt/flutter"
 FLUTTER_CHANNEL="${FLUTTER_CHANNEL:-stable}"
 

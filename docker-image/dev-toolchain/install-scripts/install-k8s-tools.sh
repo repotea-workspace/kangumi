@@ -14,6 +14,7 @@ HELMFILE_VERSION="${HELMFILE_VERSION:-1.2.3}"
 KUSTOMIZE_VERSION="${KUSTOMIZE_VERSION:-5.8.0}"
 ARGOCD_VERSION="${ARGOCD_VERSION:-3.2.5}"
 KUBESEAL_VERSION="${KUBESEAL_VERSION:-0.34.0}"
+TALOSCTL_VERSION="${TALOSCTL_VERSION:-1.9.3}"
 INSTALL_DIR="/usr/local/bin"
 
 print_header "Installing Kubernetes Tools"
@@ -24,6 +25,7 @@ echo "Kustomize: ${KUSTOMIZE_VERSION}"
 echo "Helmfile: ${HELMFILE_VERSION}"
 echo "ArgoCD CLI: ${ARGOCD_VERSION}"
 echo "Kubeseal: ${KUBESEAL_VERSION}"
+echo "Talosctl: ${TALOSCTL_VERSION}"
 echo "Install Directory: ${INSTALL_DIR}"
 echo ""
 
@@ -38,12 +40,12 @@ check_tool_installed() {
 }
 
 # Create combined version string for marker
-COMBINED_VERSION="${KUBECTL_VERSION}:${HELM_VERSION}:${KUSTOMIZE_VERSION}:${HELMFILE_VERSION}:${ARGOCD_VERSION}:${KUBESEAL_VERSION}"
+COMBINED_VERSION="${KUBECTL_VERSION}:${HELM_VERSION}:${KUSTOMIZE_VERSION}:${HELMFILE_VERSION}:${ARGOCD_VERSION}:${KUBESEAL_VERSION}:${TALOSCTL_VERSION}"
 
 # Check if already installed with same versions via marker
 if check_installed "k8s-tools" "${COMBINED_VERSION}"; then
   ALL_INSTALLED=true
-  for tool in kubectl helm kustomize helmfile argocd kubeseal; do
+  for tool in kubectl helm kustomize helmfile argocd kubeseal talosctl; do
     if ! check_tool_installed "${tool}"; then
       ALL_INSTALLED=false
     fi
@@ -128,6 +130,16 @@ if ! check_tool_installed kubeseal; then
   print_success "Kubeseal installed"
 fi
 
+# Install Talosctl
+if ! check_tool_installed talosctl; then
+  echo ""
+  print_info "Installing Talosctl ${TALOSCTL_VERSION}..."
+  TALOSCTL_URL="https://github.com/siderolabs/talos/releases/download/v${TALOSCTL_VERSION}/talosctl-linux-amd64"
+  curl -SL "${TALOSCTL_URL}" -o "${INSTALL_DIR}/talosctl"
+  chmod +x "${INSTALL_DIR}/talosctl"
+  print_success "Talosctl installed"
+fi
+
 # Install helm-diff plugin
 echo ""
 print_info "Installing helm-diff plugin ${HELM_DIFF_VERSION}..."
@@ -152,6 +164,7 @@ kustomize version 2>/dev/null || echo "  - Kustomize: installed"
 helmfile version 2>/dev/null | head -1 || echo "  - Helmfile: installed"
 argocd version --client 2>/dev/null | head -1 || echo "  - ArgoCD CLI: installed"
 kubeseal --version 2>/dev/null || echo "  - Kubeseal: installed"
+talosctl version --client 2>/dev/null | head -1 || echo "  - Talosctl: installed"
 echo ""
 echo "Helm plugins:"
 helm plugin list | grep diff || echo "  - helm-diff: installed"

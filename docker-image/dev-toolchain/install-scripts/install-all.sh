@@ -12,11 +12,18 @@ AVAILABLE_PACKAGES=(
   "rust"
   "flutter"
   "java"
+  "golang"
   "devtools"
   "docker-compose"
   "vscode"
   "k8s-tools"
   "gcm"
+  "harmonytools"
+  "maven"
+  "golang-migrate"
+  "flyway"
+  "liquibase"
+  "terraform"
 )
 
 # Default packages to install (can be overridden by environment variable)
@@ -107,12 +114,25 @@ $(printf "    - %s\n" "${AVAILABLE_PACKAGES[@]}")
     - rust          : Rust via rustup
     - flutter       : Flutter SDK
     - java          : Java JDK (Adoptium Temurin)
+    - golang        : Go programming language
+
+  Build tools:
+    - maven         : Apache Maven build tool
+    - harmonytools  : HarmonyOS command-line tools
+
+  Database migration tools:
+    - golang-migrate: golang-migrate CLI
+    - flyway        : Flyway database migration tool
+    - liquibase     : Liquibase database migration tool
+
+  Infrastructure tools:
+    - terraform     : Terraform IaC tool
+    - k8s-tools     : Kubectl, Helm, Kustomize, Helmfile, ArgoCD, Kubeseal, Talosctl
 
   Optional tools:
     - devtools      : Additional CLI tools (htop, jq, tmux, etc.)
     - docker-compose: Docker Compose standalone
     - vscode        : VSCode CLI (tunnel support)
-    - k8s-tools     : Kustomize, Helmfile, ArgoCD, Kubeseal
     - gcm           : Git Credential Manager
 
 EXAMPLES:
