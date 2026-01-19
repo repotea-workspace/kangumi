@@ -37,45 +37,38 @@ print_header() {
   echo "=========================================="
 }
 
-# Check if tool is already installed via marker file
-# Usage: check_installed "nodejs" "22.15.1"
-# Returns: 0 if installed with same version, 1 otherwise
+# Check if tool is already installed by checking actual binaries
+# Usage: check_installed "devtools"
+# Returns: 0 if installed, 1 otherwise
+# Note: This function is kept for backward compatibility but now checks
+# actual installation rather than marker files to avoid persistence issues
 check_installed() {
   local tool_name="$1"
-  local expected_version="${2:-}"
-  local marker_file="${MARKER_DIR}/${tool_name}.installed"
 
-  if [ ! -f "${marker_file}" ]; then
-    return 1
-  fi
-
-  if [ -z "${expected_version}" ]; then
-    print_success "${tool_name} is already installed"
-    return 0
-  fi
-
-  local installed_version
-  installed_version=$(cat "${marker_file}" 2>/dev/null || echo "")
-
-  if [ "${installed_version}" = "${expected_version}" ]; then
-    print_success "${tool_name} ${expected_version} is already installed"
-    return 0
-  else
-    print_info "${tool_name} is installed but version mismatch (installed: ${installed_version}, expected: ${expected_version})"
-    return 1
-  fi
+  # Special handling for meta-packages
+  case "${tool_name}" in
+    devtools)
+      # Check if key system packages are installed
+      command -v autoconf &>/dev/null && command -v automake &>/dev/null
+      return $?
+      ;;
+    *)
+      # For other tools, always return 1 (not installed)
+      # This ensures tools from Homebrew are checked by Homebrew itself
+      return 1
+      ;;
+  esac
 }
 
-# Mark tool as installed
+# Mark tool as installed (now a no-op, kept for backward compatibility)
 # Usage: mark_installed "nodejs" "22.15.1"
 mark_installed() {
   local tool_name="$1"
   local version="${2:-unknown}"
-  local marker_file="${MARKER_DIR}/${tool_name}.installed"
 
-  mkdir -p "${MARKER_DIR}"
-  echo "${version}" > "${marker_file}"
-  print_success "Marked ${tool_name} ${version} as installed"
+  # No longer create marker files to avoid persistence issues
+  # Installation state is determined by actual binary existence
+  print_success "✓ ${tool_name} ${version} installed"
 }
 
 # Ensure environment block exists in env script (idempotent)
