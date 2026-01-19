@@ -148,6 +148,15 @@ toolchains:
       image: docker:29-dind
       # Override DinD image pull policy
       # pullPolicy: IfNotPresent
+      # DinD port configuration
+      # Port for Docker daemon to listen on (used with DOCKER_HOST in main container)
+      # In hostNetwork mode, each toolchain instance should use a different port
+      # to avoid conflicts on the same node
+      port: 2375
+      # Bind address for Docker daemon (default: 127.0.0.1 for security)
+      # Using 127.0.0.1 ensures DinD is only accessible from within the Pod
+      # and prevents exposure even when using hostNetwork mode
+      bindAddress: "127.0.0.1"
       # DinD storage (for /var/lib/docker)
       # Can be emptyDir or PVC
       storage:
@@ -156,6 +165,8 @@ toolchains:
         # If using PVC, specify size
         # type: pvc
         # size: 50Gi
+      # Additional environment variables for DinD
+      env: {}
 
     # Container resources
     resources:
@@ -231,8 +242,11 @@ toolchains:
     dind:
       enabled: true
       image: docker:29-dind
+      port: 2376
+      bindAddress: "127.0.0.1"
       storage:
         type: emptyDir
+      env: {}
 
     resources:
       limits:
