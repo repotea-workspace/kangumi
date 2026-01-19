@@ -46,7 +46,7 @@ tools:
   # Tools with post-install configuration
   # ==========================================
 
-  gcm:
+  git-credential-manager:
     brew: git-credential-manager
     description: Git Credential Manager
     binaries:
