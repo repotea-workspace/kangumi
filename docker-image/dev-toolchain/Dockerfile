@@ -23,8 +23,6 @@ RUN apt-get update -y \
     git \
     # Sudo (for multi-user access)
     sudo \
-    # yq for YAML parsing in install scripts
-    yq \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

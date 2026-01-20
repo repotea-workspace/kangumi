@@ -27,6 +27,22 @@ print_success() { echo -e "${GREEN}✓${NC} $*"; }
 print_error() { echo -e "${RED}✗${NC} $*" >&2; }
 print_warning() { echo -e "${YELLOW}⚠${NC} $*"; }
 
+# Ensure yq is installed (required for tools.yaml parsing)
+ensure_yq() {
+    print_info "Checking yq installation..."
+    export PATH="${HOMEBREW_PREFIX}/bin:${PATH}"
+    if ! command -v yq &> /dev/null || ! yq --version 2>/dev/null | grep -q "mikefarah"; then
+        print_info "Installing yq..."
+        if ${HOMEBREW_PREFIX}/bin/brew install yq; then
+            print_success "yq installed successfully"
+        else
+            print_warning "Failed to install yq"
+        fi
+    else
+        print_success "yq is already installed"
+    fi
+}
+
 echo "=========================================="
 echo "Homebrew Initialization"
 echo "=========================================="
@@ -40,7 +56,8 @@ if [ -x "${HOMEBREW_PREFIX}/bin/brew" ]; then
     if ${HOMEBREW_PREFIX}/bin/brew --version >/dev/null 2>&1; then
         print_success "Homebrew is working correctly"
         echo ""
-        print_info "Skipping installation, using existing Homebrew"
+        print_info "Skipping Homebrew installation, using existing installation"
+        ensure_yq
         exit 0
     else
         print_warning "Homebrew binary exists but doesn't work, reinstalling..."
@@ -79,13 +96,7 @@ else
 fi
 
 # Install yq (required for tools.yaml parsing)
-print_info "Installing yq..."
-export PATH="${HOMEBREW_PREFIX}/bin:${PATH}"
-if ${HOMEBREW_PREFIX}/bin/brew install yq; then
-    print_success "yq installed successfully"
-else
-    print_warning "Failed to install yq, continuing anyway"
-fi
+ensure_yq
 
 echo ""
 print_success "Homebrew initialization completed!"
