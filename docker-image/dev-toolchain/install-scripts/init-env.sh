@@ -63,38 +63,38 @@ else
 fi
 
 # Export Homebrew environment variables and PATH
-# These are set in Dockerfile ENV, we read them from current environment and persist to config file
-# This ensures s6-overlay doesn't clear them and shell sessions can load them
-echo "[init-env] Configuring Homebrew environment variables..."
-if ! grep -qF "# Homebrew Environment" "${ENV_SCRIPT}" 2>/dev/null; then
-  # Read from environment (set by Dockerfile ENV)
-  # If not set, something is wrong with the image build
-  if [ -z "${HOMEBREW_PREFIX:-}" ]; then
-    echo "[init-env] WARNING: HOMEBREW_PREFIX not set in environment, using default"
-  fi
+# Only write to config file if HOMEBREW_PREFIX is not set in current environment
+# This handles the case when /root is mounted from PVC and .bashrc is missing
 
-  cat >> "${ENV_SCRIPT}" << EOF
+echo "[init-env] Checking Homebrew environment variables..."
+if [ -z "${HOMEBREW_PREFIX:-}" ]; then
+  echo "[init-env] HOMEBREW_PREFIX not set in environment, writing to config file..."
+
+  if ! grep -qF "# Homebrew Environment" "${ENV_SCRIPT}" 2>/dev/null; then
+    cat >> "${ENV_SCRIPT}" << 'EOF'
 
 # Homebrew Environment
-# These values are inherited from Dockerfile ENV and persisted here for shell sessions
-export HOMEBREW_PREFIX="${HOMEBREW_PREFIX}"
-export HOMEBREW_CELLAR="${HOMEBREW_CELLAR}"
-export HOMEBREW_REPOSITORY="${HOMEBREW_REPOSITORY}"
-export HOMEBREW_ALLOW_ROOT=${HOMEBREW_ALLOW_ROOT}
-export HOMEBREW_NO_ENV_HINTS=${HOMEBREW_NO_ENV_HINTS}
-export HOMEBREW_NO_AUTO_UPDATE=${HOMEBREW_NO_AUTO_UPDATE}
-export HOMEBREW_NO_INSTALL_FROM_API=${HOMEBREW_NO_INSTALL_FROM_API}
+# Fallback configuration when Dockerfile ENV is not available
+export HOMEBREW_PREFIX="/home/linuxbrew/.linuxbrew"
+export HOMEBREW_CELLAR="/home/linuxbrew/.linuxbrew/Cellar"
+export HOMEBREW_REPOSITORY="/home/linuxbrew/.linuxbrew"
+export HOMEBREW_ALLOW_ROOT=1
+export HOMEBREW_NO_ENV_HINTS=1
+export HOMEBREW_NO_AUTO_UPDATE=1
+export HOMEBREW_NO_INSTALL_FROM_API=1
 
-# Homebrew PATH (only set if brew is not installed, otherwise .bashrc will use 'brew shellenv')
-if [ ! -x "\${HOMEBREW_PREFIX}/bin/brew" ]; then
-  export PATH="\${HOMEBREW_PREFIX}/bin:\${HOMEBREW_PREFIX}/sbin:\${PATH}"
-fi
+# Homebrew PATH (prepend to ensure priority)
+export PATH="${HOMEBREW_PREFIX}/bin:${HOMEBREW_PREFIX}/sbin:${PATH}"
 EOF
-  echo "[init-env] Added Homebrew environment variables to env script"
-  echo "[init-env]   HOMEBREW_PREFIX=${HOMEBREW_PREFIX}"
-  echo "[init-env]   PATH includes Homebrew directories"
+    echo "[init-env] Added Homebrew environment variables to env script"
+    echo "[init-env]   HOMEBREW_PREFIX=/home/linuxbrew/.linuxbrew"
+    echo "[init-env]   PATH includes Homebrew directories"
+  else
+    echo "[init-env] Homebrew environment already configured in file"
+  fi
 else
-  echo "[init-env] Homebrew environment already configured"
+  echo "[init-env] HOMEBREW_PREFIX already set: ${HOMEBREW_PREFIX}"
+  echo "[init-env] Skipping Homebrew config (Dockerfile ENV is active)"
 fi
 
 # Display final env script content for debugging
