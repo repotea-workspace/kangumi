@@ -149,7 +149,7 @@ Generate deployment name for a toolchain instance
 Usage: include "dev-toolchain.deploymentName" (dict "root" $ "name" "fewensa")
 */}}
 {{- define "dev-toolchain.deploymentName" -}}
-{{- printf "%s-%s" (include "dev-toolchain.fullname" .root) .name }}
+{{- printf "tch-%s" .name }}
 {{- end }}
 
 {{/*
