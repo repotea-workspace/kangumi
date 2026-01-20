@@ -1,8 +1,8 @@
 services:
   dev-toolchain:
-    image: dev-toolchain:local-test
-    container_name: dev-test
-    hostname: dev-test
+    image: dev-toolchain:test
+    container_name: dev-toolchain-test-compose
+    hostname: dev-toolchain-test
     ports:
       - "2222:22"
     volumes:
@@ -19,8 +19,8 @@ services:
 
   dind:
     image: docker:29-dind
-    container_name: dev-dind
-    hostname: dev-dind
+    container_name: dev-toolchain-test-dind
+    hostname: dev-toolchain-test-dind
     privileged: true
     environment:
       - DOCKER_TLS_CERTDIR=
