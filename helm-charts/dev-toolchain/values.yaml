@@ -36,13 +36,48 @@ toolchains:
     # If not set, a random ID will be generated on first boot
     machineId: ""
 
-    # SSH authorized keys configuration
-    # List of SSH public keys to add to /root/.ssh/authorized_keys
-    authorizedKeys: []
+    # SSH Configuration
+    # Configure SSH files for multiple users
+    # Structure: sshConfig.<username>.<filename>: <content>
+    #
+    # Supported users: root, linuxbrew, or any custom user
+    # Supported files: authorized_keys, id_ed25519, id_ed25519.pub, id_rsa, id_rsa.pub, known_hosts, config, etc.
+    #
     # Example:
-    # authorizedKeys:
-    #   - "ssh-ed25519 AAAAC3Nza... user@hostname"
-    #   - "ssh-rsa AAAAB3Nza... another@host"
+    # sshConfig:
+    #   root:
+    #     authorized_keys: |
+    #       ssh-ed25519 AAAAC3Nza... user@hostname
+    #       ssh-rsa AAAAB3Nza... another@host
+    #     id_ed25519: |
+    #       -----BEGIN OPENSSH PRIVATE KEY-----
+    #       b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+    #       ...
+    #       -----END OPENSSH PRIVATE KEY-----
+    #     id_ed25519.pub: |
+    #       ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAbCdE... root@hostname
+    #     known_hosts: |
+    #       github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+    #     config: |
+    #       Host github.com
+    #         IdentityFile ~/.ssh/id_ed25519
+    #         StrictHostKeyChecking no
+    #   linuxbrew:
+    #     authorized_keys: |
+    #       ssh-ed25519 AAAAC3Nza... linuxbrew@hostname
+    #     id_ed25519: |
+    #       -----BEGIN OPENSSH PRIVATE KEY-----
+    #       ...
+    #       -----END OPENSSH PRIVATE KEY-----
+    #     id_ed25519.pub: |
+    #       ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... linuxbrew@hostname
+    #
+    # Files will be mounted to:
+    # - /root/.ssh/<filename> for user "root"
+    # - /home/<username>/.ssh/<filename> for other users
+    #
+    # All files will have permissions 0600 by default
+    sshConfig: {}
 
     # Network mode configuration
     network:
@@ -237,8 +272,8 @@ toolchains:
     image: repotea-workspace/kangumi/dev-toolchain:latest
     machineId: ""
 
-    # SSH authorized keys configuration
-    authorizedKeys: []
+    # SSH Configuration
+    sshConfig: {}
 
     # Network mode configuration
     network:

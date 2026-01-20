@@ -155,12 +155,20 @@ spec:
           mountPath: /etc/ssh/sshd_config.d/port.conf
           subPath: port.conf
         {{- end }}
-        {{- if and (hasKey $config "authorizedKeys") (gt (len $config.authorizedKeys) 0) }}
-        # SSH authorized keys
-        - name: ssh-keys
-          mountPath: /root/.ssh/authorized_keys
-          subPath: authorized_keys
+        {{- if hasKey $config "sshConfig" }}
+        # SSH configuration (new multi-user support)
+        {{- range $user, $userFiles := $config.sshConfig }}
+        {{- $homeDir := "/root" }}
+        {{- if ne $user "root" }}
+        {{- $homeDir = printf "/home/%s" $user }}
+        {{- end }}
+        {{- range $filename, $content := $userFiles }}
+        - name: ssh-{{ $user }}
+          mountPath: {{ $homeDir }}/.ssh/{{ $filename }}
+          subPath: {{ $filename }}
           readOnly: true
+        {{- end }}
+        {{- end }}
         {{- end }}
         {{- if $config.storage.pvc.enabled }}
         {{- range $volName, $volConfig := $config.storage.volumes }}
@@ -220,12 +228,14 @@ spec:
         configMap:
           name: {{ include "dev-toolchain.configMapName" (dict "root" $ "name" $name) }}
       {{- end }}
-      {{- if and (hasKey $config "authorizedKeys") (gt (len $config.authorizedKeys) 0) }}
-      # SSH authorized keys
-      - name: ssh-keys
+      {{- if hasKey $config "sshConfig" }}
+      # SSH configuration (new multi-user support)
+      {{- range $user, $userFiles := $config.sshConfig }}
+      - name: ssh-{{ $user }}
         secret:
-          secretName: {{ include "dev-toolchain.fullname" $ }}-{{ $name }}-ssh-keys
+          secretName: {{ include "dev-toolchain.fullname" $ }}-{{ $name }}-ssh-{{ $user }}
           defaultMode: 0600
+      {{- end }}
       {{- end }}
       {{- if $config.storage.pvc.enabled }}
       - name: toolchain-data
