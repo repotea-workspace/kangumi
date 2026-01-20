@@ -156,17 +156,28 @@ spec:
           subPath: port.conf
         {{- end }}
         {{- if hasKey $config "sshConfig" }}
-        # SSH configuration (new multi-user support)
+        # SSH configuration (multi-user support)
         {{- range $user, $userFiles := $config.sshConfig }}
         {{- $homeDir := "/root" }}
         {{- if ne $user "root" }}
         {{- $homeDir = printf "/home/%s" $user }}
         {{- end }}
         {{- range $filename, $content := $userFiles }}
+        {{- if kindIs "map" $content }}
+        {{- if hasKey $content "secretRef" }}
+        # SSH file from external secret: {{ $filename }}
+        - name: ssh-{{ $user }}-{{ $filename | replace "." "-" | replace "_" "-" }}
+          mountPath: {{ $homeDir }}/.ssh/{{ $filename }}
+          subPath: {{ $content.secretRef.key | default $filename }}
+          readOnly: true
+        {{- end }}
+        {{- else }}
+        # SSH file from inline content: {{ $filename }}
         - name: ssh-{{ $user }}
           mountPath: {{ $homeDir }}/.ssh/{{ $filename }}
           subPath: {{ $filename }}
           readOnly: true
+        {{- end }}
         {{- end }}
         {{- end }}
         {{- end }}
@@ -229,12 +240,35 @@ spec:
           name: {{ include "dev-toolchain.configMapName" (dict "root" $ "name" $name) }}
       {{- end }}
       {{- if hasKey $config "sshConfig" }}
-      # SSH configuration (new multi-user support)
+      # SSH configuration (multi-user support)
       {{- range $user, $userFiles := $config.sshConfig }}
+      {{- $hasInlineContent := false }}
+      {{- range $filename, $content := $userFiles }}
+      {{- if not (kindIs "map" $content) }}
+      {{- $hasInlineContent = true }}
+      {{- end }}
+      {{- end }}
+      {{- if $hasInlineContent }}
+      # SSH inline content for user: {{ $user }}
       - name: ssh-{{ $user }}
         secret:
           secretName: {{ include "dev-toolchain.fullname" $ }}-{{ $name }}-ssh-{{ $user }}
           defaultMode: 0600
+      {{- end }}
+      {{- range $filename, $content := $userFiles }}
+      {{- if kindIs "map" $content }}
+      {{- if hasKey $content "secretRef" }}
+      # SSH external secret for {{ $user }}/{{ $filename }}
+      - name: ssh-{{ $user }}-{{ $filename | replace "." "-" | replace "_" "-" }}
+        secret:
+          secretName: {{ $content.secretRef.name }}
+          defaultMode: 0600
+          items:
+          - key: {{ $content.secretRef.key | default $filename }}
+            path: {{ $content.secretRef.key | default $filename }}
+      {{- end }}
+      {{- end }}
+      {{- end }}
       {{- end }}
       {{- end }}
       {{- if $config.storage.pvc.enabled }}

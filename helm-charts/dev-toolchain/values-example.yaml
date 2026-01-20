@@ -16,6 +16,52 @@ toolchains:
     hostname: tch-alice
     image: repotea-workspace/kangumi/dev-toolchain:latest
 
+    # SSH Configuration
+    # Mix of inline content and external secret references
+    sshConfig:
+      root:
+        # Public keys - safe to store inline
+        authorized_keys: |
+          ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHcGLAMw4CU5Ugv/HTl2iskVOKp0ew/DAhAfTJ+8nDBk alice@laptop
+          ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAneSmM1VlnYEI2iLApYFQmzLt8hxAT9r2UgbgW/JdnC alice@desktop
+
+        # Private key - reference external secret (recommended)
+        # Create secret first: kubectl create secret generic ssh-private-keys --from-file=alice_id_ed25519=~/.ssh/id_ed25519 -n production
+        id_ed25519:
+          secretRef:
+            name: ssh-private-keys
+            key: alice_id_ed25519
+
+        # Public key - inline is fine
+        id_ed25519.pub: |
+          ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHcGLAMw4CU5Ugv/HTl2iskVOKp0ew/DAhAfTJ+8nDBk alice@tch-alice
+
+        # Known hosts - can use either inline or secretRef
+        known_hosts: |
+          github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+          gitlab.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAfuCHKVTjquxvt6CM6tdG4SLp1Btn/nOeHHE5UOzRdf
+
+        # SSH client config
+        config: |
+          Host github.com
+            IdentityFile ~/.ssh/id_ed25519
+            StrictHostKeyChecking no
+
+          Host gitlab.com
+            IdentityFile ~/.ssh/id_ed25519
+            StrictHostKeyChecking no
+
+      # Optional: Configure SSH for other users
+      linuxbrew:
+        authorized_keys: |
+          ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJmKL... linuxbrew@alice
+        id_ed25519:
+          secretRef:
+            name: ssh-private-keys
+            key: linuxbrew_id_ed25519
+        id_ed25519.pub: |
+          ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJmKL... linuxbrew@tch-alice
+
     # Auto-install development tools on first startup
     devTools:
       autoInstall: true
@@ -95,6 +141,13 @@ toolchains:
     enabled: true
     hostname: tch-bob
     image: repotea-workspace/kangumi/dev-toolchain:latest
+
+    # SSH Configuration - simpler example with just authorized_keys
+    sshConfig:
+      root:
+        authorized_keys: |
+          ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKjdL... bob@laptop
+          ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAB... bob@desktop
 
     # Auto-install development tools on first startup
     devTools:
