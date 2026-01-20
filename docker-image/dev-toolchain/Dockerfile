@@ -17,11 +17,14 @@ RUN apt-get update -y \
     # SSH server
     openssh-server \
     # Build tools (required by Homebrew)
+    # Essential build tools and utilities
     build-essential procps file \
     # Git (too fundamental, keep in base)
     git \
     # Sudo (for multi-user access)
     sudo \
+    # yq for YAML parsing in install scripts
+    yq \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
