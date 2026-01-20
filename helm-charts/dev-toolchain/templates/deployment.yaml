@@ -291,7 +291,7 @@ spec:
         emptyDir: {}
         {{- else if eq $storageType "pvc" }}
         persistentVolumeClaim:
-          claimName: {{ printf "%s-%s-dind" (include "dev-toolchain.fullname" $) $name }}
+          claimName: {{ include "dev-toolchain.dindPvcName" (dict "root" $ "name" $name) }}
         {{- end }}
       {{- end }}
       {{- if $config.userScripts }}

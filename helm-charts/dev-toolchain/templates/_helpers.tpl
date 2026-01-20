@@ -161,9 +161,17 @@ Usage: include "dev-toolchain.serviceName" (dict "root" $ "name" "fewensa")
 {{- end }}
 
 {{/*
-Generate ConfigMap name for a toolchain instance
+Generate config map name for a toolchain instance
 Usage: include "dev-toolchain.configMapName" (dict "root" $ "name" "fewensa")
 */}}
 {{- define "dev-toolchain.configMapName" -}}
-{{- printf "%s-%s-sshd-config" (include "dev-toolchain.fullname" .root) .name }}
+{{- printf "tch-%s-sshd-config" .name }}
+{{- end }}
+
+{{/*
+Generate DinD PVC name for a toolchain instance
+Usage: include "dev-toolchain.dindPvcName" (dict "root" $ "name" "fewensa")
+*/}}
+{{- define "dev-toolchain.dindPvcName" -}}
+{{- printf "tch-%s-dind" .name }}
 {{- end }}
