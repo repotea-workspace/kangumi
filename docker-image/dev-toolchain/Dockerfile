@@ -17,6 +17,7 @@ RUN apt-get update -y \
     # SSH server
     openssh-server \
     # Build tools (required by Homebrew)
+    # Essential build tools and utilities
     build-essential procps file \
     # Git (too fundamental, keep in base)
     git \
@@ -62,6 +63,7 @@ ENV PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}
 
 ## Create directories
 RUN mkdir -p /usr/local/lib/dev-tools/install-scripts \
+    && mkdir -p /usr/local/lib/dev-tools/user-scripts \
     && mkdir -p /etc/profile.d \
     && mkdir -p /etc/sudoers.d
 
@@ -76,9 +78,12 @@ RUN ln -s /usr/local/lib/dev-tools/install-scripts/install-brew-tools.sh /usr/lo
 COPY cont-init.d/ /etc/cont-init.d/
 RUN chmod +x /etc/cont-init.d/*
 
-## Configure bashrc for root user
-COPY bashrc.d/dev-tools-env.sh /tmp/bashrc-snippet.sh
-RUN cat /tmp/bashrc-snippet.sh >> /root/.bashrc && rm /tmp/bashrc-snippet.sh
+## Configure bashrc for root user to source profile.d script
+RUN echo '' >> /root/.bashrc && \
+    echo '# Source dev-tools environment from profile.d' >> /root/.bashrc && \
+    echo 'if [ -f /etc/profile.d/99-dev-tools-env.sh ]; then' >> /root/.bashrc && \
+    echo '    source /etc/profile.d/99-dev-tools-env.sh' >> /root/.bashrc && \
+    echo 'fi' >> /root/.bashrc
 
 ## Copy s6 service definitions
 COPY services.d /etc/services.d

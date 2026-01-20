@@ -2,10 +2,11 @@
 #
 # init-homebrew.sh - Initialize Homebrew in persistent storage
 #
-# This script is called during postStart to install Homebrew to /opt/homebrew
-# which is mounted from PVC and persists across pod restarts.
+# This script is called during postStart to install Homebrew.
+# Homebrew is installed to /home/linuxbrew/.linuxbrew which is mounted from PVC
+# and persists across pod restarts.
 #
-# Homebrew is installed and managed by root for simplified access.
+# PATH configuration is handled by Dockerfile ENV and .bashrc, not by this script.
 
 set -euo pipefail
 
@@ -26,6 +27,22 @@ print_success() { echo -e "${GREEN}✓${NC} $*"; }
 print_error() { echo -e "${RED}✗${NC} $*" >&2; }
 print_warning() { echo -e "${YELLOW}⚠${NC} $*"; }
 
+# Ensure yq is installed (required for tools.yaml parsing)
+ensure_yq() {
+    print_info "Checking yq installation..."
+    export PATH="${HOMEBREW_PREFIX}/bin:${PATH}"
+    if ! command -v yq &> /dev/null || ! yq --version 2>/dev/null | grep -q "mikefarah"; then
+        print_info "Installing yq..."
+        if ${HOMEBREW_PREFIX}/bin/brew install yq; then
+            print_success "yq installed successfully"
+        else
+            print_warning "Failed to install yq"
+        fi
+    else
+        print_success "yq is already installed"
+    fi
+}
+
 echo "=========================================="
 echo "Homebrew Initialization"
 echo "=========================================="
@@ -39,7 +56,8 @@ if [ -x "${HOMEBREW_PREFIX}/bin/brew" ]; then
     if ${HOMEBREW_PREFIX}/bin/brew --version >/dev/null 2>&1; then
         print_success "Homebrew is working correctly"
         echo ""
-        print_info "Skipping installation, using existing Homebrew"
+        print_info "Skipping Homebrew installation, using existing installation"
+        ensure_yq
         exit 0
     else
         print_warning "Homebrew binary exists but doesn't work, reinstalling..."
@@ -78,18 +96,17 @@ else
 fi
 
 # Install yq (required for tools.yaml parsing)
-print_info "Installing yq..."
-export PATH="${HOMEBREW_PREFIX}/bin:${PATH}"
-if ${HOMEBREW_PREFIX}/bin/brew install yq; then
-    print_success "yq installed successfully"
-else
-    print_warning "Failed to install yq, continuing anyway"
-fi
+ensure_yq
 
 echo ""
 print_success "Homebrew initialization completed!"
 echo ""
 echo "Location: ${HOMEBREW_PREFIX}"
 echo "Managed by: root"
-echo "All users can use: brew commands directly"
+echo "PATH: Already configured in Dockerfile ENV and .bashrc"
+echo ""
+echo "Notes:"
+echo "  - Homebrew PATH is set globally via Dockerfile ENV"
+echo "  - Shell environment is loaded automatically via .bashrc"
+echo "  - No additional configuration needed"
 echo ""

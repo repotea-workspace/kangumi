@@ -36,13 +36,68 @@ toolchains:
     # If not set, a random ID will be generated on first boot
     machineId: ""
 
-    # SSH authorized keys configuration
-    # List of SSH public keys to add to /root/.ssh/authorized_keys
-    authorizedKeys: []
+    # SSH Configuration
+    # Configure SSH files for multiple users
+    # Structure: sshConfig.<username>.<filename>: <content-or-secretRef>
+    #
+    # Supported users: root, linuxbrew, or any custom user
+    # Supported files: authorized_keys, id_ed25519, id_ed25519.pub, id_rsa, id_rsa.pub, known_hosts, config, etc.
+    #
+    # Two ways to provide content:
+    # 1. Inline content (string or list) - chart will create a Secret
+    # 2. External Secret reference - use existing Secret in the cluster
+    #
     # Example:
-    # authorizedKeys:
-    #   - "ssh-ed25519 AAAAC3Nza... user@hostname"
-    #   - "ssh-rsa AAAAB3Nza... another@host"
+    # sshConfig:
+    #   root:
+    #     # Inline content - public keys are safe to store here
+    #     authorized_keys: |
+    #       ssh-ed25519 AAAAC3Nza... user@hostname
+    #       ssh-rsa AAAAB3Nza... another@host
+    #
+    #     # External Secret reference - recommended for private keys
+    #     id_ed25519:
+    #       secretRef:
+    #         name: my-ssh-private-keys
+    #         key: root_id_ed25519
+    #
+    #     # Inline content - public key
+    #     id_ed25519.pub: |
+    #       ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAbCdE... root@hostname
+    #
+    #     # External Secret reference
+    #     known_hosts:
+    #       secretRef:
+    #         name: my-ssh-config
+    #         key: known_hosts
+    #
+    #     # Inline content
+    #     config: |
+    #       Host github.com
+    #         IdentityFile ~/.ssh/id_ed25519
+    #         StrictHostKeyChecking no
+    #
+    #   linuxbrew:
+    #     authorized_keys: |
+    #       ssh-ed25519 AAAAC3Nza... linuxbrew@hostname
+    #     id_ed25519:
+    #       secretRef:
+    #         name: linuxbrew-ssh-keys
+    #         key: id_ed25519
+    #     id_ed25519.pub: |
+    #       ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... linuxbrew@hostname
+    #
+    # Files will be mounted to:
+    # - /root/.ssh/<filename> for user "root"
+    # - /home/<username>/.ssh/<filename> for other users
+    #
+    # All files will have permissions 0600 by default
+    #
+    # Note: Create external Secrets manually before deploying:
+    #   kubectl create secret generic my-ssh-private-keys \
+    #     --from-file=root_id_ed25519=~/.ssh/id_ed25519 \
+    #     -n <namespace>
+    sshConfig: {}
 
     # Network mode configuration
     network:
@@ -67,6 +122,28 @@ toolchains:
       #   - k8s-tools
       #   - terraform
       #   - docker-compose
+
+    # User initialization scripts
+    # Custom scripts to run during container initialization (s6-overlay cont-init phase)
+    # Scripts are executed in alphabetical order after system initialization
+    userScripts: {}
+    # Example:
+    # userScripts:
+    #   00-setup-env.sh: |
+    #     #!/bin/bash
+    #     echo "Setting up custom environment..."
+    #     export CUSTOM_VAR="value"
+    #     echo 'export CUSTOM_VAR="value"' >> /etc/profile.d/99-dev-tools-env.sh
+    #
+    #   10-install-tools.sh: |
+    #     #!/bin/bash
+    #     echo "Installing additional tools..."
+    #     install-brew-tools.sh neovim tmux htop
+    #
+    #   20-configure-git.sh: |
+    #     #!/bin/bash
+    #     git config --global user.name "Your Name"
+    #     git config --global user.email "your.email@example.com"
 
     # Port configuration
     ports:
@@ -215,8 +292,8 @@ toolchains:
     image: repotea-workspace/kangumi/dev-toolchain:latest
     machineId: ""
 
-    # SSH authorized keys configuration
-    authorizedKeys: []
+    # SSH Configuration
+    sshConfig: {}
 
     # Network mode configuration
     network:
@@ -227,6 +304,9 @@ toolchains:
     devTools:
       autoInstall: false
       packages: []
+
+    # User initialization scripts
+    userScripts: {}
 
     ports:
       ssh:

@@ -59,7 +59,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ printf "%s-%s-dind" (include "dev-toolchain.fullname" $) $name }}
+  name: {{ include "dev-toolchain.dindPvcName" (dict "root" $ "name" $name) }}
   annotations:
     helm.sh/resource-policy: keep
   labels:

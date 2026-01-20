@@ -62,6 +62,35 @@ else
   echo "[init-env] DOCKER_HOST not set, skipping docker configuration"
 fi
 
+# Export Homebrew environment variables and PATH
+# Always write to config file if not already present
+# This ensures shell sessions can access Homebrew even when Dockerfile ENV is set
+
+echo "[init-env] Checking Homebrew environment variables..."
+if ! grep -qF "# Homebrew Environment" "${ENV_SCRIPT}" 2>/dev/null; then
+  echo "[init-env] Homebrew config not found in file, writing to config file..."
+  echo "[init-env]   HOMEBREW_PREFIX=${HOMEBREW_PREFIX}"
+
+  cat >> "${ENV_SCRIPT}" << EOF
+
+# Homebrew Environment
+# Values from Dockerfile ENV, written for shell sessions
+export HOMEBREW_PREFIX="${HOMEBREW_PREFIX}"
+export HOMEBREW_CELLAR="${HOMEBREW_CELLAR}"
+export HOMEBREW_REPOSITORY="${HOMEBREW_REPOSITORY}"
+export HOMEBREW_ALLOW_ROOT=${HOMEBREW_ALLOW_ROOT}
+export HOMEBREW_NO_ENV_HINTS=${HOMEBREW_NO_ENV_HINTS}
+export HOMEBREW_NO_AUTO_UPDATE=${HOMEBREW_NO_AUTO_UPDATE}
+export HOMEBREW_NO_INSTALL_FROM_API=${HOMEBREW_NO_INSTALL_FROM_API}
+
+# Homebrew PATH (prepend to ensure priority)
+export PATH="\${HOMEBREW_PREFIX}/bin:\${HOMEBREW_PREFIX}/sbin:\${PATH}"
+EOF
+  echo "[init-env] Added Homebrew environment variables to env script"
+else
+  echo "[init-env] Homebrew environment already configured in file, skipping"
+fi
+
 # Display final env script content for debugging
 echo "[init-env] Final ${ENV_SCRIPT} content:"
 cat "${ENV_SCRIPT}"
