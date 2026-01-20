@@ -34,7 +34,7 @@ if [ -n "${CUSTOM_HOSTNAME:-}" ]; then
 
 # Custom Hostname for Prompt
 export CUSTOM_HOSTNAME="${CUSTOM_HOSTNAME}"
-export PS1='\${debian_chroot:+(\$debian_chroot)}\u@\${CUSTOM_HOSTNAME}:\w\$ '
+export PS1='\${debian_chroot:+(\$debian_chroot)}\u@\${CUSTOM_HOSTNAME}:\w\\$ '
 EOF
     echo "[init-env] Added CUSTOM_HOSTNAME to env script"
   else
