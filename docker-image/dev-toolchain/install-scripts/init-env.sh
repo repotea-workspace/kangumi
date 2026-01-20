@@ -85,8 +85,10 @@ export HOMEBREW_NO_ENV_HINTS=${HOMEBREW_NO_ENV_HINTS}
 export HOMEBREW_NO_AUTO_UPDATE=${HOMEBREW_NO_AUTO_UPDATE}
 export HOMEBREW_NO_INSTALL_FROM_API=${HOMEBREW_NO_INSTALL_FROM_API}
 
-# Homebrew PATH (prepend to ensure priority)
-export PATH="${HOMEBREW_PREFIX}/bin:${HOMEBREW_PREFIX}/sbin:\${PATH}"
+# Homebrew PATH (only set if brew is not installed, otherwise .bashrc will use 'brew shellenv')
+if [ ! -x "\${HOMEBREW_PREFIX}/bin/brew" ]; then
+  export PATH="\${HOMEBREW_PREFIX}/bin:\${HOMEBREW_PREFIX}/sbin:\${PATH}"
+fi
 EOF
   echo "[init-env] Added Homebrew environment variables to env script"
   echo "[init-env]   HOMEBREW_PREFIX=${HOMEBREW_PREFIX}"
