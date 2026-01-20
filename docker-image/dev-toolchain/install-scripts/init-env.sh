@@ -62,7 +62,7 @@ else
   echo "[init-env] DOCKER_HOST not set, skipping docker configuration"
 fi
 
-# Export Homebrew environment variables
+# Export Homebrew environment variables and PATH
 # These are set in Dockerfile ENV, we read them from current environment and persist to config file
 # This ensures s6-overlay doesn't clear them and shell sessions can load them
 echo "[init-env] Configuring Homebrew environment variables..."
@@ -84,9 +84,13 @@ export HOMEBREW_ALLOW_ROOT=${HOMEBREW_ALLOW_ROOT}
 export HOMEBREW_NO_ENV_HINTS=${HOMEBREW_NO_ENV_HINTS}
 export HOMEBREW_NO_AUTO_UPDATE=${HOMEBREW_NO_AUTO_UPDATE}
 export HOMEBREW_NO_INSTALL_FROM_API=${HOMEBREW_NO_INSTALL_FROM_API}
+
+# Homebrew PATH (prepend to ensure priority)
+export PATH="${HOMEBREW_PREFIX}/bin:${HOMEBREW_PREFIX}/sbin:\${PATH}"
 EOF
   echo "[init-env] Added Homebrew environment variables to env script"
   echo "[init-env]   HOMEBREW_PREFIX=${HOMEBREW_PREFIX}"
+  echo "[init-env]   PATH includes Homebrew directories"
 else
   echo "[init-env] Homebrew environment already configured"
 fi
