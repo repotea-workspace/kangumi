@@ -71,24 +71,24 @@ if [ -z "${HOMEBREW_PREFIX:-}" ]; then
   echo "[init-env] HOMEBREW_PREFIX not set in environment, writing to config file..."
 
   if ! grep -qF "# Homebrew Environment" "${ENV_SCRIPT}" 2>/dev/null; then
-    cat >> "${ENV_SCRIPT}" << 'EOF'
+    cat >> "${ENV_SCRIPT}" << EOF
 
 # Homebrew Environment
-# Fallback configuration when Dockerfile ENV is not available
-export HOMEBREW_PREFIX="/home/linuxbrew/.linuxbrew"
-export HOMEBREW_CELLAR="/home/linuxbrew/.linuxbrew/Cellar"
-export HOMEBREW_REPOSITORY="/home/linuxbrew/.linuxbrew"
-export HOMEBREW_ALLOW_ROOT=1
-export HOMEBREW_NO_ENV_HINTS=1
-export HOMEBREW_NO_AUTO_UPDATE=1
-export HOMEBREW_NO_INSTALL_FROM_API=1
+# Values read from Dockerfile ENV
+export HOMEBREW_PREFIX="${HOMEBREW_PREFIX}"
+export HOMEBREW_CELLAR="${HOMEBREW_CELLAR}"
+export HOMEBREW_REPOSITORY="${HOMEBREW_REPOSITORY}"
+export HOMEBREW_ALLOW_ROOT=${HOMEBREW_ALLOW_ROOT}
+export HOMEBREW_NO_ENV_HINTS=${HOMEBREW_NO_ENV_HINTS}
+export HOMEBREW_NO_AUTO_UPDATE=${HOMEBREW_NO_AUTO_UPDATE}
+export HOMEBREW_NO_INSTALL_FROM_API=${HOMEBREW_NO_INSTALL_FROM_API}
 
 # Homebrew PATH (prepend to ensure priority)
-export PATH="${HOMEBREW_PREFIX}/bin:${HOMEBREW_PREFIX}/sbin:${PATH}"
+export PATH="\${HOMEBREW_PREFIX}/bin:\${HOMEBREW_PREFIX}/sbin:\${PATH}"
 EOF
     echo "[init-env] Added Homebrew environment variables to env script"
-    echo "[init-env]   HOMEBREW_PREFIX=/home/linuxbrew/.linuxbrew"
-    echo "[init-env]   PATH includes Homebrew directories"
+    echo "[init-env]   HOMEBREW_PREFIX=${HOMEBREW_PREFIX}"
+    echo "[init-env]   Values read from Dockerfile ENV"
   else
     echo "[init-env] Homebrew environment already configured in file"
   fi
