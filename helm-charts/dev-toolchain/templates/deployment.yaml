@@ -252,7 +252,7 @@ spec:
       # SSH inline content for user: {{ $user }}
       - name: ssh-{{ $user }}
         secret:
-          secretName: {{ include "dev-toolchain.fullname" $ }}-{{ $name }}-ssh-{{ $user }}
+          secretName: tch-{{ $name }}-ssh-{{ $user }}
           defaultMode: 0600
       {{- end }}
       {{- range $filename, $content := $userFiles }}
