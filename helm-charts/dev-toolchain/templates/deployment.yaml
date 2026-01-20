@@ -175,6 +175,12 @@ spec:
         - name: shared-wwwroot
           mountPath: {{ $config.storage.sharedPVC.mountPath }}
         {{- end }}
+        {{- if $config.userScripts }}
+        # User initialization scripts
+        - name: user-scripts
+          mountPath: /usr/local/lib/dev-tools/user-scripts
+          readOnly: true
+        {{- end }}
       {{- if $config.dind.enabled }}
       # DinD sidecar - Docker daemon
       - name: dind
@@ -243,6 +249,13 @@ spec:
         persistentVolumeClaim:
           claimName: {{ printf "%s-%s-dind" (include "dev-toolchain.fullname" $) $name }}
         {{- end }}
+      {{- end }}
+      {{- if $config.userScripts }}
+      # User initialization scripts
+      - name: user-scripts
+        configMap:
+          name: {{ include "dev-toolchain.deploymentName" (dict "root" $ "name" $name) }}-user-scripts
+          defaultMode: 0755
       {{- end }}
       {{- with $config.nodeSelector }}
       nodeSelector:

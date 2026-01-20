@@ -68,6 +68,28 @@ toolchains:
       #   - terraform
       #   - docker-compose
 
+    # User initialization scripts
+    # Custom scripts to run during container initialization (s6-overlay cont-init phase)
+    # Scripts are executed in alphabetical order after system initialization
+    userScripts: {}
+    # Example:
+    # userScripts:
+    #   00-setup-env.sh: |
+    #     #!/bin/bash
+    #     echo "Setting up custom environment..."
+    #     export CUSTOM_VAR="value"
+    #     echo 'export CUSTOM_VAR="value"' >> /etc/profile.d/99-dev-tools-env.sh
+    #
+    #   10-install-tools.sh: |
+    #     #!/bin/bash
+    #     echo "Installing additional tools..."
+    #     install-brew-tools.sh neovim tmux htop
+    #
+    #   20-configure-git.sh: |
+    #     #!/bin/bash
+    #     git config --global user.name "Your Name"
+    #     git config --global user.email "your.email@example.com"
+
     # Port configuration
     ports:
       # SSH port configuration
@@ -227,6 +249,9 @@ toolchains:
     devTools:
       autoInstall: false
       packages: []
+
+    # User initialization scripts
+    userScripts: {}
 
     ports:
       ssh:

@@ -62,6 +62,7 @@ ENV PATH="${PATH}:/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin
 
 ## Create directories
 RUN mkdir -p /usr/local/lib/dev-tools/install-scripts \
+    && mkdir -p /usr/local/lib/dev-tools/user-scripts \
     && mkdir -p /etc/profile.d \
     && mkdir -p /etc/sudoers.d
 

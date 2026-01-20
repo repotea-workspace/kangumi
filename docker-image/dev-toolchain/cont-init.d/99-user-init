@@ -1,0 +1,9 @@
+#!/command/execlineb -P
+#
+# 99-user-init - Execute user-provided initialization scripts
+#
+# This runs after all system initialization scripts (01-init-env, etc.)
+# allowing users to provide custom initialization logic.
+
+s6-envdir /var/run/s6/container_environment
+/bin/bash /usr/local/lib/dev-tools/install-scripts/user-init.sh
