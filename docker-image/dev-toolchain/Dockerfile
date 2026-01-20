@@ -51,7 +51,7 @@ RUN mkdir -p /run/sshd \
 
 ## Setup Homebrew environment for all users
 ## Homebrew will be installed by postStart to /home/linuxbrew/.linuxbrew
-ENV PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}" \
+ENV PATH="${PATH}:/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin" \
     HOMEBREW_PREFIX="/home/linuxbrew/.linuxbrew" \
     HOMEBREW_CELLAR="/home/linuxbrew/.linuxbrew/Cellar" \
     HOMEBREW_REPOSITORY="/home/linuxbrew/.linuxbrew" \
