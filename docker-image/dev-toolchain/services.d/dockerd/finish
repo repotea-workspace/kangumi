@@ -1,0 +1,5 @@
+#!/command/execlineb -S0
+#
+
+if { s6-echo "[dockerd] service stopping" }
+foreground { s6-svc -wD -d /var/run/s6/legacy-services/dockerd }

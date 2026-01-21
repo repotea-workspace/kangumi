@@ -227,33 +227,18 @@ toolchains:
         # Mount path
         mountPath: /data/wwwroot
 
-    # Docker-in-Docker (DinD) sidecar configuration
+    # Docker daemon configuration (DEPRECATED - all fields below are kept for backward compatibility)
+    # Note: dockerd now runs directly in the main container via s6-overlay service
+    # Docker data is stored in main PVC at subPath "docker" (/var/lib/docker)
+    # This ensures docker mounts work correctly as containers share the same filesystem
     dind:
-      # Enable DinD sidecar
-      enabled: true
-      # DinD image
-      image: docker:29-dind
-      # Override DinD image pull policy
-      # pullPolicy: IfNotPresent
-      # DinD port configuration
-      # Port for Docker daemon to listen on (used with DOCKER_HOST in main container)
-      # In hostNetwork mode, each toolchain instance should use a different port
-      # to avoid conflicts on the same node
-      port: 2375
-      # Bind address for Docker daemon (default: 127.0.0.1 for security)
-      # Using 127.0.0.1 ensures DinD is only accessible from within the Pod
-      # and prevents exposure even when using hostNetwork mode
-      bindAddress: "127.0.0.1"
-      # DinD storage (for /var/lib/docker)
-      # Can be emptyDir or PVC
-      storage:
-        # Use emptyDir (ephemeral, faster)
+      enabled: true # Deprecated - has no effect, dockerd always runs
+      image: docker:29-dind # Deprecated - dockerd is built into main image
+      port: 2375 # Deprecated - dockerd uses unix:///var/run/docker.sock
+      bindAddress: "127.0.0.1" # Deprecated - unix socket is used
+      storage: # Deprecated - docker data is in main PVC subPath "docker"
         type: emptyDir
-        # If using PVC, specify size
-        # type: pvc
-        # size: 50Gi
-      # Additional environment variables for DinD
-      env: {}
+      env: {} # Deprecated - no effect
 
     # Container resources
     resources:
@@ -333,13 +318,13 @@ toolchains:
         mountPath: /data/wwwroot
 
     dind:
-      enabled: true
-      image: docker:29-dind
-      port: 2376
-      bindAddress: "127.0.0.1"
-      storage:
+      enabled: true # Deprecated
+      image: docker:29-dind # Deprecated
+      port: 2376 # Deprecated
+      bindAddress: "127.0.0.1" # Deprecated
+      storage: # Deprecated
         type: emptyDir
-      env: {}
+      env: {} # Deprecated
 
     resources:
       limits:
@@ -354,21 +339,15 @@ toolchains:
     tolerations: []
     affinity: {}
 
-# Default DinD configuration
-# These values are used for all toolchains unless overridden
+# Default DinD configuration (DEPRECATED - all settings kept for backward compatibility only)
+# dockerd now runs in the main container via s6-overlay service, not as a sidecar
+# These settings have no effect and will be removed in a future version
 dindDefaults:
-  # DinD image
-  image: docker:29-dind
-  # Pull policy
-  pullPolicy: IfNotPresent
-
-  # Environment variables for DinD container
+  image: docker:29-dind # Deprecated
+  pullPolicy: IfNotPresent # Deprecated
   env:
-    # Disable TLS for simplicity (containers communicate via localhost)
-    DOCKER_TLS_CERTDIR: ""
-
-  # DinD container resources
-  resources:
+    DOCKER_TLS_CERTDIR: "" # Deprecated
+  resources: # Deprecated
     limits:
       cpu: "4"
       memory: 8Gi

@@ -94,19 +94,7 @@ Usage: include "dev-toolchain.image" (dict "root" $ "config" .Values.toolchains.
 {{- end }}
 {{- end }}
 
-{{/*
-Generate DinD image name
-Usage: include "dev-toolchain.dindImage" (dict "root" $ "config" .Values.toolchains.fewensa)
-*/}}
-{{- define "dev-toolchain.dindImage" -}}
-{{- $dindImage := .config.dind.image | default .root.Values.dindDefaults.image -}}
-{{- $registry := .config.imageRegistry | default .root.Values.global.imageRegistry -}}
-{{- if and $registry (not (contains "docker.io" $dindImage)) (not (contains "/" $dindImage)) }}
-{{- printf "%s/%s" $registry $dindImage }}
-{{- else }}
-{{- $dindImage }}
-{{- end }}
-{{- end }}
+
 
 {{/*
 Get image pull policy
@@ -114,14 +102,6 @@ Usage: include "dev-toolchain.imagePullPolicy" (dict "root" $ "config" .Values.t
 */}}
 {{- define "dev-toolchain.imagePullPolicy" -}}
 {{- .config.imagePullPolicy | default .root.Values.global.imagePullPolicy | default "IfNotPresent" }}
-{{- end }}
-
-{{/*
-Get DinD image pull policy
-Usage: include "dev-toolchain.dindImagePullPolicy" (dict "root" $ "config" .Values.toolchains.fewensa)
-*/}}
-{{- define "dev-toolchain.dindImagePullPolicy" -}}
-{{- .config.dind.pullPolicy | default .root.Values.dindDefaults.pullPolicy | default "IfNotPresent" }}
 {{- end }}
 
 {{/*
@@ -166,12 +146,4 @@ Usage: include "dev-toolchain.configMapName" (dict "root" $ "name" "fewensa")
 */}}
 {{- define "dev-toolchain.configMapName" -}}
 {{- printf "tch-%s-sshd-config" .name }}
-{{- end }}
-
-{{/*
-Generate DinD PVC name for a toolchain instance
-Usage: include "dev-toolchain.dindPvcName" (dict "root" $ "name" "fewensa")
-*/}}
-{{- define "dev-toolchain.dindPvcName" -}}
-{{- printf "tch-%s-dind" .name }}
 {{- end }}

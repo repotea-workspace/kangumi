@@ -23,6 +23,8 @@ RUN apt-get update -y \
     git \
     # Sudo (for multi-user access)
     sudo \
+    # Docker daemon requirements
+    iptables \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -34,11 +36,19 @@ RUN tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \
     && tar -C / -Jxpf /tmp/s6-overlay-x86_64.tar.xz \
     && rm -rf /tmp/s6-overlay-*.tar.xz
 
-## Docker CLI only (no daemon - will connect to DinD sidecar)
+## Install full Docker engine (daemon + CLI)
 RUN curl -fsSL "https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz" -o /tmp/docker.tgz \
     && tar -xzf /tmp/docker.tgz -C /tmp \
     && install -m 755 /tmp/docker/docker /usr/local/bin/docker \
-    && rm -rf /tmp/docker.tgz /tmp/docker
+    && install -m 755 /tmp/docker/dockerd /usr/local/bin/dockerd \
+    && install -m 755 /tmp/docker/docker-init /usr/local/bin/docker-init \
+    && install -m 755 /tmp/docker/docker-proxy /usr/local/bin/docker-proxy \
+    && install -m 755 /tmp/docker/containerd /usr/local/bin/containerd \
+    && install -m 755 /tmp/docker/containerd-shim-runc-v2 /usr/local/bin/containerd-shim-runc-v2 \
+    && install -m 755 /tmp/docker/ctr /usr/local/bin/ctr \
+    && install -m 755 /tmp/docker/runc /usr/local/bin/runc \
+    && rm -rf /tmp/docker.tgz /tmp/docker \
+    && mkdir -p /var/lib/docker
 
 ## SSH config
 RUN mkdir -p /run/sshd \
@@ -88,8 +98,7 @@ RUN echo '' >> /root/.bashrc && \
 ## Copy s6 service definitions
 COPY services.d /etc/services.d
 
-## Set DOCKER_HOST to connect to DinD sidecar
-ENV DOCKER_HOST=tcp://localhost:2375
+## Docker will run locally in the container (no DOCKER_HOST needed)
 
 ## Create container marker file for Homebrew
 ## Homebrew checks for /.dockerenv to allow running as root in containers

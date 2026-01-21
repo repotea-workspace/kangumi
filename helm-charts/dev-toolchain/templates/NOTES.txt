@@ -29,7 +29,7 @@ Instance: {{ $name }}
     Shared PVC: {{ include "dev-toolchain.sharedPvcName" (dict "root" $ "config" $config) }}
     {{- end }}
 
-  Docker-in-Docker: {{ if $config.dind.enabled }}✓ Enabled{{ else }}✗ Disabled{{ end }}
+  Docker: ✓ Built-in (dockerd via s6-overlay)
 {{- end }}
 {{- end }}
 
@@ -47,7 +47,7 @@ QUICK START
 {{- end }}
 {{- end }}
 
-3. Test Docker-in-Docker (inside container):
+3. Test Docker (inside container):
    docker run hello-world
    docker ps
 
@@ -79,10 +79,10 @@ Access container shell:
 {{- end }}
 {{- end }}
 
-Check DinD sidecar:
+Check dockerd service logs (via s6):
 {{- range $name, $config := .Values.toolchains }}
-{{- if and $config.enabled $config.dind.enabled }}
-  kubectl logs deployment/{{ include "dev-toolchain.deploymentName" (dict "root" $ "name" $name) }} -c dind -n {{ $.Release.Namespace }}
+{{- if $config.enabled }}
+  kubectl exec deployment/{{ include "dev-toolchain.deploymentName" (dict "root" $ "name" $name) }} -n {{ $.Release.Namespace }} -- s6-svstat /var/run/s6/legacy-services/dockerd
 {{- end }}
 {{- end }}
 

@@ -4,13 +4,13 @@ A Helm chart for deploying development toolchain containers with Docker-in-Docke
 
 ## Features
 
-- 🐳 **Docker-in-Docker Support**: Run Docker commands inside containers via DinD sidecar
-- 🔒 **Secure Architecture**: Main container runs without privileged mode; only DinD sidecar requires privileges
+- 🐳 **Docker-in-Docker Support**: Run Docker commands inside containers with built-in dockerd
 - 💾 **Persistent Storage**: PVC-based storage with flexible mount configurations
 - 🌐 **NodePort Services**: SSH and custom ports in the 17000-18000 range
 - 🚀 **Multi-Instance**: Deploy multiple independent toolchain instances
 - 📦 **Flexible Configuration**: Comprehensive values.yaml with sensible defaults
 - 🛠️ **Auto-Install Dev Tools**: Automatically install development tools on first startup
+- 🔧 **Unified Container**: Docker daemon runs in the main container, sharing the same filesystem
 
 ## Prerequisites
 
@@ -26,23 +26,33 @@ A Helm chart for deploying development toolchain containers with Docker-in-Docke
 ┌─────────────────────────────────────────┐
 │  Pod: dev-toolchain-fewensa             │
 │                                         │
-│  ┌─────────────────┐  ┌──────────────┐ │
-│  │ dev-toolchain   │  │ dind         │ │
-│  │ (main)          │  │ (sidecar)    │ │
-│  │                 │  │              │ │
-│  │ Docker CLI ─────┼──┼─→ Docker     │ │
-│  │ (tcp://localhost:2375)  Daemon   │ │
-│  │                 │  │              │ │
-│  │ Dev Tools       │  │ privileged   │ │
-│  │ (no privilege)  │  │              │ │
-│  └─────────────────┘  └──────────────┘ │
-│         │                     │         │
-│         └─────────┬───────────┘         │
+│  ┌─────────────────────────────────────┐│
+│  │ dev-toolchain (privileged)          ││
+│  │                                     ││
+│  │  ┌──────────────┐                  ││
+│  │  │ Docker CLI   │                  ││
+│  │  └──────┬───────┘                  ││
+│  │         │ unix:///var/run/docker.sock
+│  │         ↓                           ││
+│  │  ┌──────────────┐                  ││
+│  │  │ dockerd      │                  ││
+│  │  │ (s6 service) │                  ││
+│  │  └──────────────┘                  ││
+│  │                                     ││
+│  │  Dev Tools, SSH, VSCode Server      ││
+│  │                                     ││
+│  │  Shared filesystem for mounts       ││
+│  └─────────────────────────────────────┘│
 │                   ↓                     │
-│           Shared Network                │
 │           PVC Volumes                   │
 └─────────────────────────────────────────┘
 ```
+
+**Key improvements:**
+- Docker daemon runs in the main container (managed by s6-overlay)
+- Single filesystem - docker mounts work correctly
+- No network overhead between CLI and daemon
+- Simpler architecture, easier to debug
 
 ## Installation
 

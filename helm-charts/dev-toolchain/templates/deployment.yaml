@@ -48,10 +48,11 @@ spec:
       - name: dev-toolchain
         image: {{ include "dev-toolchain.image" (dict "root" $ "config" $config) }}
         imagePullPolicy: {{ include "dev-toolchain.imagePullPolicy" (dict "root" $ "config" $config) }}
-        {{- with $.Values.securityContext }}
         securityContext:
+          privileged: true
+          {{- with $.Values.securityContext }}
           {{- toYaml . | nindent 10 }}
-        {{- end }}
+          {{- end }}
         {{- if $config.devTools.autoInstall }}
         lifecycle:
           postStart:
@@ -104,9 +105,7 @@ spec:
                   {{- end }}
         {{- end }}
         env:
-        # Docker host points to DinD sidecar
-        - name: DOCKER_HOST
-          value: tcp://localhost:{{ $config.dind.port | default 2375 }}
+        # Docker runs locally in the container (via dockerd service)
         {{- if $config.hostname }}
         # Custom hostname for shell prompt (used in hostNetwork mode)
         - name: CUSTOM_HOSTNAME
@@ -200,38 +199,12 @@ spec:
           mountPath: /usr/local/lib/dev-tools/user-scripts
           readOnly: true
         {{- end }}
-      {{- if $config.dind.enabled }}
-      # DinD sidecar - Docker daemon
-      - name: dind
-        image: {{ include "dev-toolchain.dindImage" (dict "root" $ "config" $config) }}
-        imagePullPolicy: {{ include "dev-toolchain.dindImagePullPolicy" (dict "root" $ "config" $config) }}
-        securityContext:
-          privileged: true
-        {{- $dindPort := $config.dind.port | default 2375 }}
-        {{- $dindBindAddr := $config.dind.bindAddress | default "127.0.0.1" }}
-        command:
-        - dockerd
-        - --host=tcp://{{ $dindBindAddr }}:{{ $dindPort }}
-        {{- if eq ($.Values.dindDefaults.env.DOCKER_TLS_CERTDIR | default "") "" }}
-        - --tls=false
-        {{- end }}
-        env:
-        - name: DOCKER_TLS_CERTDIR
-          value: {{ $.Values.dindDefaults.env.DOCKER_TLS_CERTDIR | quote }}
-        {{- if $config.dind.env }}
-        {{- range $key, $value := $config.dind.env }}
-        - name: {{ $key }}
-          value: {{ $value | quote }}
-        {{- end }}
-        {{- end }}
-        {{- with $config.dind.resources | default $.Values.dindDefaults.resources }}
-        resources:
-          {{- toYaml . | nindent 10 }}
-        {{- end }}
-        volumeMounts:
-        - name: dind-storage
+        {{- if $config.storage.pvc.enabled }}
+        # Docker storage (dockerd runs in main container, from PVC subPath)
+        - name: toolchain-data
           mountPath: /var/lib/docker
-      {{- end }}
+          subPath: docker
+        {{- end }}
       volumes:
       {{- if eq ($config.network.mode | default "nodePort") "hostNetwork" }}
       # hostNetwork mode: SSH port configuration
@@ -280,19 +253,6 @@ spec:
       - name: shared-wwwroot
         persistentVolumeClaim:
           claimName: {{ include "dev-toolchain.sharedPvcName" (dict "root" $ "config" $config) }}
-      {{- end }}
-      {{- if $config.dind.enabled }}
-      - name: dind-storage
-        {{- $storageType := "emptyDir" }}
-        {{- if $config.dind.storage }}
-          {{- $storageType = $config.dind.storage.type | default "emptyDir" }}
-        {{- end }}
-        {{- if eq $storageType "emptyDir" }}
-        emptyDir: {}
-        {{- else if eq $storageType "pvc" }}
-        persistentVolumeClaim:
-          claimName: {{ include "dev-toolchain.dindPvcName" (dict "root" $ "name" $name) }}
-        {{- end }}
       {{- end }}
       {{- if $config.userScripts }}
       # User initialization scripts
