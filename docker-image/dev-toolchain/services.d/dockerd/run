@@ -2,4 +2,4 @@
 #
 
 s6-envdir /var/run/s6/container_environment
-/usr/local/bin/dockerd --host=unix:///var/run/docker.sock
+/usr/local/bin/dockerd --host=unix:///var/run/docker.sock --iptables=false
