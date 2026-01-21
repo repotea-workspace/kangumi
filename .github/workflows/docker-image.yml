@@ -58,41 +58,7 @@ jobs:
           - package: wait-for-port
             context: docker-image/wait-for-port
             build-args: ""
-    steps:
-      - uses: actions/checkout@v6
 
-      - uses: benjlevesque/short-sha@v3.0
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Docker login
-        uses: docker/login-action@v3
-        with:
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-          registry: ${{ env.DOCKER_REGISTRY }}
-
-      - name: Build & Push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          push: true
-          context: ${{ matrix.context }}
-          tags: |
-            ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/${{ matrix.package }}:sha-${{ env.SHA }}
-            ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/${{ matrix.package }}:latest
-          build-args: ${{ matrix.build-args }}
-
-  build-stage-two:
-    name: Build Stage Two
-    runs-on: ubuntu-latest
-    needs:
-      - build-stage-one
-    permissions:
-      packages: write
-    strategy:
-      matrix:
-        include:
           - package: dev-toolchain
             context: docker-image/dev-toolchain
     steps:
@@ -119,3 +85,40 @@ jobs:
             ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/${{ matrix.package }}:sha-${{ env.SHA }}
             ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/${{ matrix.package }}:latest
           build-args: ${{ matrix.build-args }}
+
+  # build-stage-two:
+  #   name: Build Stage Two
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #     - build-stage-one
+  #   permissions:
+  #     packages: write
+  #   strategy:
+  #     matrix:
+  #       include:
+  #         - package: dev-toolchain
+  #           context: docker-image/dev-toolchain
+  #   steps:
+  #     - uses: actions/checkout@v6
+
+  #     - uses: benjlevesque/short-sha@v3.0
+
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v3
+
+  #     - name: Docker login
+  #       uses: docker/login-action@v3
+  #       with:
+  #         username: ${{ github.actor }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+  #         registry: ${{ env.DOCKER_REGISTRY }}
+
+  #     - name: Build & Push Docker image
+  #       uses: docker/build-push-action@v6
+  #       with:
+  #         push: true
+  #         context: ${{ matrix.context }}
+  #         tags: |
+  #           ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/${{ matrix.package }}:sha-${{ env.SHA }}
+  #           ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/${{ matrix.package }}:latest
+  #         build-args: ${{ matrix.build-args }}
