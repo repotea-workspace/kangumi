@@ -125,30 +125,70 @@ Automatically install development tools on first container startup:
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `devTools.autoInstall` | Enable auto-installation | `false` |
-| `devTools.packages` | List of tools to install | `[]` |
+| `devTools.packages` | List of tools to install (string or object format) | `[]` |
 
-Available tools:
-- `nodejs` - Node.js and npm via nvm
-- `rust` - Rust toolchain via rustup
+The `packages` field supports two formats:
+
+#### 1. Simple String Format
+For tools available in Homebrew or defined in `tools.yaml`:
+```yaml
+devTools:
+  packages:
+    - golang
+    - nodejs
+    - k8s-tools
+    - terraform
+```
+
+#### 2. Object Format with Tap Support
+For tools requiring custom taps (no need to rebuild Docker image):
+```yaml
+devTools:
+  packages:
+    - flutter
+    - name: fvm
+      tap: leoafarias/fvm
+      formula: fvm  # optional, defaults to 'name'
+    - name: talosctl
+      tap: siderolabs/tap
+      formula: siderolabs/tap/talosctl
+```
+
+#### 3. Mixed Format
+Combine both formats as needed:
+```yaml
+devTools:
+  packages:
+    - golang          # Simple string
+    - nodejs          # Simple string
+    - name: fvm       # Object with custom tap
+      tap: leoafarias/fvm
+```
+
+**Available predefined tools** (from `tools.yaml`):
+- `nodejs` - Node.js and npm
+- `golang` - Go programming language
+- `java` - OpenJDK 17
 - `flutter` - Flutter SDK
-- `java` - Java Development Kit
-- `gcm` - Git Credential Manager
-- `vscode` - VS Code CLI
+- `terraform` - Infrastructure as code
 - `docker-compose` - Docker Compose
 - `k8s-tools` - kubectl, helm, kustomize, helmfile, argocd, kubeseal
-- `all` - Install all available tools
+- `talosctl` - Talos Linux CLI (includes tap)
+- `git-credential-manager` - Git credential helper
+- Any Homebrew formula name
 
-**Example**:
+**Full Example**:
 ```yaml
 toolchains:
   fewensa:
     devTools:
       autoInstall: true
       packages:
+        - golang
         - nodejs
-        - rust
-        - gcm
-        - vscode
+        - k8s-tools
+        - name: fvm
+          tap: leoafarias/fvm
 ```
 
 **How it works**:

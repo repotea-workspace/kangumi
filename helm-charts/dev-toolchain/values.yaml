@@ -113,15 +113,35 @@ toolchains:
       # Enable auto-installation on first startup
       autoInstall: false
 
-      # Tools to install via Homebrew (from tools.yaml)
+      # Tools to install via Homebrew
+      # Supports two formats:
+      # 1. Simple string format (package name or tools.yaml entry)
+      # 2. Object format with tap support
       packages: []
-      # Example:
+      # Example - Simple string format:
       # packages:
       #   - golang
       #   - nodejs
       #   - k8s-tools
       #   - terraform
       #   - docker-compose
+      #
+      # Example - Object format with tap support:
+      # packages:
+      #   - flutter
+      #   - name: fvm
+      #     tap: leoafarias/fvm
+      #     formula: fvm  # optional, defaults to 'name'
+      #   - name: talosctl
+      #     tap: siderolabs/tap
+      #     formula: siderolabs/tap/talosctl
+      #
+      # Mix both formats:
+      # packages:
+      #   - golang          # Simple string
+      #   - nodejs          # Simple string
+      #   - name: fvm       # Object with tap
+      #     tap: leoafarias/fvm
 
     # User initialization scripts
     # Custom scripts to run during container initialization (s6-overlay cont-init phase)

@@ -79,25 +79,49 @@ spec:
                   echo ""
                   echo "→ Installing dev tools..."
 
-                  {{- range $config.devTools.packages }}
-                  echo "Installing {{ . }}..."
+                  {{- range $pkg := $config.devTools.packages }}
+                  {{- if kindIs "string" $pkg }}
+                  {{- /* Simple string format: just the package name */}}
+                  echo "Installing {{ $pkg }}..."
 
                   # Check if it's a custom tool (not in brew)
-                  if [ "{{ . }}" = "devtools" ] || [ "{{ . }}" = "harmonytools" ] || [ "{{ . }}" = "vscode" ]; then
+                  if [ "{{ $pkg }}" = "devtools" ] || [ "{{ $pkg }}" = "harmonytools" ] || [ "{{ $pkg }}" = "vscode" ]; then
                     # Use custom install script
-                    if [ -f /usr/local/lib/dev-tools/install-scripts/install-{{ . }}.sh ]; then
-                      /usr/local/lib/dev-tools/install-scripts/install-{{ . }}.sh || echo "⚠ Failed to install {{ . }}"
+                    if [ -f /usr/local/lib/dev-tools/install-scripts/install-{{ $pkg }}.sh ]; then
+                      /usr/local/lib/dev-tools/install-scripts/install-{{ $pkg }}.sh || echo "⚠ Failed to install {{ $pkg }}"
                     else
-                      echo "⚠ Script not found: /usr/local/lib/dev-tools/install-scripts/install-{{ . }}.sh"
+                      echo "⚠ Script not found: /usr/local/lib/dev-tools/install-scripts/install-{{ $pkg }}.sh"
                     fi
                   else
                     # Use Homebrew install script
                     if [ -f /usr/local/lib/dev-tools/install-scripts/install-brew-tools.sh ]; then
-                      /usr/local/lib/dev-tools/install-scripts/install-brew-tools.sh {{ . }} || echo "⚠ Failed to install {{ . }}"
+                      /usr/local/lib/dev-tools/install-scripts/install-brew-tools.sh {{ $pkg }} || echo "⚠ Failed to install {{ $pkg }}"
                     else
                       echo "⚠ Homebrew install script not found"
                     fi
                   fi
+                  {{- else if kindIs "map" $pkg }}
+                  {{- /* Object format with tap support */}}
+                  {{- $pkgName := $pkg.name | default "" }}
+                  {{- $pkgTap := $pkg.tap | default "" }}
+                  {{- $pkgFormula := $pkg.formula | default $pkgName }}
+                  echo "Installing {{ $pkgName }}{{ if $pkgTap }} (from tap: {{ $pkgTap }}){{ end }}..."
+
+                  # Add tap if specified
+                  {{- if $pkgTap }}
+                  if ! brew tap | grep -q "^{{ $pkgTap }}$"; then
+                    echo "→ Adding tap: {{ $pkgTap }}"
+                    brew tap {{ $pkgTap }} || echo "⚠ Failed to add tap {{ $pkgTap }}"
+                  fi
+                  {{- end }}
+
+                  # Install the package
+                  if [ -f /usr/local/lib/dev-tools/install-scripts/install-brew-tools.sh ]; then
+                    /usr/local/lib/dev-tools/install-scripts/install-brew-tools.sh {{ $pkgFormula }} || echo "⚠ Failed to install {{ $pkgName }}"
+                  else
+                    echo "⚠ Homebrew install script not found"
+                  fi
+                  {{- end }}
                   {{- end }}
                   echo "✓ Dev tools installation completed"
                   {{- else }}
