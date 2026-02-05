@@ -8,12 +8,15 @@ ARG S6_OVERLAY_VERSION=3.2.1.0
 
 SHELL ["/bin/bash", "-c"]
 
-## Install minimal base dependencies (only Homebrew requirements + SSH/sudo)
+## Restore full Ubuntu installation (from minimized state)
+RUN yes | unminimize || true
+
+## Install base dependencies
 RUN apt-get update -y \
     && apt-get install --no-install-recommends -y \
     # Core utilities (required by Homebrew and container basics)
     curl ca-certificates wget \
-    xz-utils zstd zip unzip tar gzip bzip2 \
+    xz-utils zstd zip unzip bzip2 \
     # SSH server
     openssh-server \
     # Build tools (required by Homebrew)
