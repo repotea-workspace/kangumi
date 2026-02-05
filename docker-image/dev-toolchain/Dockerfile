@@ -28,6 +28,8 @@ RUN apt-get update -y \
     sudo \
     # Docker daemon requirements
     iptables \
+    # Cron daemon
+    cronie \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
