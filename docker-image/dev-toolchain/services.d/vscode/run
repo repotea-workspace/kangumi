@@ -11,22 +11,17 @@ done
 
 echo "[vscode] VSCode CLI detected, starting tunnel..."
 
-# Set tunnel name from environment variable or use hostname as fallback  
+# Set tunnel name from environment variable or use hostname as fallback
 TUNNEL_NAME="${VSCODE_TUNNEL_NAME:-$(hostname)}"
 
-# Additional tunnel options
-TUNNEL_ARGS="--accept-server-license-terms"
-
-# Add name if specified
-if [ -n "$TUNNEL_NAME" ]; then
-  TUNNEL_ARGS="$TUNNEL_ARGS --name \"$TUNNEL_NAME\""
-fi
-
-# Add verbose logging if enabled
-if [ "${VSCODE_TUNNEL_VERBOSE:-false}" = "true" ]; then
-  TUNNEL_ARGS="$TUNNEL_ARGS --verbose"
-fi
-
 echo "[vscode] Starting tunnel with name: $TUNNEL_NAME"
-echo "[vscode] Tunnel args: $TUNNEL_ARGS"
-exec /usr/local/bin/code tunnel $TUNNEL_ARGS
+echo "[vscode] Environment variables:"
+echo "[vscode]   VSCODE_TUNNEL_NAME: ${VSCODE_TUNNEL_NAME:-<not set>}"
+echo "[vscode]   VSCODE_TUNNEL_VERBOSE: ${VSCODE_TUNNEL_VERBOSE:-<not set>}"
+
+# Build command with proper argument handling
+if [ "${VSCODE_TUNNEL_VERBOSE:-false}" = "true" ]; then
+  exec /usr/local/bin/code tunnel --accept-server-license-terms --name "$TUNNEL_NAME" --verbose
+else
+  exec /usr/local/bin/code tunnel --accept-server-license-terms --name "$TUNNEL_NAME"
+fi
