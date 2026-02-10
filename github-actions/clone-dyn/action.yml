@@ -9,9 +9,9 @@ inputs:
   token:
     description: "Github token"
     required: false
-  target:
-    description: "Clone target dir name"
-    required: false
+  # target:
+  #   description: "Clone target dir name"
+  #   required: false
   ref:
     description: "Git ref"
     required: false
@@ -33,42 +33,54 @@ runs:
         set -xe
         GIT_REF=${{ inputs.ref }}
         GIT_REF_FILE=${{ inputs.ref_file }}
-        TARGET_NAME=${{ inputs.target }}
 
         if [ -z "${GIT_REF}" ]; then
           GIT_REF=$(cat ${GIT_REF_FILE})
         fi
 
-        TARGET_NAME=${TARGET_NAME:-repo}
-
         echo "GIT_REF=$GIT_REF" >> $GITHUB_OUTPUT
-        echo "TARGET_NAME=$TARGET_NAME" >> $GITHUB_OUTPUT
 
     - name: Prepare Git Repository
       shell: bash
       run: |
+        set -x
+        # Remove existing .git if present
         rm -rf .git
+
+        # Create backup directory and move everything to __origin__
         echo '/*' > .gitignore
-        mkdir __origin__
-        find . -maxdepth 1 ! -path './__origin__' ! -path '.' -exec mv {} __origin__/ \;
+        mkdir -p __origin__
+        find . -maxdepth 1 ! -path './__origin__' ! -path '.' -exec mv {} __origin__/ \; 2>/dev/null || true
+
+        # Move __origin__ to temp location outside current directory to make it truly empty
+        TEMP_BACKUP="${RUNNER_TEMP:-/tmp}/clone_dyn_backup_$$"
+        mkdir -p "$TEMP_BACKUP"
+        mv __origin__ "$TEMP_BACKUP/"
+
+        echo "TEMP_BACKUP=$TEMP_BACKUP" >> $GITHUB_ENV
+        echo "Backed up files to $TEMP_BACKUP/__origin__"
 
     - uses: actions/checkout@v6
       with:
         repository: ${{ inputs.repository }}
         ref: ${{ steps.prepare_options.outputs.GIT_REF }}
         token: ${{ inputs.token }}
-        path: ${{ steps.prepare_options.outputs.TARGET_NAME }}
+        path: "."
         fetch-depth: 0
         submodules: ${{ inputs.submodules }}
 
-    - name: Reorganize Git Repo
+    - name: Restore backup directory
       shell: bash
       run: |
-        TARGET_NAME='${{ steps.prepare_options.outputs.TARGET_NAME }}'
+        set -x
+        # Move __origin__ back to workspace
+        if [ -d "$TEMP_BACKUP/__origin__" ]; then
+          mv "$TEMP_BACKUP/__origin__" .
+          rm -rf "$TEMP_BACKUP"
+          echo "Restored __origin__ directory"
+        fi
 
-        find ${TARGET_NAME} -mindepth 1 -maxdepth 1 -exec mv {} . \;
-        rm -rf ${TARGET_NAME}
-
+        # Configure git safe directories
         git config --global --add safe.directory ${{ github.workspace }}
         git config --global --add safe.directory ${{ github.action_path }}
         git config --global --add safe.directory ${GITHUB_ACTION_PATH}
@@ -76,3 +88,5 @@ runs:
           PROJECT_NAME=${GITHUB_REPOSITORY#*/}
           git config --global --add safe.directory /__w/${PROJECT_NAME}/${PROJECT_NAME}
         fi
+
+        echo "Cloned ${{ inputs.repository }} repository successfully."
