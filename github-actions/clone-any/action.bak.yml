@@ -1,0 +1,129 @@
+name: 'Clone Any Git Repo Action'
+
+description: "Clone any git repository in Github Actions"
+
+inputs:
+  platform:
+    description: 'The git platform, if you want use custom platform, please set none'
+    required: false
+    default: 'github'
+  server_host:
+    description: 'Custom server_host'
+    required: false
+  enable_ssl:
+    description: 'Is enable https'
+    required: false
+    default: 'true'
+  repository:
+    description: 'Repository url'
+    required: true
+  access_token:
+    description: 'Access token with http protocol'
+    required: false
+  ssh_key:
+    description: 'SSH private key'
+    required: false
+  ssh_host:
+    description: 'SSH server host, will auto scan known hosts by this value'
+    required: false
+  target:
+    description: 'Clone target dir name'
+    required: false
+  ref:
+    description: 'Git ref'
+    required: false
+  ref_file:
+    description: 'Read ref from a file'
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Clone
+      shell: bash
+      id: deploy_vercel
+      run: |
+        set -xe
+        REPOSITORY=${{ inputs.repository }}
+        ACCESS_TOKEN=${{ inputs.access_token }}
+        SSH_KEY=${{ inputs.ssh_key }}
+        SSH_HOST=${{ inputs.ssh_host }}
+        TARGET_NAME=${{ inputs.target }}
+        PLATFORM=${{ inputs.platform }}
+        SERVER_HOST=${{ inputs.server_host }}
+        ENABLE_SSL=${{ inputs.enable_ssl }}
+        GIT_REF=${{ inputs.ref }}
+        GIT_REF_FILE=${{ inputs.ref_file }}
+
+        if [ -z "${GIT_REF}" ]; then
+          GIT_REF=$(cat ${GIT_REF_FILE})
+        fi
+        rm -rf .git
+
+        mkdir -p ~/.ssh
+
+        if [ -n "$SSH_KEY" ]; then
+          eval $(ssh-agent -s)
+          echo "$SSH_KEY" | tr -d '\r' | ssh-add -
+        fi
+
+        if [ -n "$SSH_HOST" ]; then
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+        fi
+
+        _SERVER=
+
+        if [ "${PLATFORM}" == "github" ]; then
+          _SERVER=github.com
+        elif [ "${PLATFORM}" == "gitlab" ]; then
+          _SERVER=gitlab.com
+        else
+          _SERVER=${SERVER_HOST}
+        fi
+
+        Z_REPOSITORY=
+        Z_SAFE_REPOSITORY=
+
+
+        if [ -n "${SSH_KEY}" ]; then
+          Z_REPOSITORY="ssh://${_SERVER}/${REPOSITORY}"
+          Z_SAFE_REPOSITORY=${Z_REPOSITORY}
+        else
+          PROTOCOL='https://'
+          if [ "${ENABLE_SSL}" != "true" ]; then
+            PROTOCOL='http://'
+          fi
+          Z_REPOSITORY=${PROTOCOL}${ACCESS_TOKEN:+"$ACCESS_TOKEN@"}${_SERVER}/${REPOSITORY}
+          Z_SAFE_REPOSITORY=${PROTOCOL}${_SERVER}/${REPOSITORY}
+        fi
+
+        echo "Repository: ${Z_SAFE_REPOSITORY}"
+
+        echo '/*' > .gitignore
+        mkdir __origin__
+        find . -maxdepth 1 ! -path './__origin__' ! -path '.' -exec mv {} __origin__/ \;
+
+        TARGET_NAME=${TARGET_NAME:-repo}
+        git clone $Z_REPOSITORY $TARGET_NAME
+
+        find ${TARGET_NAME} -mindepth 1 -maxdepth 1 -exec mv {} . \;
+        # rm -rf $TARGET_NAME
+        git config --global --add safe.directory ${{ github.workspace }}
+        git config --global --add safe.directory ${{ github.action_path }}
+        git config --global --add safe.directory ${GITHUB_ACTION_PATH}
+        if [ -d "/__w" ]; then
+          PROJECT_NAME=${GITHUB_REPOSITORY#*/}
+          git config --global --add safe.directory /__w/${PROJECT_NAME}/${PROJECT_NAME}
+        fi
+
+        if [ -n "${GIT_REF}" ]; then
+          # git checkout -b ${GIT_REF} origin/${GIT_REF} || true
+          git checkout ${GIT_REF} || true
+          git pull origin ${GIT_REF} || true
+        fi
+
+        # ls -la ./
+
+        echo "Cloned $Z_SAFE_REPOSITORY repository successfully."
+
