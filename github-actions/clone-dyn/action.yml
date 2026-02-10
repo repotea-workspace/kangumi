@@ -1,28 +1,27 @@
-name: 'Clone Dynmatic Git Repo Action'
+name: "Clone Dynmatic Git Repo Action"
 
 description: "Clone any git repository in Github Actions for dyn-actions"
 
 inputs:
   repository:
-    description: 'Repository'
+    description: "Repository"
     required: true
   token:
-    description: 'Github token'
+    description: "Github token"
     required: false
   target:
-    description: 'Clone target dir name'
+    description: "Clone target dir name"
     required: false
   ref:
-    description: 'Git ref'
+    description: "Git ref"
     required: false
   ref_file:
-    description: 'Read ref from a file'
+    description: "Read ref from a file"
     required: false
 
 runs:
   using: "composite"
   steps:
-
     - name: Prepare Options
       shell: bash
       id: prepare_options
