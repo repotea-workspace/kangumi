@@ -69,6 +69,32 @@ runs:
         fetch-depth: 0
         submodules: ${{ inputs.submodules }}
 
+    - name: Verify and initialize submodules
+      if: inputs.submodules != 'false'
+      shell: bash
+      run: |
+        set -x
+
+        echo "Checking submodules status..."
+        if [ -f ".gitmodules" ]; then
+          cat .gitmodules
+
+          echo "Current submodule status:"
+          git submodule status || true
+
+          echo "Initializing and updating submodules..."
+          git submodule sync --recursive
+          git submodule update --init --recursive --force
+
+          echo "Final submodule status:"
+          git submodule status
+
+          echo "Listing submodule directories:"
+          git submodule foreach --recursive 'echo "Submodule: $name at $sm_path" && ls -la'
+        else
+          echo "No .gitmodules file found"
+        fi
+
     - name: Restore backup directory
       shell: bash
       run: |
