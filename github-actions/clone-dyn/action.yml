@@ -18,6 +18,10 @@ inputs:
   ref_file:
     description: "Read ref from a file"
     required: false
+  submodules:
+    description: "Whether to checkout submodules: `true` to checkout submodules or `recursive` to recursively checkout submodules"
+    required: false
+    default: "false"
 
 runs:
   using: "composite"
@@ -55,6 +59,7 @@ runs:
         token: ${{ inputs.token }}
         path: ${{ steps.prepare_options.outputs.TARGET_NAME }}
         fetch-depth: 0
+        submodules: ${{ inputs.submodules }}
 
     - name: Reorganize Git Repo
       shell: bash
