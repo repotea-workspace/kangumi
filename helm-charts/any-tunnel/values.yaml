@@ -163,6 +163,11 @@ proxies:
       periodSeconds: 5
     ingress:
       hosts: []
+        # Simple format (domain string only):
+        # - nginx.example.com
+        # - app.example.com
+        # 
+        # Or advanced format with custom paths:
         # - host: nginx.example.com
         #   paths:
         #     - path: /

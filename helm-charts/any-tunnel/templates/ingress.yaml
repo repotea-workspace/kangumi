@@ -29,9 +29,22 @@ spec:
   {{- end }}
   rules:
     {{- range $proxy.ingress.hosts }}
+    {{- if kindIs "string" . }}
+    - host: {{ . | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "any-tunnel.fullname" $ }}
+                port:
+                  number: 80
+    {{- else }}
     - host: {{ .host | quote }}
       http:
         paths:
+          {{- if .paths }}
           {{- range .paths }}
           - path: {{ .path }}
             pathType: {{ .pathType }}
@@ -41,6 +54,16 @@ spec:
                 port:
                   number: {{ .servicePort | default 80 }}
           {{- end }}
+          {{- else }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "any-tunnel.fullname" $ }}
+                port:
+                  number: 80
+          {{- end }}
+    {{- end }}
     {{- end }}
 {{- end }}
 {{- end }}
