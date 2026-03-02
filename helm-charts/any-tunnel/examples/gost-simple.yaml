@@ -1,0 +1,38 @@
+# Example: GOST HTTP + SOCKS5 Proxy
+# Usage: helm install my-tunnel ./any-tunnel -f examples/gost-simple.yaml
+
+proxies:
+  gost:
+    enabled: true
+    image:
+      repository: gogost/gost
+      tag: latest
+    args:
+      - "-L=:8080"
+      - "-L=socks5://:1080"
+    ports:
+      - name: http
+        containerPort: 8080
+        protocol: TCP
+      - name: socks5
+        containerPort: 1080
+        protocol: TCP
+    servicePorts:
+      - name: http
+        port: 8080
+        targetPort: 8080
+        protocol: TCP
+      - name: socks5
+        port: 1080
+        targetPort: 1080
+        protocol: TCP
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+service:
+  type: ClusterIP

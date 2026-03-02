@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "any-tunnel.fullname" . }}
+  labels:
+    {{- include "any-tunnel.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "any-tunnel.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "any-tunnel.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "any-tunnel.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      {{- range $proxyName, $proxy := .Values.proxies }}
+      {{- if $proxy.enabled }}
+        - name: {{ $proxyName }}
+          securityContext:
+            {{- toYaml $.Values.securityContext | nindent 12 }}
+          image: "{{ $proxy.image.repository }}:{{ $proxy.image.tag }}"
+          imagePullPolicy: {{ $proxy.image.pullPolicy }}
+          {{- if $proxy.command }}
+          command:
+            {{- toYaml $proxy.command | nindent 12 }}
+          {{- end }}
+          {{- if $proxy.args }}
+          args:
+            {{- toYaml $proxy.args | nindent 12 }}
+          {{- end }}
+          {{- if or $proxy.env $.Values.globalEnv }}
+          env:
+            {{- if $.Values.globalEnv }}
+            {{- toYaml $.Values.globalEnv | nindent 12 }}
+            {{- end }}
+            {{- if $proxy.env }}
+            {{- toYaml $proxy.env | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          {{- if $proxy.ports }}
+          ports:
+            {{- toYaml $proxy.ports | nindent 12 }}
+          {{- end }}
+          {{- if $proxy.livenessProbe }}
+          livenessProbe:
+            {{- toYaml $proxy.livenessProbe | nindent 12 }}
+          {{- end }}
+          {{- if $proxy.readinessProbe }}
+          readinessProbe:
+            {{- toYaml $proxy.readinessProbe | nindent 12 }}
+          {{- end }}
+          {{- if $proxy.resources }}
+          resources:
+            {{- toYaml $proxy.resources | nindent 12 }}
+          {{- end }}
+          {{- if or $proxy.configMap.enabled $.Values.additionalVolumeMounts }}
+          volumeMounts:
+            {{- if $proxy.configMap.enabled }}
+            - name: {{ $proxyName }}-config
+              mountPath: {{ $proxy.configMap.mountPath }}
+            {{- end }}
+            {{- if $.Values.additionalVolumeMounts }}
+            {{- toYaml $.Values.additionalVolumeMounts | nindent 12 }}
+            {{- end }}
+          {{- end }}
+      {{- end }}
+      {{- end }}
+      {{- if or (include "any-tunnel.hasConfigMap" .) .Values.additionalVolumes }}
+      volumes:
+        {{- range $proxyName, $proxy := .Values.proxies }}
+        {{- if and $proxy.enabled $proxy.configMap.enabled }}
+        - name: {{ $proxyName }}-config
+          configMap:
+            name: {{ include "any-tunnel.fullname" $ }}-{{ $proxyName }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.additionalVolumes }}
+        {{- toYaml .Values.additionalVolumes | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- define "any-tunnel.hasConfigMap" -}}
+{{- range $proxyName, $proxy := .Values.proxies }}
+{{- if and $proxy.enabled $proxy.configMap.enabled }}
+true
+{{- end }}
+{{- end }}
+{{- end }}

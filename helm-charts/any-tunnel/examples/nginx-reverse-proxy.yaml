@@ -1,0 +1,67 @@
+# Example: Nginx Reverse Proxy with ConfigMap
+# Usage: helm install my-tunnel ./any-tunnel -f examples/nginx-reverse-proxy.yaml
+
+proxies:
+  nginx:
+    enabled: true
+    image:
+      repository: nginx
+      tag: alpine
+    ports:
+      - name: http
+        containerPort: 80
+        protocol: TCP
+    servicePorts:
+      - name: http
+        port: 80
+        targetPort: 80
+        protocol: TCP
+    configMap:
+      enabled: true
+      mountPath: /etc/nginx/conf.d
+      data:
+        default.conf: |
+          server {
+            listen 80;
+            server_name _;
+            
+            location / {
+              proxy_pass http://backend-service:8080;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+            }
+          }
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 10
+      periodSeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+service:
+  type: ClusterIP
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: proxy.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          servicePort: 80

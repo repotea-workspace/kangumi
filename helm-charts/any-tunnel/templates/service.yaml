@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "any-tunnel.fullname" . }}
+  labels:
+    {{- include "any-tunnel.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  {{- range $proxyName, $proxy := .Values.proxies }}
+  {{- if and $proxy.enabled $proxy.servicePorts }}
+  {{- range $proxy.servicePorts }}
+    - name: {{ $proxyName }}-{{ .name }}
+      port: {{ .port }}
+      targetPort: {{ .targetPort }}
+      protocol: {{ .protocol | default "TCP" }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  selector:
+    {{- include "any-tunnel.selectorLabels" . | nindent 4 }}

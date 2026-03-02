@@ -1,0 +1,225 @@
+# Default values for any-tunnel.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  # Additional service ports can be configured per proxy below
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Proxy configurations
+# Multiple proxy services can be enabled/configured independently
+proxies:
+  # GOST - GO Simple Tunnel
+  # Supports: HTTP/HTTPS/HTTP2/SOCKS4/SOCKS5/Shadowsocks/SS/SSR
+  gost:
+    enabled: false
+    image:
+      repository: gogost/gost
+      tag: latest
+      pullPolicy: IfNotPresent
+    # GOST configuration
+    # Examples:
+    # - HTTP proxy: -L=:8080
+    # - SOCKS5 proxy: -L=socks5://:1080
+    # - Multiple chains: -L=:8080 -F=http://proxy1:8080 -F=socks5://proxy2:1080
+    args: []
+      # - "-L=:8080"
+      # - "-L=socks5://:1080"
+    env: []
+      # - name: GOST_LOG_LEVEL
+      #   value: "info"
+    ports:
+      # - name: http
+      #   containerPort: 8080
+      #   protocol: TCP
+      # - name: socks5
+      #   containerPort: 1080
+      #   protocol: TCP
+    servicePorts: []
+      # - name: http
+      #   port: 8080
+      #   targetPort: 8080
+      #   protocol: TCP
+      # - name: socks5
+      #   port: 1080
+      #   targetPort: 1080
+      #   protocol: TCP
+    resources: {}
+    livenessProbe: {}
+    readinessProbe: {}
+    ingress:
+      hosts: []
+        # - host: gost.example.com
+        #   paths:
+        #     - path: /
+        #       pathType: Prefix
+      tls: []
+        # - secretName: tls-secret
+        #   hosts:
+        #     - gost.example.com
+    configMap:
+      enabled: false
+      mountPath: /etc/gost
+      data: {}
+        # config.yaml: |
+        #   services:
+        #   - name: http
+        #     addr: :8080
+        #     handler:
+        #       type: http
+        #     listener:
+        #       type: tcp
+
+  # Nginx - HTTP/HTTPS proxy and reverse proxy
+  nginx:
+    enabled: false
+    image:
+      repository: nginx
+      tag: alpine
+      pullPolicy: IfNotPresent
+    args: []
+    env: []
+    ports:
+      - name: http
+        containerPort: 80
+        protocol: TCP
+    servicePorts:
+      - name: http
+        port: 80
+        targetPort: 80
+        protocol: TCP
+    resources: {}
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 80
+      initialDelaySeconds: 10
+      periodSeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: 80
+      initialDelaySeconds: 5
+      periodSeconds: 5
+    ingress:
+      hosts: []
+        # - host: nginx.example.com
+        #   paths:
+        #     - path: /
+        #       pathType: Prefix
+      tls: []
+        # - secretName: tls-secret
+        #   hosts:
+        #     - nginx.example.com
+    configMap:
+      enabled: false
+      mountPath: /etc/nginx/conf.d
+      data:
+        health.conf: |
+          # Default health check server
+          server {
+            listen 80 default_server;
+            server_name _;
+            
+            location /health {
+              access_log off;
+              return 200 "healthy\n";
+              add_header Content-Type text/plain;
+            }
+            
+            location / {
+              return 404;
+            }
+          }
+        # Add your custom config in another file, e.g.:
+        # custom.conf: |
+        #   server {
+        #     listen 80;
+        #     server_name example.com;
+        #     location / {
+        #       proxy_pass http://backend;
+        #     }
+        #   }
+
+# Global environment variables applied to all proxy containers
+globalEnv: []
+  # - name: TZ
+  #   value: "Asia/Shanghai"
+  # - name: LOG_LEVEL
+  #   value: "info"
+
+# Additional volumes that can be mounted to all containers
+additionalVolumes: []
+  # - name: shared-data
+  #   emptyDir: {}
+  # - name: secret-data
+  #   secret:
+  #     secretName: my-secret
+
+# Additional volume mounts for all containers
+additionalVolumeMounts: []
+  # - name: shared-data
+  #   mountPath: /data
+  # - name: secret-data
+  #   mountPath: /secrets
+  #   readOnly: true

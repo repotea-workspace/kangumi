@@ -1,0 +1,103 @@
+# Example: Multiple proxies (GOST + Nginx)
+# GOST provides the proxy backend, Nginx sits in front for additional features
+# Usage: helm install my-tunnel ./any-tunnel -f examples/multi-proxy.yaml
+
+globalEnv:
+  - name: TZ
+    value: "Asia/Shanghai"
+
+proxies:
+  # GOST provides HTTP and SOCKS5 proxy
+  gost:
+    enabled: true
+    image:
+      repository: gogost/gost
+      tag: latest
+    args:
+      - "-L=:8080"
+      - "-L=socks5://:1080"
+    ports:
+      - name: http
+        containerPort: 8080
+        protocol: TCP
+      - name: socks5
+        containerPort: 1080
+        protocol: TCP
+    servicePorts:
+      - name: http
+        port: 8080
+        targetPort: 8080
+        protocol: TCP
+      - name: socks5
+        port: 1080
+        targetPort: 1080
+        protocol: TCP
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  # Nginx as reverse proxy with custom logic
+  nginx:
+    enabled: true
+    image:
+      repository: nginx
+      tag: alpine
+    ports:
+      - name: http
+        containerPort: 80
+        protocol: TCP
+    servicePorts:
+      - name: http
+        port: 80
+        targetPort: 80
+        protocol: TCP
+    configMap:
+      enabled: true
+      mountPath: /etc/nginx/conf.d
+      data:
+        default.conf: |
+          upstream gost_backend {
+            server localhost:8080;
+          }
+          
+          server {
+            listen 80;
+            server_name _;
+            
+            # Proxy requests to GOST
+            location /proxy/ {
+              proxy_pass http://gost_backend/;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+            }
+            
+            # Health check endpoint
+            location /health {
+              access_log off;
+              return 200 "healthy\n";
+              add_header Content-Type text/plain;
+            }
+          }
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 80
+      initialDelaySeconds: 10
+      periodSeconds: 10
+
+service:
+  type: ClusterIP
+
+ingress:
+  enabled: false

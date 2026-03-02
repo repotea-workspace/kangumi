@@ -1,0 +1,17 @@
+{{- range $proxyName, $proxy := .Values.proxies }}
+{{- if and $proxy.enabled $proxy.configMap.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "any-tunnel.fullname" $ }}-{{ $proxyName }}
+  labels:
+    {{- include "any-tunnel.labels" $ | nindent 4 }}
+    proxy: {{ $proxyName }}
+data:
+  {{- range $key, $value := $proxy.configMap.data }}
+  {{ $key }}: |
+{{ $value | indent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,48 @@
+{{- if .Values.ingress.enabled }}
+{{- range $proxyName, $proxy := .Values.proxies }}
+{{- if and $proxy.enabled (or $proxy.ingress.hosts $proxy.ingress.tls) }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "any-tunnel.fullname" $ }}-{{ $proxyName }}
+  labels:
+    {{- include "any-tunnel.labels" $ | nindent 4 }}
+    proxy: {{ $proxyName }}
+  {{- with $.Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if $.Values.ingress.className }}
+  ingressClassName: {{ $.Values.ingress.className }}
+  {{- end }}
+  {{- if $proxy.ingress.tls }}
+  tls:
+    {{- range $proxy.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range $proxy.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "any-tunnel.fullname" $ }}
+                port:
+                  number: {{ .servicePort | default 80 }}
+          {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+

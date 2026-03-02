@@ -18,6 +18,8 @@ jobs:
             path: helm-charts/any-cors
           - package: dev-toolchain-helm
             path: helm-charts/dev-toolchain
+          - package: any-tunnel-helm
+            path: helm-charts/any-tunnel
     steps:
       - uses: actions/checkout@v6
 
