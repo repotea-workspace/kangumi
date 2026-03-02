@@ -135,9 +135,13 @@ Usage: include "dev-toolchain.deploymentName" (dict "root" $ "name" "fewensa")
 {{/*
 Generate service name for a toolchain instance
 Usage: include "dev-toolchain.serviceName" (dict "root" $ "name" "fewensa")
+Truncates fullname portion to ensure total length <= 63 chars.
 */}}
 {{- define "dev-toolchain.serviceName" -}}
-{{- printf "%s-%s" (include "dev-toolchain.fullname" .root) .name }}
+{{- $suffix := printf "-%s" .name -}}
+{{- $fullname := include "dev-toolchain.fullname" .root -}}
+{{- $maxLen := int (sub 63 (len $suffix)) -}}
+{{- printf "%s%s" ($fullname | trunc $maxLen | trimSuffix "-") $suffix -}}
 {{- end }}
 
 {{/*
