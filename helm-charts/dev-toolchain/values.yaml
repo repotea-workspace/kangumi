@@ -16,348 +16,111 @@ global:
 
 # Toolchain instances configuration
 # Each entry creates a separate deployment with its own PVC and services
-toolchains:
-  # First toolchain instance - example
-  foo:
-    # Enable/disable this toolchain
-    enabled: true
-
-    # Hostname for the container
-    hostname: tch-foo
-
-    # Container image configuration
-    image: repotea-workspace/kangumi/dev-toolchain:latest
-    # Override global registry if needed
-    # imageRegistry: ghcr.io
-    # Override global pull policy if needed
-    # imagePullPolicy: Always
-
-    # Machine ID for SSH host key generation (optional)
-    # If not set, a random ID will be generated on first boot
-    machineId: ""
-
-    # SSH Configuration
-    # Configure SSH files for multiple users
-    # Structure: sshConfig.<username>.<filename>: <content-or-secretRef>
-    #
-    # Supported users: root, linuxbrew, or any custom user
-    # Supported files: authorized_keys, id_ed25519, id_ed25519.pub, id_rsa, id_rsa.pub, known_hosts, config, etc.
-    #
-    # Two ways to provide content:
-    # 1. Inline content (string or list) - chart will create a Secret
-    # 2. External Secret reference - use existing Secret in the cluster
-    #
-    # Example:
-    # sshConfig:
-    #   root:
-    #     # Inline content - public keys are safe to store here
-    #     authorized_keys: |
-    #       ssh-ed25519 AAAAC3Nza... user@hostname
-    #       ssh-rsa AAAAB3Nza... another@host
-    #
-    #     # External Secret reference - recommended for private keys
-    #     id_ed25519:
-    #       secretRef:
-    #         name: my-ssh-private-keys
-    #         key: root_id_ed25519
-    #
-    #     # Inline content - public key
-    #     id_ed25519.pub: |
-    #       ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAbCdE... root@hostname
-    #
-    #     # External Secret reference
-    #     known_hosts:
-    #       secretRef:
-    #         name: my-ssh-config
-    #         key: known_hosts
-    #
-    #     # Inline content
-    #     config: |
-    #       Host github.com
-    #         IdentityFile ~/.ssh/id_ed25519
-    #         StrictHostKeyChecking no
-    #
-    #   linuxbrew:
-    #     authorized_keys: |
-    #       ssh-ed25519 AAAAC3Nza... linuxbrew@hostname
-    #     id_ed25519:
-    #       secretRef:
-    #         name: linuxbrew-ssh-keys
-    #         key: id_ed25519
-    #     id_ed25519.pub: |
-    #       ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... linuxbrew@hostname
-    #
-    # Files will be mounted to:
-    # - /root/.ssh/<filename> for user "root"
-    # - /home/<username>/.ssh/<filename> for other users
-    #
-    # All files will have permissions 0600 by default
-    #
-    # Note: Create external Secrets manually before deploying:
-    #   kubectl create secret generic my-ssh-private-keys \
-    #     --from-file=root_id_ed25519=~/.ssh/id_ed25519 \
-    #     -n <namespace>
-    sshConfig: {}
-
-    # Network mode configuration
-    network:
-      # Network mode: "nodePort" or "hostNetwork"
-      # - nodePort (default): Uses Service with NodePort, requires port pre-configuration
-      # - hostNetwork: Pod uses host network, all ports automatically exposed
-      mode: nodePort
-      # DNS policy for hostNetwork mode (only effective when mode is hostNetwork)
-      dnsPolicy: ClusterFirstWithHostNet
-
-    # Development tools auto-installation (first startup only)
-    devTools:
-      # Enable auto-installation on first startup
-      autoInstall: false
-
-      # Tools to install via Homebrew
-      # Supports two formats:
-      # 1. Simple string format (package name or tools.yaml entry)
-      # 2. Object format with tap support
-      packages: []
-      # Example - Simple string format:
-      # packages:
-      #   - golang
-      #   - nodejs
-      #   - k8s-tools
-      #   - terraform
-      #   - docker-compose
-      #
-      # Example - Object format with tap support:
-      # packages:
-      #   - flutter
-      #   - name: fvm
-      #     tap: leoafarias/fvm
-      #     formula: fvm  # optional, defaults to 'name'
-      #   - name: talosctl
-      #     tap: siderolabs/tap
-      #     formula: siderolabs/tap/talosctl
-      #
-      # Mix both formats:
-      # packages:
-      #   - golang          # Simple string
-      #   - nodejs          # Simple string
-      #   - name: fvm       # Object with tap
-      #     tap: leoafarias/fvm
-
-    # User initialization scripts
-    # Custom scripts to run during container initialization (s6-overlay cont-init phase)
-    # Scripts are executed in alphabetical order after system initialization
-    userScripts: {}
-    # Example:
-    # userScripts:
-    #   00-setup-env.sh: |
-    #     #!/bin/bash
-    #     echo "Setting up custom environment..."
-    #     export CUSTOM_VAR="value"
-    #     echo 'export CUSTOM_VAR="value"' >> /etc/profile.d/99-dev-tools-env.sh
-    #
-    #   10-install-tools.sh: |
-    #     #!/bin/bash
-    #     echo "Installing additional tools..."
-    #     install-brew-tools.sh neovim tmux htop
-    #
-    #   20-configure-git.sh: |
-    #     #!/bin/bash
-    #     git config --global user.name "Your Name"
-    #     git config --global user.email "your.email@example.com"
-
-    # Port configuration
-    ports:
-      # SSH port configuration
-      ssh:
-        # nodePort mode: container internal port (default 22)
-        containerPort: 22
-        # nodePort mode: external NodePort
-        # hostNetwork mode: actual port sshd listens on
-        nodePort: 17000
-
-      # Additional ports (for nodePort mode only)
-      # hostNetwork mode: no need to configure, all ports are automatically exposed
-      extra: []
-      # nodePort mode example:
-      # extra:
-      #   - name: http
-      #     containerPort: 8080
-      #     nodePort: 17100
-      #     protocol: TCP
-      #   - name: https
-      #     containerPort: 8443
-      #     nodePort: 17101
-      #     protocol: TCP
-
-    # Storage configuration
-    storage:
-      # Main PVC for this toolchain
-      pvc:
-        # Enable PVC creation
-        enabled: true
-        # PVC name (auto-generated if not set)
-        name: ""
-        # Storage class (use cluster default if not set)
-        storageClassName: ""
-        # PVC size
-        size: 100Gi
-        # Access mode
-        accessMode: ReadWriteOnce
-
-      # Volume mount configuration
-      # Maps PVC subdirectories to container paths
-      # Example volume mounts (customize as needed):
-      volumes: {}
-      # Example configuration:
-      # volumes:
-      #   config:
-      #     mountPath: /etc/profile.d/env.sh
-      #     subPath: config/env.sh
-      #   sshConfig:
-      #     mountPath: /etc/ssh/sshd_config.d
-      #     subPath: config/sshd_config.d
-      #   root:
-      #     mountPath: /root
-      #     subPath: home/root
-      #   home:
-      #     mountPath: /home
-      #     subPath: home/users
-      #   data:
-      #     mountPath: /data
-      #     subPath: workspace/data
-      #   opt:
-      #     mountPath: /opt
-      #     subPath: workspace/opt
-      #   code:
-      #     mountPath: /code
-      #     subPath: workspace/code
-
-      # Shared PVC (optional, for /data/wwwroot)
-      sharedPVC:
-        # Enable shared PVC mounting
-        enabled: false
-        # Shared PVC name (must be created separately or by another toolchain)
-        name: dev-shared-wwwroot
-        # Storage class for shared PVC (must support ReadWriteMany)
-        storageClassName: ""
-        # Size (only used if this is the first toolchain to create it)
-        size: 50Gi
-        # Access mode (must be ReadWriteMany for sharing)
-        accessMode: ReadWriteMany
-        # Mount path
-        mountPath: /data/wwwroot
-
-    # Docker daemon configuration (DEPRECATED - all fields below are kept for backward compatibility)
-    # Note: dockerd now runs directly in the main container via s6-overlay service
-    # Docker data is stored in main PVC at subPath "docker" (/var/lib/docker)
-    # This ensures docker mounts work correctly as containers share the same filesystem
-    dind:
-      enabled: true # Deprecated - has no effect, dockerd always runs
-      image: docker:29-dind # Deprecated - dockerd is built into main image
-      port: 2375 # Deprecated - dockerd uses unix:///var/run/docker.sock
-      bindAddress: "127.0.0.1" # Deprecated - unix socket is used
-      storage: # Deprecated - docker data is in main PVC subPath "docker"
-        type: emptyDir
-      env: {} # Deprecated - no effect
-
-    # Container resources
-    resources:
-      limits:
-        cpu: "8"
-        memory: 32Gi
-      requests:
-        cpu: "2"
-        memory: 4Gi
-
-    # Environment variables for the main container
-    env: []
-    # Example:
-    # env:
-    #   - name: TZ
-    #     value: Asia/Shanghai
-    #   - name: LANG
-    #     value: en_US.UTF-8
-
-    # Node selector
-    nodeSelector: {}
-    # Example:
-    # nodeSelector:
-    #   kubernetes.io/hostname: node1
-
-    # Tolerations
-    tolerations: []
-
-    # Affinity rules
-    affinity: {}
-
-  # Second toolchain instance - example (disabled by default)
-  bar:
-    enabled: false
-    hostname: tch-bar
-    image: repotea-workspace/kangumi/dev-toolchain:latest
-    machineId: ""
-
-    # SSH Configuration
-    sshConfig: {}
-
-    # Network mode configuration
-    network:
-      mode: nodePort
-      dnsPolicy: ClusterFirstWithHostNet
-
-    # Development tools auto-installation (first startup only)
-    devTools:
-      autoInstall: false
-      packages: []
-
-    # User initialization scripts
-    userScripts: {}
-
-    ports:
-      ssh:
-        containerPort: 22
-        nodePort: 17001
-      extra: []
-
-    storage:
-      pvc:
-        enabled: true
-        name: ""
-        storageClassName: ""
-        size: 100Gi
-        accessMode: ReadWriteOnce
-
-      volumes: {}
-
-      sharedPVC:
-        enabled: false
-        name: dev-shared-wwwroot
-        storageClassName: ""
-        size: 50Gi
-        accessMode: ReadWriteMany
-        mountPath: /data/wwwroot
-
-    dind:
-      enabled: true # Deprecated
-      image: docker:29-dind # Deprecated
-      port: 2376 # Deprecated
-      bindAddress: "127.0.0.1" # Deprecated
-      storage: # Deprecated
-        type: emptyDir
-      env: {} # Deprecated
-
-    resources:
-      limits:
-        cpu: "8"
-        memory: 32Gi
-      requests:
-        cpu: "2"
-        memory: 4Gi
-
-    env: []
-    nodeSelector: {}
-    tolerations: []
-    affinity: {}
+toolchains: {}
+  # ---------------------------------------------------------------------------
+  # Example toolchain instances (commented out - uncomment and customize to use)
+  # ---------------------------------------------------------------------------
+  #
+  # foo:
+  #   enabled: true
+  #
+  #   hostname: tch-foo
+  #
+  #   image: repotea-workspace/kangumi/dev-toolchain:latest
+  #   # imageRegistry: ghcr.io
+  #   # imagePullPolicy: Always
+  #
+  #   machineId: ""
+  #
+  #   # SSH Configuration
+  #   # sshConfig:
+  #   #   root:
+  #   #     authorized_keys: |
+  #   #       ssh-ed25519 AAAAC3Nza... user@hostname
+  #   #     id_ed25519:
+  #   #       secretRef:
+  #   #         name: my-ssh-private-keys
+  #   #         key: root_id_ed25519
+  #   #     id_ed25519.pub: |
+  #   #       ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAbCdE... root@hostname
+  #   sshConfig: {}
+  #
+  #   network:
+  #     mode: nodePort        # or: hostNetwork
+  #     dnsPolicy: ClusterFirstWithHostNet
+  #
+  #   devTools:
+  #     autoInstall: false
+  #     packages: []
+  #     # packages:
+  #     #   - golang
+  #     #   - nodejs
+  #     #   - name: fvm
+  #     #     tap: leoafarias/fvm
+  #     #     formula: fvm
+  #
+  #   userScripts: {}
+  #   # userScripts:
+  #   #   00-setup-env.sh: |
+  #   #     #!/bin/bash
+  #   #     echo 'export MY_VAR=value' >> /etc/profile.d/99-dev-tools-env.sh
+  #   #   10-configure-git.sh: |
+  #   #     #!/bin/bash
+  #   #     git config --global user.name "Your Name"
+  #   #     git config --global user.email "your@email.com"
+  #
+  #   ports:
+  #     ssh:
+  #       containerPort: 22
+  #       nodePort: 17000
+  #     extra: []
+  #     # extra:
+  #     #   - name: http
+  #     #     containerPort: 8080
+  #     #     nodePort: 17100
+  #     #     protocol: TCP
+  #
+  #   storage:
+  #     pvc:
+  #       enabled: true
+  #       name: ""
+  #       storageClassName: ""
+  #       size: 100Gi
+  #       accessMode: ReadWriteOnce
+  #     volumes: {}
+  #     # volumes:
+  #     #   root:
+  #     #     mountPath: /root
+  #     #     subPath: home/root
+  #     #   code:
+  #     #     mountPath: /code
+  #     #     subPath: workspace/code
+  #     sharedPVC:
+  #       enabled: false
+  #       name: dev-shared-wwwroot
+  #       storageClassName: ""
+  #       size: 50Gi
+  #       accessMode: ReadWriteMany
+  #       mountPath: /data/wwwroot
+  #
+  #   resources:
+  #     limits:
+  #       cpu: "8"
+  #       memory: 32Gi
+  #     requests:
+  #       cpu: "2"
+  #       memory: 4Gi
+  #
+  #   env: []
+  #   # env:
+  #   #   - name: TZ
+  #   #     value: Asia/Shanghai
+  #   #   - name: LANG
+  #   #     value: en_US.UTF-8
+  #
+  #   nodeSelector: {}
+  #   tolerations: []
+  #   affinity: {}
 
 # Default DinD configuration (DEPRECATED - all settings kept for backward compatibility only)
 # dockerd now runs in the main container via s6-overlay service, not as a sidecar
