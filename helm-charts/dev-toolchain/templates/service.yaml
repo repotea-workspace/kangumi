@@ -25,6 +25,28 @@ spec:
     nodePort: {{ .nodePort }}
     protocol: {{ .protocol | default "TCP" }}
   {{- end }}
+{{- else }}
+{{- /* hostNetwork mode - create ClusterIP service for port forwarder */ -}}
+{{- if $config.ports.portForwarder }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dev-toolchain.serviceName" (dict "root" $ "name" $name) }}
+  labels:
+    {{- include "dev-toolchain.instanceLabels" (dict "root" $ "name" $name) | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "dev-toolchain.instanceSelectorLabels" (dict "root" $ "name" $name) | nindent 4 }}
+  ports:
+  {{- range $forward := $config.ports.portForwarder }}
+  - name: {{ $forward.name }}
+    port: {{ $forward.servicePort | default $forward.targetPort }}
+    targetPort: {{ $forward.listenPort }}
+    protocol: TCP
+  {{- end }}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

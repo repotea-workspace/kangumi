@@ -229,6 +229,33 @@ spec:
           mountPath: /var/lib/docker
           subPath: docker
         {{- end }}
+      
+      {{- if and (eq ($config.network.mode | default "nodePort") "hostNetwork") $config.ports.portForwarder }}
+      # Port forwarder sidecar - forwards ports from 0.0.0.0 to 127.0.0.1
+      # Enables Service access to localhost-only services in hostNetwork mode
+      - name: port-forwarder
+        image: {{ $.Values.portForwarder.image }}
+        imagePullPolicy: {{ $.Values.portForwarder.imagePullPolicy }}
+        command:
+          - sh
+          - -c
+          - |
+            {{- range $forward := $config.ports.portForwarder }}
+            socat TCP-LISTEN:{{ $forward.listenPort }},bind=0.0.0.0,fork,reuseaddr TCP:127.0.0.1:{{ $forward.targetPort }} &
+            {{- end }}
+            wait
+        ports:
+        {{- range $forward := $config.ports.portForwarder }}
+        - name: {{ $forward.name }}
+          containerPort: {{ $forward.listenPort }}
+          protocol: TCP
+        {{- end }}
+        {{- with $.Values.portForwarder.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- end }}
+      
       volumes:
       {{- if eq ($config.network.mode | default "nodePort") "hostNetwork" }}
       # hostNetwork mode: SSH port configuration

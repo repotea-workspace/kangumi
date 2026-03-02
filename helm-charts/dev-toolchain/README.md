@@ -212,6 +212,7 @@ ssh -p 17000 root@<NODE_IP>
 
 ### Port Configuration
 
+#### NodePort Mode (default)
 SSH port follows the pattern: `17000 + instance_number`
 
 ```yaml
@@ -227,6 +228,46 @@ ports:
       containerPort: 8443
       nodePort: 17101
 ```
+
+#### HostNetwork Mode with Port Forwarder
+For services listening on 127.0.0.1 that need to be accessed via Service:
+
+```yaml
+# Global port forwarder configuration (optional)
+portForwarder:
+  image: alpine/socat:latest          # Default image
+  imagePullPolicy: IfNotPresent       # Default pull policy
+  resources:                           # Default resources
+    requests:
+      cpu: 10m
+      memory: 16Mi
+    limits:
+      cpu: 100m
+      memory: 32Mi
+
+# Per-toolchain configuration
+network:
+  mode: hostNetwork
+ports:
+  ssh:
+    nodePort: 17011       # Actual port sshd listens on host
+  portForwarder:
+    - name: vibekanban
+      listenPort: 33694   # Port forwarder listens on 0.0.0.0
+      targetPort: 33693   # Forwards to 127.0.0.1:33693
+      servicePort: 33693  # Service exposes this port
+```
+
+**How it works**:
+1. Service forwards traffic to Pod (in hostNetwork mode, Pod IP = Node IP)
+2. Port forwarder sidecar (socat) listens on `0.0.0.0:33694`
+3. Forwards all traffic to `127.0.0.1:33693` (where vibekanban listens)
+4. Service exposes port 33693 (or custom servicePort)
+
+This allows:
+- vibekanban stays on 127.0.0.1 (secure, not exposed externally)
+- Other pods can access via Service: `tch-<name>.<namespace>.svc.cluster.local:33693`
+- External access still requires explicit ingress/proxy configuration
 
 ### Storage Configuration
 

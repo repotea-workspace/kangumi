@@ -14,6 +14,22 @@ global:
   # imagePullSecrets:
   #   - name: ghcr-secret
 
+# Port forwarder sidecar configuration
+# Used in hostNetwork mode to forward traffic from 0.0.0.0 to 127.0.0.1
+portForwarder:
+  # Container image for port forwarder
+  image: alpine/socat:latest
+  # Image pull policy
+  imagePullPolicy: IfNotPresent
+  # Resource limits and requests
+  resources:
+    requests:
+      cpu: 10m
+      memory: 16Mi
+    limits:
+      cpu: 100m
+      memory: 32Mi
+
 # Toolchain instances configuration
 # Each entry creates a separate deployment with its own PVC and services
 toolchains:
@@ -175,8 +191,9 @@ toolchains:
         # hostNetwork mode: actual port sshd listens on
         nodePort: 17000
 
-      # Additional ports (for nodePort mode only)
-      # hostNetwork mode: no need to configure, all ports are automatically exposed
+      # Additional ports
+      # - nodePort mode: exposed via NodePort Service
+      # - hostNetwork mode: use portForwarder for localhost-only services
       extra: []
       # nodePort mode example:
       # extra:
@@ -188,6 +205,17 @@ toolchains:
       #     containerPort: 8443
       #     nodePort: 17101
       #     protocol: TCP
+
+      # Port forwarder (hostNetwork mode only)
+      # Forwards ports from 0.0.0.0 to 127.0.0.1, enabling Service access
+      # to localhost-only services (e.g., vibekanban on 127.0.0.1:33693)
+      portForwarder: []
+      # Example:
+      # portForwarder:
+      #   - name: vibekanban
+      #     listenPort: 33694        # Port forwarder listens on (0.0.0.0)
+      #     targetPort: 33693        # Target service on 127.0.0.1
+      #     servicePort: 33693       # Service port, optional (defaults to targetPort)
 
     # Storage configuration
     storage:
