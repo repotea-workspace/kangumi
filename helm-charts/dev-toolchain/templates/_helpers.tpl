@@ -151,3 +151,11 @@ Usage: include "dev-toolchain.configMapName" (dict "root" $ "name" "fewensa")
 {{- define "dev-toolchain.configMapName" -}}
 {{- printf "tch-%s-sshd-config" .name }}
 {{- end }}
+
+{{/*
+Generate user scripts config map name for a toolchain instance
+Usage: include "dev-toolchain.userScriptsConfigMapName" (dict "root" $ "name" "fewensa" "config" .Values.toolchains.fewensa)
+*/}}
+{{- define "dev-toolchain.userScriptsConfigMapName" -}}
+{{- .config.userScriptsConfigMapName | default (printf "%s-user-scripts" (include "dev-toolchain.deploymentName" (dict "root" .root "name" .name))) -}}
+{{- end }}

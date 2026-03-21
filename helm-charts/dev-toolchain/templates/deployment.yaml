@@ -217,7 +217,7 @@ spec:
         - name: shared-wwwroot
           mountPath: {{ $config.storage.sharedPVC.mountPath }}
         {{- end }}
-        {{- if $config.userScripts }}
+        {{- if or $config.userScripts $config.userScriptsConfigMapName }}
         # User initialization scripts
         - name: user-scripts
           mountPath: /usr/local/lib/dev-tools/user-scripts
@@ -278,11 +278,11 @@ spec:
         persistentVolumeClaim:
           claimName: {{ include "dev-toolchain.sharedPvcName" (dict "root" $ "config" $config) }}
       {{- end }}
-      {{- if $config.userScripts }}
+      {{- if or $config.userScripts $config.userScriptsConfigMapName }}
       # User initialization scripts
       - name: user-scripts
         configMap:
-          name: {{ include "dev-toolchain.deploymentName" (dict "root" $ "name" $name) }}-user-scripts
+          name: {{ include "dev-toolchain.userScriptsConfigMapName" (dict "root" $ "name" $name "config" $config) }}
           defaultMode: 0755
       {{- end }}
       {{- with $config.nodeSelector }}

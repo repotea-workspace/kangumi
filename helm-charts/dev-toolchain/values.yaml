@@ -60,6 +60,10 @@ toolchains: {}
   #     #     formula: fvm
   #
   #   userScripts: {}
+  #   # Use an existing ConfigMap instead of generating one from inline userScripts.
+  #   # The ConfigMap data keys should be script filenames, mounted under
+  #   # /usr/local/lib/dev-tools/user-scripts.
+  #   userScriptsConfigMapName: ""
   #   # userScripts:
   #   #   00-setup-env.sh: |
   #   #     #!/bin/bash
