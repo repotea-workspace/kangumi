@@ -59,6 +59,9 @@ jobs:
             context: docker-image/wait-for-port
             build-args: ""
 
+          - package: mem0-mcp
+            context: https://github.com/mem0ai/mem0-mcp.git#main
+
           - package: dev-toolchain
             context: docker-image/dev-toolchain
     steps:
