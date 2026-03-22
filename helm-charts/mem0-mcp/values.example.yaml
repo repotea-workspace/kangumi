@@ -1,0 +1,79 @@
+# Example values for mem0-mcp-helm
+#
+# This file demonstrates:
+# - image override
+# - ClusterIP service
+# - Ingress exposure
+# - plain env values
+# - secret-backed env values
+# - extra env / envFrom usage
+# - resource sizing
+
+replicaCount: 1
+
+image:
+  repository: mem0/openmemory-mcp
+  pullPolicy: IfNotPresent
+  digest: sha256:b665d382a94fdc18c7bb84a647d4bebdc98d9e7fc1146fc5e559ca7f5f7f9211
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 8081
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  hosts:
+    - host: mem0-mcp.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: example-tls-secret
+      hosts:
+        - mem0-mcp.example.com
+
+env:
+  # Plain env values
+  PORT: "8081"
+  MEM0_DEFAULT_USER_ID: your-default-user
+  MEM0_ENABLE_GRAPH_DEFAULT: "false"
+
+  # Secret-backed env values
+  MEM0_API_KEY:
+    secretName: secret-mem0-mcp-env
+    secretKey: MEM0_API_KEY
+
+  # You can mix both forms in the same map
+  OPENAI_API_KEY:
+    secretName: secret-openai-env
+    secretKey: OPENAI_API_KEY
+
+extraEnv:
+  - name: HOST
+    value: 0.0.0.0
+
+extraEnvFrom:
+  - secretRef:
+      name: extra-runtime-env
+  - configMapRef:
+      name: mem0-mcp-runtime-config
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

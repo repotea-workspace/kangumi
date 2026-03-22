@@ -1,16 +1,14 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "any-cors.name" -}}
+{{- define "mem0-mcp.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Create a default fully qualified app name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-If release name contains chart name it will be used as a full name.
 */}}
-{{- define "any-cors.fullname" -}}
+{{- define "mem0-mcp.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -21,16 +19,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "any-cors.chart" -}}
+{{- define "mem0-mcp.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "any-cors.labels" -}}
-helm.sh/chart: {{ include "any-cors.chart" . }}
-{{ include "any-cors.selectorLabels" . }}
+{{- define "mem0-mcp.labels" -}}
+helm.sh/chart: {{ include "mem0-mcp.chart" . }}
+{{ include "mem0-mcp.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -40,18 +38,31 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "any-cors.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "any-cors.name" . }}
+{{- define "mem0-mcp.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "mem0-mcp.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "any-cors.serviceAccountName" -}}
+{{- define "mem0-mcp.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "any-cors.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "mem0-mcp.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
+{{- end }}
+{{- end }}
+
+{{/*
+Build the image reference
+*/}}
+{{- define "mem0-mcp.image" -}}
+{{- if .Values.image.digest }}
+{{- printf "%s@%s" .Values.image.repository .Values.image.digest }}
+{{- else if .Values.image.tag }}
+{{- printf "%s:%s" .Values.image.repository .Values.image.tag }}
+{{- else }}
+{{- printf "%s:%s" .Values.image.repository .Chart.AppVersion }}
 {{- end }}
 {{- end }}

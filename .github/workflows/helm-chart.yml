@@ -20,6 +20,8 @@ jobs:
             path: helm-charts/dev-toolchain
           - package: any-tunnel-helm
             path: helm-charts/any-tunnel
+          - package: mem0-mcp-helm
+            path: helm-charts/mem0-mcp
     steps:
       - uses: actions/checkout@v6
 

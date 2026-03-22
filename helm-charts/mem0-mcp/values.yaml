@@ -1,0 +1,76 @@
+# Default values for mem0-mcp.
+
+replicaCount: 1
+
+image:
+  repository: mem0/openmemory-mcp
+  pullPolicy: IfNotPresent
+  digest: sha256:b665d382a94fdc18c7bb84a647d4bebdc98d9e7fc1146fc5e559ca7f5f7f9211
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8081
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: mem0-mcp.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+env:
+  PORT: "8081"
+  MEM0_DEFAULT_USER_ID: mem0-mcp
+  MEM0_ENABLE_GRAPH_DEFAULT: "false"
+  MEM0_API_KEY:
+    secretName: secret-mem0-mcp-env
+    secretKey: MEM0_API_KEY
+
+extraEnv: []
+extraEnvFrom: []
+
+livenessProbe:
+  tcpSocket:
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 20
+  timeoutSeconds: 3
+
+readinessProbe:
+  tcpSocket:
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
