@@ -148,6 +148,11 @@ spec:
         - name: ssh
           containerPort: {{ $config.ports.ssh.nodePort }}
           protocol: TCP
+        {{- range $config.ports.extra }}
+        - name: {{ .name }}
+          containerPort: {{ .targetPort | default .containerPort }}
+          protocol: {{ .protocol | default "TCP" }}
+        {{- end }}
         {{- else }}
         # nodePort mode: standard port declaration
         - name: ssh

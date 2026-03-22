@@ -1,6 +1,8 @@
 {{- range $name, $config := .Values.toolchains }}
 {{- if $config.enabled }}
-{{- if ne ($config.network.mode | default "nodePort") "hostNetwork" }}
+{{- $networkMode := $config.network.mode | default "nodePort" }}
+{{- $extraPorts := $config.ports.extra | default (list) }}
+{{- if or (ne $networkMode "hostNetwork") (gt (len $extraPorts) 0) }}
 ---
 apiVersion: v1
 kind: Service
@@ -9,9 +11,14 @@ metadata:
   labels:
     {{- include "dev-toolchain.instanceLabels" (dict "root" $ "name" $name) | nindent 4 }}
 spec:
+  {{- if eq $networkMode "hostNetwork" }}
+  type: ClusterIP
+  {{- else }}
   type: NodePort
+  {{- end }}
   selector:
     {{- include "dev-toolchain.instanceSelectorLabels" (dict "root" $ "name" $name) | nindent 4 }}
+  {{- if ne $networkMode "hostNetwork" }}
   ports:
   - name: ssh
     port: {{ $config.ports.ssh.containerPort }}
@@ -24,6 +31,15 @@ spec:
     targetPort: {{ .name }}
     nodePort: {{ .nodePort }}
     protocol: {{ .protocol | default "TCP" }}
+  {{- end }}
+  {{- else }}
+  ports:
+  {{- range $extraPorts }}
+  - name: {{ .name }}
+    port: {{ .servicePort | default .containerPort }}
+    targetPort: {{ .targetPort | default .containerPort }}
+    protocol: {{ .protocol | default "TCP" }}
+  {{- end }}
   {{- end }}
 {{- end }}
 {{- end }}

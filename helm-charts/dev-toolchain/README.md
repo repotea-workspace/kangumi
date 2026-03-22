@@ -6,7 +6,7 @@ A Helm chart for deploying development toolchain containers with Docker-in-Docke
 
 - 🐳 **Docker-in-Docker Support**: Run Docker commands inside containers with built-in dockerd
 - 💾 **Persistent Storage**: PVC-based storage with flexible mount configurations
-- 🌐 **NodePort Services**: SSH and custom ports in the 17000-18000 range
+- 🌐 **NodePort + ClusterIP Services**: external node ports plus optional in-cluster discovery for hostNetwork toolchains
 - 🚀 **Multi-Instance**: Deploy multiple independent toolchain instances
 - 📦 **Flexible Configuration**: Comprehensive values.yaml with sensible defaults
 - 🛠️ **Auto-Install Dev Tools**: Automatically install development tools on first startup
@@ -227,6 +227,40 @@ ports:
       containerPort: 8443
       nodePort: 17101
 ```
+
+### hostNetwork + Service Discovery
+
+When `network.mode: hostNetwork` is enabled, the pod can still reach normal Kubernetes
+Services as long as `dnsPolicy: ClusterFirstWithHostNet` works in the cluster.
+
+For reverse traffic from other pods back into the toolchain, declare fixed ports in
+`ports.extra`. The chart will then create a `ClusterIP` Service automatically for
+those ports even though the workload itself still uses `hostNetwork`.
+
+```yaml
+toolchains:
+  vibe:
+    network:
+      mode: hostNetwork
+      dnsPolicy: ClusterFirstWithHostNet
+    ports:
+      ssh:
+        containerPort: 22
+        nodePort: 17012
+      extra:
+        - name: webapp
+          containerPort: 8080       # in-cluster Service port
+          protocol: TCP
+          # Optional when the real listener differs:
+          # servicePort: 80
+          # targetPort: 8080
+```
+
+Result:
+
+- external access can still use node IP + host port
+- in-cluster clients can use `{{service-name}}.{{namespace}}.svc.cluster.local`
+- only explicitly declared fixed ports get Service discovery; arbitrary ad-hoc ports do not
 
 ### Storage Configuration
 
@@ -470,6 +504,16 @@ kubectl exec -it deployment/<deployment-name> -n dev-toolchain -- /bin/bash
 - Verify NodePort is in allowed range
 - Check if sshd is running inside container
 - Verify firewall rules on nodes
+
+#### 5. hostNetwork service discovery not working
+
+**Symptom**: other pods cannot reach the toolchain through `*.svc.cluster.local`
+
+**Solution**:
+- Verify the target port is declared in `ports.extra`
+- Check the generated Service exists: `kubectl get svc`
+- Confirm the process is actually listening on the declared port inside the toolchain
+- If the listener uses a different real port, set `targetPort`
 
 #### 4. Shared PVC mount fails
 

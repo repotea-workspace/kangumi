@@ -83,6 +83,12 @@ toolchains: {}
   #     #     containerPort: 8080
   #     #     nodePort: 17100
   #     #     protocol: TCP
+  #     #     # hostNetwork mode only:
+  #     #     # - ClusterIP Service is created automatically for declared extra ports
+  #     #     # - servicePort defaults to containerPort
+  #     #     # - targetPort defaults to containerPort
+  #     #     # servicePort: 8080
+  #     #     # targetPort: 8080
   #
   #   storage:
   #     pvc:
