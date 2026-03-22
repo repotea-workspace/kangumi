@@ -48,7 +48,7 @@ env:
 
   # Secret-backed env values
   MEM0_API_KEY:
-    secretName: secret-mem0-mcp-env
+    secretName: secret-mem0-env
     secretKey: MEM0_API_KEY
 
   # You can mix both forms in the same map

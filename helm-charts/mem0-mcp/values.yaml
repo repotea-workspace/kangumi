@@ -51,14 +51,35 @@ tolerations: []
 affinity: {}
 
 env:
+  # HTTP listen port used by the streamable MCP endpoint.
   PORT: "8081"
-  MEM0_DEFAULT_USER_ID: mem0-mcp
-  MEM0_ENABLE_GRAPH_DEFAULT: "false"
-  MEM0_API_KEY:
-    secretName: secret-mem0-mcp-env
-    secretKey: MEM0_API_KEY
 
+  # # Default user_id injected into Mem0 filters/writes when callers do not provide one.
+  # MEM0_DEFAULT_USER_ID: mem0-mcp
+
+  # # Enable graph memories by default. Keep false unless graph behavior is desired broadly.
+  # MEM0_ENABLE_GRAPH_DEFAULT: "false"
+
+  # # Required secret-backed env example.
+  # # The env map supports both of these forms:
+  # #
+  # #   PLAIN_ENV: "value"
+  # #
+  # #   SECRET_ENV:
+  # #     secretName: my-secret
+  # #     secretKey: SECRET_ENV
+  # #
+  # # Upstream mem0-mcp also documents these optional env vars:
+  # # - MEM0_MCP_AGENT_MODEL: model for the bundled example agent
+  # # - HOST: bind address override for the HTTP entrypoint
+  # MEM0_API_KEY:
+  #   secretName: secret-mem0-env
+  #   secretKey: MEM0_API_KEY
+
+# Additional explicit env items appended after the env map above.
 extraEnv: []
+
+# Additional envFrom sources (Secret/ConfigMap refs).
 extraEnvFrom: []
 
 livenessProbe:
