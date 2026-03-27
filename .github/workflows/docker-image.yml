@@ -52,9 +52,9 @@ jobs:
           # - package: nubit
           #   context: docker-image/nubit
           #   build-args: ""
-          # - package: harmonytools
-          #   context: docker-image/harmonytools
-          #   build-args: ""
+          - package: harmonytools
+            context: docker-image/harmonytools
+            build-args: ""
           - package: wait-for-port
             context: docker-image/wait-for-port
             build-args: ""
