@@ -1,0 +1,17 @@
+{{- if eq (include "mem0-mcp.authProxyEnabled" .) "true" -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mem0-mcp.fullname" . }}-auth-proxy
+  labels:
+    {{- include "mem0-mcp.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: auth-proxy
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "mem0-mcp.selectorLabels" . | nindent 4 }}
+{{- end }}

@@ -4,5 +4,5 @@ description: Mem0 MCP HTTP server
 
 type: application
 
-version: 0.1.2
+version: 0.1.3
 appVersion: "0.2.1"

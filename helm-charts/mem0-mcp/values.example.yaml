@@ -21,6 +21,13 @@ service:
   type: ClusterIP
   port: 8081
 
+authProxy:
+  image:
+    repository: nginxinc/nginx-unprivileged
+    pullPolicy: IfNotPresent
+    tag: "1.29-alpine"
+  port: 8080
+
 ingress:
   enabled: true
   className: nginx
@@ -39,7 +46,7 @@ ingress:
   hosts:
     - host: mem0-mcp.example.com
       paths:
-        - path: /
+        - path: /mcp
           pathType: Prefix
   tls:
     - secretName: example-tls-secret

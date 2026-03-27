@@ -2,11 +2,6 @@
 {{- $fullName := include "mem0-mcp.fullname" . -}}
 {{- $svcPort := .Values.service.port -}}
 {{- $annotations := deepCopy .Values.ingress.annotations -}}
-{{- $authToken := .Values.ingress.auth.token | default "" -}}
-{{- $authQueryParamName := .Values.ingress.auth.queryParamName | default "token" -}}
-{{- if $authToken }}
-  {{- $_ := set $annotations "nginx.ingress.kubernetes.io/configuration-snippet" (printf "if ($arg_%s != %q) {\n  return 401;\n}" ($authQueryParamName | lower | replace "-" "_") $authToken) -}}
-{{- end }}
 {{- if and .Values.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
   {{- if not (hasKey $annotations "kubernetes.io/ingress.class") }}
   {{- $_ := set $annotations "kubernetes.io/ingress.class" .Values.ingress.className}}
@@ -55,11 +50,11 @@ spec:
             backend:
               {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
               service:
-                name: {{ $fullName }}
+                name: {{ include "mem0-mcp.ingressServiceName" $ }}
                 port:
                   number: {{ $svcPort }}
               {{- else }}
-              serviceName: {{ $fullName }}
+              serviceName: {{ include "mem0-mcp.ingressServiceName" $ }}
               servicePort: {{ $svcPort }}
               {{- end }}
           {{- end }}

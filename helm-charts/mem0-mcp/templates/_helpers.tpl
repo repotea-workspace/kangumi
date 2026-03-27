@@ -66,3 +66,21 @@ Build the image reference
 {{- printf "%s:%s" .Values.image.repository .Chart.AppVersion }}
 {{- end }}
 {{- end }}
+
+{{/*
+Whether the auth proxy sidecar should be enabled
+*/}}
+{{- define "mem0-mcp.authProxyEnabled" -}}
+{{- if .Values.ingress.auth.token }}true{{- else }}false{{- end }}
+{{- end }}
+
+{{/*
+Ingress backend service name
+*/}}
+{{- define "mem0-mcp.ingressServiceName" -}}
+{{- if eq (include "mem0-mcp.authProxyEnabled" .) "true" }}
+{{- printf "%s-auth-proxy" (include "mem0-mcp.fullname" .) }}
+{{- else }}
+{{- include "mem0-mcp.fullname" . }}
+{{- end }}
+{{- end }}
