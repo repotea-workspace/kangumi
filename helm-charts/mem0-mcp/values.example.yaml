@@ -30,6 +30,12 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  auth:
+    # Optional exact-match token check at ingress.
+    # Example clients should call:
+    #   https://mem0-mcp.example.com/?token=replace-me
+    queryParamName: token
+    token: "replace-me"
   hosts:
     - host: mem0-mcp.example.com
       paths:

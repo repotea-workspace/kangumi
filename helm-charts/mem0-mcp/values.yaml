@@ -31,6 +31,11 @@ ingress:
   enabled: false
   className: ""
   annotations: {}
+  auth:
+    # Optional NGINX Ingress query-param-based token validation.
+    # When token is empty, requests are forwarded without auth checks.
+    queryParamName: token
+    token: ""
   hosts:
     - host: mem0-mcp.example.com
       paths:
