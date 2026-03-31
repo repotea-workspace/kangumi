@@ -1,0 +1,105 @@
+# Default values for lanhu-mcp.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/repotea-workspace/kangumi/lanhu-mcp
+  pullPolicy: IfNotPresent
+  tag: latest
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8000
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: lanhu-mcp.example.com
+      paths:
+        - path: /mcp
+          pathType: Prefix
+  tls: []
+
+resources: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+env:
+  SERVER_HOST: "0.0.0.0"
+  SERVER_PORT: "8000"
+  DATA_DIR: "/app/data"
+  HTTP_TIMEOUT: "30"
+  VIEWPORT_WIDTH: "1920"
+  VIEWPORT_HEIGHT: "1080"
+  DEBUG: "false"
+
+  # Required: Lanhu cookie copied from browser request headers.
+  # LANHU_COOKIE:
+  #   secretName: secret-lanhu-mcp-env
+  #   secretKey: LANHU_COOKIE
+
+  # Optional: Override DDS cookie. Defaults to LANHU_COOKIE upstream.
+  # DDS_COOKIE:
+  #   secretName: secret-lanhu-mcp-env
+  #   secretKey: DDS_COOKIE
+
+  # Optional: Feishu bot webhook.
+  # FEISHU_WEBHOOK_URL:
+  #   secretName: secret-lanhu-mcp-env
+  #   secretKey: FEISHU_WEBHOOK_URL
+
+extraEnv: []
+extraEnvFrom: []
+
+persistence:
+  data:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 10Gi
+    storageClass: ""
+    existingClaim: ""
+  logs:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 2Gi
+    storageClass: ""
+    existingClaim: ""
+
+livenessProbe:
+  tcpSocket:
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 20
+  timeoutSeconds: 3
+
+readinessProbe:
+  tcpSocket:
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 3

@@ -22,6 +22,8 @@ jobs:
             path: helm-charts/any-tunnel
           - package: mem0-mcp-helm
             path: helm-charts/mem0-mcp
+          - package: lanhu-mcp-helm
+            path: helm-charts/lanhu-mcp
     steps:
       - uses: actions/checkout@v6
 

@@ -14,6 +14,7 @@ Ready-to-deploy Kubernetes applications distributed via OCI registry with custom
 | -------------- | ---------------------------------------- | -------------------------------------------------------------- | ------- |
 | any-cors       | CORS-anywhere proxy service              | `oci://ghcr.io/repotea-workspace/kangumi/any-cors-helm`        | v0.1.13 |
 | dev-toolchain  | Development toolchain with Docker-in-Docker | `oci://ghcr.io/repotea-workspace/kangumi/dev-toolchain-helm` | v0.1.1  |
+| lanhu-mcp      | Lanhu MCP HTTP server                    | `oci://ghcr.io/repotea-workspace/kangumi/lanhu-mcp-helm`       | v0.1.0  |
 
 #### Installation
 
@@ -47,6 +48,7 @@ Optimized container images for various use cases:
 | [gotenberg](docker-image/gotenberg)                         | Document conversion service                   |
 | [harmonytools](docker-image/harmonytools)                   | Open Harmony tools                            |
 | [k8ops](docker-image/k8ops)                                 | Kubernetes operations utilities               |
+| [lanhu-mcp](docker-image/lanhu-mcp)                         | Lanhu MCP server image                        |
 | [mem0-mcp](docker-image/mem0-mcp)                           | Mem0 MCP server image                         |
 | [node-liveness-probe](docker-image/node-liveness-probe)     | Node health monitoring probe                  |
 | [nubit](docker-image/nubit)                                 | Nubit blockchain node                         |
