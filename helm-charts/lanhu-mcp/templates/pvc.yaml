@@ -1,35 +1,17 @@
-{{- if and .Values.persistence.data.enabled (not .Values.persistence.data.existingClaim) -}}
+{{- if and .Values.persistence.shared.enabled (not .Values.persistence.shared.existingClaim) -}}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "lanhu-mcp.dataClaimName" . }}
+  name: {{ include "lanhu-mcp.sharedClaimName" . }}
   labels:
     {{- include "lanhu-mcp.labels" . | nindent 4 }}
 spec:
   accessModes:
-    - {{ .Values.persistence.data.accessMode }}
+    - {{ .Values.persistence.shared.accessMode }}
   resources:
     requests:
-      storage: {{ .Values.persistence.data.size }}
-  {{- if .Values.persistence.data.storageClass }}
-  storageClassName: {{ .Values.persistence.data.storageClass | quote }}
-  {{- end }}
----
-{{- end }}
-{{- if and .Values.persistence.logs.enabled (not .Values.persistence.logs.existingClaim) -}}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "lanhu-mcp.logsClaimName" . }}
-  labels:
-    {{- include "lanhu-mcp.labels" . | nindent 4 }}
-spec:
-  accessModes:
-    - {{ .Values.persistence.logs.accessMode }}
-  resources:
-    requests:
-      storage: {{ .Values.persistence.logs.size }}
-  {{- if .Values.persistence.logs.storageClass }}
-  storageClassName: {{ .Values.persistence.logs.storageClass | quote }}
+      storage: {{ .Values.persistence.shared.size }}
+  {{- if .Values.persistence.shared.storageClass }}
+  storageClassName: {{ .Values.persistence.shared.storageClass | quote }}
   {{- end }}
 {{- end }}

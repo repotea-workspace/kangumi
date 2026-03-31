@@ -64,24 +64,17 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
-            {{- if .Values.persistence.data.enabled }}
-            - name: data
+            {{- if .Values.persistence.shared.enabled }}
+            - name: storage
               mountPath: /app/data
-            {{- end }}
-            {{- if .Values.persistence.logs.enabled }}
-            - name: logs
+            - name: storage
               mountPath: /app/logs
             {{- end }}
       volumes:
-        {{- if .Values.persistence.data.enabled }}
-        - name: data
+        {{- if .Values.persistence.shared.enabled }}
+        - name: storage
           persistentVolumeClaim:
-            claimName: {{ include "lanhu-mcp.dataClaimName" . }}
-        {{- end }}
-        {{- if .Values.persistence.logs.enabled }}
-        - name: logs
-          persistentVolumeClaim:
-            claimName: {{ include "lanhu-mcp.logsClaimName" . }}
+            claimName: {{ include "lanhu-mcp.sharedClaimName" . }}
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

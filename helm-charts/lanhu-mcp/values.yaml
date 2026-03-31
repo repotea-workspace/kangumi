@@ -77,16 +77,10 @@ extraEnv: []
 extraEnvFrom: []
 
 persistence:
-  data:
+  shared:
     enabled: true
     accessMode: ReadWriteOnce
-    size: 10Gi
-    storageClass: ""
-    existingClaim: ""
-  logs:
-    enabled: true
-    accessMode: ReadWriteOnce
-    size: 2Gi
+    size: 12Gi
     storageClass: ""
     existingClaim: ""
 

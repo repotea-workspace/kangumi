@@ -57,18 +57,10 @@ Create the name of the service account to use
 {{/*
 PVC names
 */}}
-{{- define "lanhu-mcp.dataClaimName" -}}
-{{- if .Values.persistence.data.existingClaim }}
-{{- .Values.persistence.data.existingClaim }}
+{{- define "lanhu-mcp.sharedClaimName" -}}
+{{- if .Values.persistence.shared.existingClaim }}
+{{- .Values.persistence.shared.existingClaim }}
 {{- else }}
-{{- printf "%s-data" (include "lanhu-mcp.fullname" .) }}
-{{- end }}
-{{- end }}
-
-{{- define "lanhu-mcp.logsClaimName" -}}
-{{- if .Values.persistence.logs.existingClaim }}
-{{- .Values.persistence.logs.existingClaim }}
-{{- else }}
-{{- printf "%s-logs" (include "lanhu-mcp.fullname" .) }}
+{{- printf "%s-storage" (include "lanhu-mcp.fullname" .) }}
 {{- end }}
 {{- end }}
