@@ -1,0 +1,17 @@
+{{- if eq (include "lanhu-mcp.authProxyEnabled" .) "true" -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "lanhu-mcp.fullname" . }}-auth-proxy
+  labels:
+    {{- include "lanhu-mcp.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: auth-proxy
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "lanhu-mcp.selectorLabels" . | nindent 4 }}
+{{- end }}

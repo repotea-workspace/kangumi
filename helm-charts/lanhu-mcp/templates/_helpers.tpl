@@ -55,6 +55,24 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
+Whether the auth proxy sidecar should be enabled
+*/}}
+{{- define "lanhu-mcp.authProxyEnabled" -}}
+{{- if .Values.ingress.auth.token }}true{{- else }}false{{- end }}
+{{- end }}
+
+{{/*
+Ingress backend service name
+*/}}
+{{- define "lanhu-mcp.ingressServiceName" -}}
+{{- if eq (include "lanhu-mcp.authProxyEnabled" .) "true" }}
+{{- printf "%s-auth-proxy" (include "lanhu-mcp.fullname" .) }}
+{{- else }}
+{{- include "lanhu-mcp.fullname" . }}
+{{- end }}
+{{- end }}
+
+{{/*
 PVC names
 */}}
 {{- define "lanhu-mcp.sharedClaimName" -}}

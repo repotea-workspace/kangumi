@@ -26,10 +26,22 @@ service:
   type: ClusterIP
   port: 8000
 
+authProxy:
+  image:
+    repository: nginxinc/nginx-unprivileged
+    pullPolicy: IfNotPresent
+    tag: "1.29-alpine"
+  port: 8080
+
 ingress:
   enabled: false
   className: ""
   annotations: {}
+  auth:
+    # Optional NGINX query-param-based token validation.
+    # This is an ingress-side gate, not MCP standard OAuth authorization.
+    queryParamName: token
+    token: ""
   hosts:
     - host: lanhu-mcp.example.com
       paths:
