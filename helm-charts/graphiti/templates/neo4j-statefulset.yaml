@@ -38,11 +38,6 @@ spec:
           env:
             - name: NEO4J_USER
               value: {{ .Values.neo4j.auth.user | quote }}
-            - name: NEO4J_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ required "neo4j.auth.existingSecret is required" .Values.neo4j.auth.existingSecret }}
-                  key: {{ .Values.neo4j.auth.passwordKey }}
             - name: NEO4J_AUTH
               {{- if .Values.neo4j.auth.authSecretKey }}
               valueFrom:
