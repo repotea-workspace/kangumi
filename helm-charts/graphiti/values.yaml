@@ -79,6 +79,9 @@ neo4j:
   auth:
     user: neo4j
     existingSecret: graphiti-secrets
+    # Secret key containing the full Neo4j auth value, for example neo4j/password.
+    authSecretKey: NEO4J_AUTH
+    # Secret key containing only the password, used by Graphiti to connect to Neo4j.
     passwordKey: NEO4J_PASSWORD
   database: neo4j
   service:
