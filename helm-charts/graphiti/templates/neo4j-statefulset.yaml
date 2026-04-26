@@ -36,17 +36,11 @@ spec:
               containerPort: {{ .Values.neo4j.service.boltPort }}
               protocol: TCP
           env:
-            - name: NEO4J_USER
-              value: {{ .Values.neo4j.auth.user | quote }}
             - name: NEO4J_AUTH
-              {{- if .Values.neo4j.auth.authSecretKey }}
               valueFrom:
                 secretKeyRef:
                   name: {{ required "neo4j.auth.existingSecret is required" .Values.neo4j.auth.existingSecret }}
-                  key: {{ .Values.neo4j.auth.authSecretKey }}
-              {{- else }}
-              value: "$(NEO4J_USER)/$(NEO4J_PASSWORD)"
-              {{- end }}
+                  key: {{ required "neo4j.auth.authSecretKey is required" .Values.neo4j.auth.authSecretKey }}
             {{- range $k, $v := .Values.neo4j.env }}
             - name: {{ $k }}
               value: {{ $v | quote }}
