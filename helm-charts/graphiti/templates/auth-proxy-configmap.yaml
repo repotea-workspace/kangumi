@@ -7,6 +7,8 @@ metadata:
     {{- include "graphiti.labels" . | nindent 4 }}
 data:
   default.conf.template: |
+    map_hash_bucket_size 128;
+
     map $http_authorization $graphiti_auth_ok {
       default 0;
       {{ printf "\"Bearer ${%s}\" 1;" .Values.ingress.auth.tokenEnvName }}
