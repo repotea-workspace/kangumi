@@ -14,6 +14,11 @@ data:
       {{ printf "\"Bearer ${%s}\" 1;" .Values.ingress.auth.tokenEnvName }}
     }
 
+    map $http_x_forwarded_proto $graphiti_forwarded_proto {
+      default $http_x_forwarded_proto;
+      "" $scheme;
+    }
+
     server {
       listen {{ .Values.authProxy.port }};
       server_name _;
@@ -34,7 +39,7 @@ data:
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto $graphiti_forwarded_proto;
         proxy_pass http://127.0.0.1:${GRAPHITI_BACKEND_PORT};
       }
     }
