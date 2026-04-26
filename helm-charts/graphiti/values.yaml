@@ -1,0 +1,132 @@
+# Default values for graphiti.
+
+replicaCount: 1
+
+image:
+  repository: zepai/knowledge-graph-mcp
+  pullPolicy: IfNotPresent
+  digest: ""
+  tag: standalone
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8000
+
+authProxy:
+  image:
+    repository: nginxinc/nginx-unprivileged
+    pullPolicy: IfNotPresent
+    tag: "1.29-alpine"
+  port: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  auth:
+    enabled: false
+    tokenEnvName: GRAPHITI_MCP_AUTH_TOKEN
+    existingSecret: ""
+    secretKey: GRAPHITI_MCP_AUTH_TOKEN
+  hosts:
+    - host: graphiti-mcp.example.com
+      paths:
+        - path: /mcp
+          pathType: Prefix
+        - path: /health
+          pathType: Prefix
+  tls: []
+
+graphiti:
+  groupId: repotea-default
+  semaphoreLimit: 2
+  config:
+    llm:
+      provider: openai
+      model: gpt-4o-mini
+      maxTokens: 4096
+      # OpenAI-compatible endpoint, for example LiteLLM: http://litellm:4000/v1.
+      apiBase: ""
+    embedder:
+      provider: openai
+      model: text-embedding-3-small
+      dimensions: 1536
+      # OpenAI-compatible embedding endpoint. Leave empty to use OpenAI directly.
+      apiBase: ""
+    database: neo4j
+
+neo4j:
+  enabled: true
+  image:
+    repository: neo4j
+    pullPolicy: IfNotPresent
+    tag: "5.26.0"
+  auth:
+    user: neo4j
+    existingSecret: graphiti-secrets
+    passwordKey: NEO4J_PASSWORD
+  database: neo4j
+  service:
+    httpPort: 7474
+    boltPort: 7687
+  persistence:
+    enabled: true
+    storageClassName: ""
+    size: 20Gi
+  env:
+    NEO4J_server_memory_heap_initial__size: 512m
+    NEO4J_server_memory_heap_max__size: 1G
+    NEO4J_server_memory_pagecache_size: 512m
+  resources: {}
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+
+resources: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+env:
+  CONFIG_PATH: /app/mcp/config/config.yaml
+
+extraEnv: []
+extraEnvFrom: []
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 20
+  timeoutSeconds: 5
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5

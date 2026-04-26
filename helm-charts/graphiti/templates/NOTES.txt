@@ -1,0 +1,7 @@
+Graphiti MCP is available inside the cluster at:
+
+  http://{{ include "graphiti.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}/mcp/
+
+Health check:
+
+  http://{{ include "graphiti.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}/health

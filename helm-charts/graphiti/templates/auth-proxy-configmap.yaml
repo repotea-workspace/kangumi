@@ -1,0 +1,39 @@
+{{- if eq (include "graphiti.authProxyEnabled" .) "true" -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "graphiti.fullname" . }}-auth-proxy
+  labels:
+    {{- include "graphiti.labels" . | nindent 4 }}
+data:
+  default.conf.template: |
+    map $http_authorization $graphiti_auth_ok {
+      default 0;
+      {{ printf "\"Bearer ${%s}\" 1;" .Values.ingress.auth.tokenEnvName }}
+    }
+
+    server {
+      listen {{ .Values.authProxy.port }};
+      server_name _;
+
+      error_page 401 = @unauthorized;
+
+      location @unauthorized {
+        internal;
+        add_header WWW-Authenticate 'Bearer realm="graphiti"' always;
+        return 401;
+      }
+
+      location / {
+        if ($graphiti_auth_ok = 0) {
+          return 401;
+        }
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_pass http://127.0.0.1:${GRAPHITI_BACKEND_PORT};
+      }
+    }
+{{- end }}

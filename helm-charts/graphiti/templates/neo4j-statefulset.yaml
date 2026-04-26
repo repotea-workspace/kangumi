@@ -1,0 +1,90 @@
+{{- if .Values.neo4j.enabled -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "graphiti.neo4jName" . }}
+  labels:
+    {{- include "graphiti.neo4jLabels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "graphiti.neo4jHeadlessName" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "graphiti.neo4jSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.neo4j.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "graphiti.neo4jSelectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.neo4j.podSecurityContext | nindent 8 }}
+      containers:
+        - name: neo4j
+          securityContext:
+            {{- toYaml .Values.neo4j.securityContext | nindent 12 }}
+          image: {{ include "graphiti.neo4jImage" . | quote }}
+          imagePullPolicy: {{ .Values.neo4j.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.neo4j.service.httpPort }}
+              protocol: TCP
+            - name: bolt
+              containerPort: {{ .Values.neo4j.service.boltPort }}
+              protocol: TCP
+          env:
+            - name: NEO4J_USER
+              value: {{ .Values.neo4j.auth.user | quote }}
+            - name: NEO4J_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "neo4j.auth.existingSecret is required" .Values.neo4j.auth.existingSecret }}
+                  key: {{ .Values.neo4j.auth.passwordKey }}
+            - name: NEO4J_AUTH
+              value: "$(NEO4J_USER)/$(NEO4J_PASSWORD)"
+            {{- range $k, $v := .Values.neo4j.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            {{- toYaml .Values.neo4j.resources | nindent 12 }}
+      {{- if not .Values.neo4j.persistence.enabled }}
+      volumes:
+        - name: data
+          emptyDir: {}
+      {{- end }}
+  {{- if .Values.neo4j.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        {{- with .Values.neo4j.persistence.storageClassName }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.neo4j.persistence.size }}
+  {{- end }}
+{{- end }}

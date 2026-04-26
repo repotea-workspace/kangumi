@@ -1,0 +1,17 @@
+{{- if eq (include "graphiti.authProxyEnabled" .) "true" -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "graphiti.fullname" . }}-auth-proxy
+  labels:
+    {{- include "graphiti.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: auth-proxy
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "graphiti.selectorLabels" . | nindent 4 }}
+{{- end }}

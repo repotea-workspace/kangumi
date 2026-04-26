@@ -24,6 +24,8 @@ jobs:
             path: helm-charts/mem0-mcp
           - package: lanhu-mcp-helm
             path: helm-charts/lanhu-mcp
+          - package: graphiti-helm
+            path: helm-charts/graphiti
     steps:
       - uses: actions/checkout@v6
 
