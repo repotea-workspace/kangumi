@@ -53,6 +53,10 @@ spec:
               value: {{ .Values.graphiti.groupId | quote }}
             - name: SEMAPHORE_LIMIT
               value: {{ .Values.graphiti.semaphoreLimit | quote }}
+            {{- with .Values.graphiti.config.llm.apiBase }}
+            - name: OPENAI_BASE_URL
+              value: {{ . | quote }}
+            {{- end }}
             {{- range $k, $v := .Values.env }}
             {{- if and (kindIs "map" $v) (hasKey $v "secretName") (hasKey $v "secretKey") }}
             - name: {{ $k }}
