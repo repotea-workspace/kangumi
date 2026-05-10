@@ -12,6 +12,9 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+command: []
+args: []
+
 serviceAccount:
   create: false
   annotations: {}
