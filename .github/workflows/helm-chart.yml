@@ -26,6 +26,8 @@ jobs:
             path: helm-charts/lanhu-mcp
           - package: graphiti-helm
             path: helm-charts/graphiti
+          - package: obsidian-fns-helm
+            path: helm-charts/obsidian-fns
     steps:
       - uses: actions/checkout@v6
 

@@ -1,0 +1,211 @@
+replicaCount: 1
+
+image:
+  repository: haierkeys/fast-note-sync-service
+  pullPolicy: IfNotPresent
+  digest: ""
+  tag: "2.14.4"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 9000
+
+config:
+  mountPath: /fast-note-sync/config
+  templateMountPath: /fast-note-sync/config-template
+  secretName: ""
+  authTokenKeySecretKey: auth-token-key
+  shareTokenKeySecretKey: share-token-key
+  configYaml: |
+    server:
+      run-mode: release
+      http-port: ":9000"
+      read-timeout: 60
+      write-timeout: 60
+      private-http-listen: ""
+      mcp-sse-ping-interval: 30
+      webgui-port: ""
+      share-port: ""
+      share-base-url: ""
+      ext-api-url: ""
+    app:
+      default-page-size: 10
+      max-page-size: 100
+      default-context-timeout: 60
+      temp-path: storage/temp
+      is-return-sussess: false
+      soft-delete-retention-time: "7d"
+      sync-log-retention-time: "30d"
+      history-keep-versions: 100
+      history-save-delay: "10s"
+      upload-session-timeout: "1d"
+      file-chunk-size: "512KB"
+      download-session-timeout: "1h"
+      worker-pool-max-workers: 100
+      worker-pool-queue-size: 1000
+      write-queue-capacity: 1000
+      write-queue-timeout: "30s"
+      write-queue-idle-time: "10m"
+      ws-read-max-payload-size: "128MB"
+      ws-write-max-payload-size: "128MB"
+      ws-parallel-enabled: true
+      ws-parallel-golimit: 5
+      ws-check-utf8-enabled: true
+      ws-compression-enabled: true
+      ws-compression-level: 1
+      ws-compression-threshold: 512
+      log-save-fileurl: storage/logs/
+      log-file: log.log
+      pull-source: auto
+    security:
+      auth-token-key: "__FNS_AUTH_TOKEN_KEY__"
+      token-expiry: "365d"
+      share-token-key: "__FNS_SHARE_TOKEN_KEY__"
+      share-token-expiry: "30d"
+    database:
+      type: sqlite
+      path: storage/database/db.sqlite3
+      host:
+      port:
+      username:
+      password: ""
+      name:
+      ssl-mode:
+      table-prefix: ""
+      schema:
+      auto-migrate: true
+      charset:
+      parse-time: true
+      max-open-conns: 100
+      max-idle-conns: 10
+      conn-max-lifetime: "30m"
+      conn-max-idle-time: "10m"
+      enable-write-queue: true
+      max-write-concurrency: 0
+    user-database:
+      type:
+      path:
+      host:
+      port:
+      username:
+      password: ""
+      name:
+      ssl-mode:
+      table-prefix: ""
+      schema: public
+      auto-migrate: true
+      charset:
+      parse-time: true
+      max-open-conns: 100
+      max-idle-conns: 10
+      conn-max-lifetime: "30m"
+      conn-max-idle-time: "10m"
+      enable-write-queue: true
+      max-write-concurrency: 0
+    log:
+      level: warn
+      file: storage/logs/log.log
+      production: true
+    user:
+      register-is-enable: true
+      admin-uid: 0
+    tracer:
+      enabled: true
+      header: "X-Trace-ID"
+    short-link:
+      base-url: "https://sink.cool"
+      api-key: "SinkCool"
+      password: ""
+      cloaking: false
+    storage:
+      local-fs:
+        is-enable: false
+        httpfs-is-enable: true
+        save-path: "storage/uploads"
+      aliyun-oss:
+        is-enable: true
+      aws-s3:
+        is-enable: true
+      cloudflare-r2:
+        is-enable: true
+      minio:
+        is-enable: true
+      webdav:
+        is-enable: true
+    git:
+      name: "FNS Service"
+      email: "fns@email.com"
+    webgui:
+      font-set: "local"
+    ngrok:
+      enabled: false
+      auth-token: ""
+      domain: ""
+    cloudflare:
+      enabled: false
+      token: ""
+      log-enabled: false
+
+persistence:
+  enabled: true
+  storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 20Gi
+  mountPath: /fast-note-sync/storage
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: obsidian-fns.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+livenessProbe:
+  httpGet:
+    path: /api/health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 6
+
+readinessProbe:
+  httpGet:
+    path: /api/health
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6

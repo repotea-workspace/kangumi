@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "obsidian-fns.fullname" . }}
+  labels:
+    {{- include "obsidian-fns.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "obsidian-fns.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "obsidian-fns.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "obsidian-fns.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: obsidian-fns
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: {{ include "obsidian-fns.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          env:
+            - name: FNS_AUTH_TOKEN_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "config.secretName is required" .Values.config.secretName }}
+                  key: {{ .Values.config.authTokenKeySecretKey }}
+            - name: FNS_SHARE_TOKEN_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "config.secretName is required" .Values.config.secretName }}
+                  key: {{ .Values.config.shareTokenKeySecretKey }}
+          command:
+            - /bin/sh
+            - -ec
+          args:
+            - |
+              sed \
+                -e "s|__FNS_AUTH_TOKEN_KEY__|${FNS_AUTH_TOKEN_KEY}|g" \
+                -e "s|__FNS_SHARE_TOKEN_KEY__|${FNS_SHARE_TOKEN_KEY}|g" \
+                {{ .Values.config.templateMountPath }}/config.yaml > {{ .Values.config.mountPath }}/config.yaml
+              exec /entrypoint.sh
+          volumeMounts:
+            - name: storage
+              mountPath: {{ .Values.persistence.mountPath }}
+            - name: config-template
+              mountPath: {{ .Values.config.templateMountPath }}
+              readOnly: true
+            - name: config
+              mountPath: {{ .Values.config.mountPath }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: storage
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "obsidian-fns.fullname" . }}-storage
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: config
+          emptyDir: {}
+        - name: config-template
+          configMap:
+            name: {{ include "obsidian-fns.fullname" . }}-config
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
