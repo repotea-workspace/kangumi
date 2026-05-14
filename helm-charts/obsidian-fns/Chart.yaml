@@ -2,5 +2,5 @@ apiVersion: v2
 name: obsidian-fns-helm
 description: Fast Note Sync Service for Obsidian
 type: application
-version: 0.1.0
-appVersion: "2.14.4"
+version: 0.1.1
+appVersion: "3.0.0"

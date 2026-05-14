@@ -4,7 +4,7 @@ image:
   repository: haierkeys/fast-note-sync-service
   pullPolicy: IfNotPresent
   digest: ""
-  tag: "2.14.4"
+  tag: "3.0.0"
 
 imagePullSecrets: []
 nameOverride: ""
