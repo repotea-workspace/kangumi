@@ -6,6 +6,15 @@ image:
   digest: ""
   tag: "latest"
 
+agent:
+  codex: false
+
+agentImages:
+  codex:
+    repository: ghcr.io/repotea-workspace/kangumi/opendesign
+    digest: ""
+    tag: "0.7.0-codex"
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""

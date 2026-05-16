@@ -1,6 +1,8 @@
 ARG NODE_IMAGE=docker.io/library/node:24-alpine
 ARG RUNTIME_IMAGE=docker.io/library/node:24-alpine
 ARG OPEN_DESIGN_REF=open-design-v0.7.0
+ARG CODEX_VERSION=0.130.0
+ARG INSTALL_CODEX=false
 
 FROM ${NODE_IMAGE} AS build
 
@@ -64,9 +66,17 @@ RUN pnpm --filter @open-design/daemon build && \
 
 FROM ${RUNTIME_IMAGE}
 
+ARG CODEX_VERSION
+ARG INSTALL_CODEX
+
 RUN apk add --no-cache tini && \
     addgroup -S -g 1001 open-design && \
     adduser -S -D -H -u 1001 -G open-design open-design
+
+RUN if [ "${INSTALL_CODEX}" = "true" ]; then \
+      npm install -g "@openai/codex@${CODEX_VERSION}" && \
+      npm cache clean --force; \
+    fi
 
 WORKDIR /app
 COPY --from=build --chown=open-design:open-design /app/deploy/daemon ./apps/daemon
@@ -86,6 +96,7 @@ ENV NODE_OPTIONS=--max-old-space-size=192
 ENV OD_BIND_HOST=0.0.0.0
 ENV OD_PORT=7456
 ENV OD_APP_VERSION=0.7.0
+ENV HOME=/app/.od/home
 
 EXPOSE 7456
 
