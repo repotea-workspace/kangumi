@@ -13,7 +13,6 @@ env:
   IMAGE_NAME: opendesign
   OPEN_DESIGN_REF: open-design-v0.7.0
   OPEN_DESIGN_VERSION: 0.7.0
-  CODEX_VERSION: 0.130.0
 
 jobs:
   build:
@@ -48,17 +47,3 @@ jobs:
             ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}:latest
           build-args: |
             OPEN_DESIGN_REF=${{ env.OPEN_DESIGN_REF }}
-
-      - name: Build & Push Docker image with Codex
-        uses: docker/build-push-action@v6
-        with:
-          push: true
-          context: docker-image/opendesign
-          tags: |
-            ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}:${{ env.OPEN_DESIGN_VERSION }}-codex
-            ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}:sha-${{ env.SHA }}-codex
-            ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}:codex-latest
-          build-args: |
-            OPEN_DESIGN_REF=${{ env.OPEN_DESIGN_REF }}
-            INSTALL_CODEX=true
-            CODEX_VERSION=${{ env.CODEX_VERSION }}

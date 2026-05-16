@@ -8,12 +8,14 @@ image:
 
 agent:
   codex: false
-
-agentImages:
-  codex:
-    repository: ghcr.io/repotea-workspace/kangumi/opendesign
-    digest: ""
-    tag: "0.7.0-codex"
+  installPath: /opt/opendesign-agents
+  home: /app/.od/home
+  codexPackage: "@openai/codex"
+  codexVersion: "0.130.0"
+  installerImage:
+    repository: docker.io/library/node
+    pullPolicy: IfNotPresent
+    tag: "24-alpine"
 
 imagePullSecrets: []
 nameOverride: ""

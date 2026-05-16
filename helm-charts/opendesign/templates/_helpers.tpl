@@ -58,15 +58,18 @@ Create the name of the service account to use
 Create the image reference, preferring digest when set.
 */}}
 {{- define "opendesign.image" -}}
-{{- $image := .Values.image -}}
-{{- if .Values.agent.codex -}}
-{{- $image = .Values.agentImages.codex -}}
-{{- end -}}
-{{- if $image.digest }}
-{{- printf "%s@%s" $image.repository $image.digest }}
+{{- if .Values.image.digest }}
+{{- printf "%s@%s" .Values.image.repository .Values.image.digest }}
 {{- else }}
-{{- printf "%s:%s" $image.repository ($image.tag | default .Chart.AppVersion) }}
+{{- printf "%s:%s" .Values.image.repository (.Values.image.tag | default .Chart.AppVersion) }}
 {{- end }}
+{{- end }}
+
+{{/*
+Create the agent installer image reference.
+*/}}
+{{- define "opendesign.agentInstallerImage" -}}
+{{- printf "%s:%s" .Values.agent.installerImage.repository .Values.agent.installerImage.tag }}
 {{- end }}
 
 {{/*

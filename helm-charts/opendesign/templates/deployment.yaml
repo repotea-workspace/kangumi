@@ -27,6 +27,23 @@ spec:
       serviceAccountName: {{ include "opendesign.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.agent.codex }}
+      initContainers:
+        - name: install-codex
+          image: "{{ include "opendesign.agentInstallerImage" . }}"
+          imagePullPolicy: {{ .Values.agent.installerImage.pullPolicy }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              npm install --prefix {{ .Values.agent.installPath | quote }} {{ printf "%s@%s" .Values.agent.codexPackage .Values.agent.codexVersion | quote }}
+              mkdir -p {{ printf "%s/bin" .Values.agent.installPath | quote }}
+              ln -sf ../node_modules/.bin/codex {{ printf "%s/bin/codex" .Values.agent.installPath | quote }}
+              {{ printf "%s/bin/codex" .Values.agent.installPath | quote }} --version
+          volumeMounts:
+            - name: agents
+              mountPath: {{ .Values.agent.installPath }}
+      {{- end }}
       containers:
         - name: opendesign
           securityContext:
@@ -50,6 +67,12 @@ spec:
               value: {{ $v | quote }}
             {{- end }}
             {{- end }}
+            {{- if .Values.agent.codex }}
+            - name: PATH
+              value: {{ printf "%s/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" .Values.agent.installPath | quote }}
+            - name: HOME
+              value: {{ .Values.agent.home | quote }}
+            {{- end }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -72,6 +95,11 @@ spec:
             - name: tmp
               mountPath: {{ .Values.tmpfs.mountPath }}
             {{- end }}
+            {{- if .Values.agent.codex }}
+            - name: agents
+              mountPath: {{ .Values.agent.installPath }}
+              readOnly: true
+            {{- end }}
       volumes:
         {{- if .Values.persistence.enabled }}
         - name: storage
@@ -80,6 +108,10 @@ spec:
         {{- end }}
         {{- if .Values.tmpfs.enabled }}
         - name: tmp
+          emptyDir: {}
+        {{- end }}
+        {{- if .Values.agent.codex }}
+        - name: agents
           emptyDir: {}
         {{- end }}
       {{- with .Values.nodeSelector }}
