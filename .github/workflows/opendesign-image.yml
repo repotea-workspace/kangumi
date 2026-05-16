@@ -1,0 +1,49 @@
+name: Publish Open Design Image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docker-image/opendesign/**
+      - .github/workflows/opendesign-image.yml
+  workflow_dispatch:
+
+env:
+  DOCKER_REGISTRY: ghcr.io
+  IMAGE_NAME: opendesign
+  OPEN_DESIGN_REF: open-design-v0.7.0
+  OPEN_DESIGN_VERSION: 0.7.0
+
+jobs:
+  build:
+    name: Build Open Design image
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: benjlevesque/short-sha@v3.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ${{ env.DOCKER_REGISTRY }}
+
+      - name: Build & Push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          context: docker-image/opendesign
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}:${{ env.OPEN_DESIGN_VERSION }}
+            ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}:sha-${{ env.SHA }}
+            ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}:latest
+          build-args: |
+            OPEN_DESIGN_REF=${{ env.OPEN_DESIGN_REF }}
