@@ -1,0 +1,11 @@
+Open Design has been installed.
+
+{{- if .Values.ingress.enabled }}
+Ingress:
+{{- range .Values.ingress.hosts }}
+  https://{{ .host }}
+{{- end }}
+{{- else }}
+Port-forward:
+  kubectl port-forward svc/{{ include "opendesign.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+{{- end }}

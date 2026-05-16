@@ -1,0 +1,6 @@
+apiVersion: v2
+name: opendesign-helm
+description: Open Design web and daemon runtime
+type: application
+version: 0.1.0
+appVersion: "0.7.0"
