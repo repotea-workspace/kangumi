@@ -28,6 +28,8 @@ jobs:
             path: helm-charts/graphiti
           - package: obsidian-fns-helm
             path: helm-charts/obsidian-fns
+          - package: opendesign-helm
+            path: helm-charts/opendesign
     steps:
       - uses: actions/checkout@v6
 
