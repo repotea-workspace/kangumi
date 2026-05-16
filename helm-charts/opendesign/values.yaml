@@ -17,6 +17,8 @@ agent:
     pullPolicy: IfNotPresent
     tag: "24-alpine"
 
+agents: []
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""

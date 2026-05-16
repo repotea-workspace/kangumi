@@ -1,5 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
+{{- $agents := .Values.agents | default list }}
+{{- $legacyCodex := .Values.agent.codex | default false }}
+{{- $hasAgentInstallers := or $legacyCodex (gt (len $agents) 0) }}
 metadata:
   name: {{ include "opendesign.fullname" . }}
   labels:
@@ -27,8 +30,9 @@ spec:
       serviceAccountName: {{ include "opendesign.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      {{- if .Values.agent.codex }}
+      {{- if $hasAgentInstallers }}
       initContainers:
+        {{- if $legacyCodex }}
         - name: install-codex
           image: "{{ include "opendesign.agentInstallerImage" . }}"
           imagePullPolicy: {{ .Values.agent.installerImage.pullPolicy }}
@@ -43,6 +47,30 @@ spec:
           volumeMounts:
             - name: agents
               mountPath: {{ .Values.agent.installPath }}
+        {{- end }}
+        {{- range $index, $agent := $agents }}
+        {{- if eq $agent.type "codex" }}
+        {{- $installPath := default "/opt/opendesign-agents/codex" $agent.installPath }}
+        {{- $installerImage := default "docker.io/library/node:24-alpine" $agent.installerImage }}
+        {{- $pullPolicy := default "IfNotPresent" $agent.pullPolicy }}
+        {{- $package := default "@openai/codex" $agent.package }}
+        {{- $version := default "0.130.0" $agent.version }}
+        - name: {{ printf "install-codex-%d" $index }}
+          image: {{ $installerImage | quote }}
+          imagePullPolicy: {{ $pullPolicy }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              npm install --prefix {{ $installPath | quote }} {{ printf "%s@%s" $package $version | quote }}
+              mkdir -p {{ printf "%s/bin" $installPath | quote }}
+              ln -sf ../node_modules/.bin/codex {{ printf "%s/bin/codex" $installPath | quote }}
+              {{ printf "%s/bin/codex" $installPath | quote }} --version
+          volumeMounts:
+            - name: agents
+              mountPath: {{ default "/opt/opendesign-agents" $agent.volumeMountPath }}
+        {{- end }}
+        {{- end }}
       {{- end }}
       containers:
         - name: opendesign
@@ -67,11 +95,21 @@ spec:
               value: {{ $v | quote }}
             {{- end }}
             {{- end }}
-            {{- if .Values.agent.codex }}
+            {{- if $legacyCodex }}
             - name: PATH
               value: {{ printf "%s/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" .Values.agent.installPath | quote }}
             - name: HOME
               value: {{ .Values.agent.home | quote }}
+            {{- end }}
+            {{- range $agent := $agents }}
+            {{- if eq $agent.type "codex" }}
+            {{- $installPath := default "/opt/opendesign-agents/codex" $agent.installPath }}
+            {{- $home := default "/app/.od/agents/codex" $agent.home }}
+            - name: PATH
+              value: {{ printf "%s/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" $installPath | quote }}
+            - name: HOME
+              value: {{ $home | quote }}
+            {{- end }}
             {{- end }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
@@ -95,9 +133,9 @@ spec:
             - name: tmp
               mountPath: {{ .Values.tmpfs.mountPath }}
             {{- end }}
-            {{- if .Values.agent.codex }}
+            {{- if $hasAgentInstallers }}
             - name: agents
-              mountPath: {{ .Values.agent.installPath }}
+              mountPath: /opt/opendesign-agents
               readOnly: true
             {{- end }}
       volumes:
@@ -110,7 +148,7 @@ spec:
         - name: tmp
           emptyDir: {}
         {{- end }}
-        {{- if .Values.agent.codex }}
+        {{- if $hasAgentInstallers }}
         - name: agents
           emptyDir: {}
         {{- end }}
