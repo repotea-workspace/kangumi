@@ -42,7 +42,17 @@ spec:
             - |
               npm install --prefix {{ .Values.agent.installPath | quote }} {{ printf "%s@%s" .Values.agent.codexPackage .Values.agent.codexVersion | quote }}
               mkdir -p {{ printf "%s/bin" .Values.agent.installPath | quote }}
-              ln -sf ../node_modules/.bin/codex {{ printf "%s/bin/codex" .Values.agent.installPath | quote }}
+              ln -sf ../node_modules/.bin/codex {{ printf "%s/bin/codex-real" .Values.agent.installPath | quote }}
+              printf '%s\n' \
+                '#!/bin/sh' \
+                'set -e' \
+                'self_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"' \
+                'if [ "$1" = "exec" ] && [ "${CODEX_BYPASS_SANDBOX:-false}" = "true" ]; then' \
+                '  exec "$self_dir/codex-real" "$@" --dangerously-bypass-approvals-and-sandbox' \
+                'fi' \
+                'exec "$self_dir/codex-real" "$@"' \
+                > {{ printf "%s/bin/codex" .Values.agent.installPath | quote }}
+              chmod +x {{ printf "%s/bin/codex" .Values.agent.installPath | quote }}
               {{ printf "%s/bin/codex" .Values.agent.installPath | quote }} --version
           volumeMounts:
             - name: agents
@@ -55,6 +65,7 @@ spec:
         {{- $pullPolicy := default "IfNotPresent" $agent.pullPolicy }}
         {{- $package := default "@openai/codex" $agent.package }}
         {{- $version := default "0.130.0" $agent.version }}
+        {{- $bypassSandbox := default true $agent.bypassSandbox }}
         - name: {{ printf "install-codex-%d" $index }}
           image: {{ $installerImage | quote }}
           imagePullPolicy: {{ $pullPolicy }}
@@ -64,7 +75,17 @@ spec:
             - |
               npm install --prefix {{ $installPath | quote }} {{ printf "%s@%s" $package $version | quote }}
               mkdir -p {{ printf "%s/bin" $installPath | quote }}
-              ln -sf ../node_modules/.bin/codex {{ printf "%s/bin/codex" $installPath | quote }}
+              ln -sf ../node_modules/.bin/codex {{ printf "%s/bin/codex-real" $installPath | quote }}
+              printf '%s\n' \
+                '#!/bin/sh' \
+                'set -e' \
+                'self_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"' \
+                'if [ "$1" = "exec" ] && [ "${CODEX_BYPASS_SANDBOX:-false}" = "true" ]; then' \
+                '  exec "$self_dir/codex-real" "$@" --dangerously-bypass-approvals-and-sandbox' \
+                'fi' \
+                'exec "$self_dir/codex-real" "$@"' \
+                > {{ printf "%s/bin/codex" $installPath | quote }}
+              chmod +x {{ printf "%s/bin/codex" $installPath | quote }}
               {{ printf "%s/bin/codex" $installPath | quote }} --version
           volumeMounts:
             - name: agents
@@ -100,15 +121,20 @@ spec:
               value: {{ printf "%s/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" .Values.agent.installPath | quote }}
             - name: HOME
               value: {{ .Values.agent.home | quote }}
+            - name: CODEX_BYPASS_SANDBOX
+              value: {{ .Values.agent.codexBypassSandbox | quote }}
             {{- end }}
             {{- range $agent := $agents }}
             {{- if eq $agent.type "codex" }}
             {{- $installPath := default "/opt/opendesign-agents/codex" $agent.installPath }}
             {{- $home := default "/app/.od/agents/codex" $agent.home }}
+            {{- $bypassSandbox := default true $agent.bypassSandbox }}
             - name: PATH
               value: {{ printf "%s/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" $installPath | quote }}
             - name: HOME
               value: {{ $home | quote }}
+            - name: CODEX_BYPASS_SANDBOX
+              value: {{ $bypassSandbox | quote }}
             {{- end }}
             {{- end }}
             {{- with .Values.extraEnv }}

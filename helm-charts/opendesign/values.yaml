@@ -12,6 +12,7 @@ agent:
   home: /app/.od/home
   codexPackage: "@openai/codex"
   codexVersion: "0.130.0"
+  codexBypassSandbox: true
   installerImage:
     repository: docker.io/library/node
     pullPolicy: IfNotPresent
