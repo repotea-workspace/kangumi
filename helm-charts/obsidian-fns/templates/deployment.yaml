@@ -49,6 +49,13 @@ spec:
                 secretKeyRef:
                   name: {{ required "config.secretName is required" .Values.config.secretName }}
                   key: {{ .Values.config.shareTokenKeySecretKey }}
+            {{- if .Values.config.stytchSecretSecretKey }}
+            - name: FNS_STYTCH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "config.secretName is required" .Values.config.secretName }}
+                  key: {{ .Values.config.stytchSecretSecretKey }}
+            {{- end }}
           command:
             - /bin/sh
             - -ec
@@ -57,6 +64,9 @@ spec:
               sed \
                 -e "s|__FNS_AUTH_TOKEN_KEY__|${FNS_AUTH_TOKEN_KEY}|g" \
                 -e "s|__FNS_SHARE_TOKEN_KEY__|${FNS_SHARE_TOKEN_KEY}|g" \
+                {{- if .Values.config.stytchSecretSecretKey }}
+                -e "s|__FNS_STYTCH_SECRET__|${FNS_STYTCH_SECRET}|g" \
+                {{- end }}
                 {{ .Values.config.templateMountPath }}/config.yaml > {{ .Values.config.mountPath }}/config.yaml
               exec /entrypoint.sh
           volumeMounts:

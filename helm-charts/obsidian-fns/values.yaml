@@ -31,6 +31,7 @@ config:
   secretName: ""
   authTokenKeySecretKey: auth-token-key
   shareTokenKeySecretKey: share-token-key
+  stytchSecretSecretKey: ""
   configYaml: |
     server:
       run-mode: release
