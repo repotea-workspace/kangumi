@@ -91,6 +91,25 @@ spec:
             - name: agents
               mountPath: {{ default "/opt/opendesign-agents" $agent.volumeMountPath }}
         {{- end }}
+        {{- if eq $agent.type "agent-browser" }}
+        {{- $installPath := default "/opt/opendesign-agents/agent-browser" $agent.installPath }}
+        {{- $installerImage := default "docker.io/library/node:24-alpine" $agent.installerImage }}
+        {{- $pullPolicy := default "IfNotPresent" $agent.pullPolicy }}
+        {{- $package := default "agent-browser" $agent.package }}
+        {{- $version := default "0.27.0" $agent.version }}
+        - name: {{ printf "install-agent-browser-%d" $index }}
+          image: {{ $installerImage | quote }}
+          imagePullPolicy: {{ $pullPolicy }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              npm install --prefix {{ $installPath | quote }} {{ printf "%s@%s" $package $version | quote }}
+              {{ printf "%s/node_modules/.bin/agent-browser" $installPath | quote }} --version
+          volumeMounts:
+            - name: agents
+              mountPath: {{ default "/opt/opendesign-agents" $agent.volumeMountPath }}
+        {{- end }}
         {{- end }}
       {{- end }}
       containers:
@@ -130,11 +149,18 @@ spec:
             {{- $home := default "/app/.od/agents/codex" $agent.home }}
             {{- $bypassSandbox := default true $agent.bypassSandbox }}
             - name: PATH
-              value: {{ printf "%s/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" $installPath | quote }}
+              value: {{ printf "%s/bin:/opt/opendesign-agents/agent-browser/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" $installPath | quote }}
             - name: HOME
               value: {{ $home | quote }}
             - name: CODEX_BYPASS_SANDBOX
               value: {{ $bypassSandbox | quote }}
+            {{- end }}
+            {{- if eq $agent.type "agent-browser" }}
+            {{- $home := default "/app/.od/agents/agent-browser" $agent.home }}
+            - name: AGENT_BROWSER_HOME
+              value: {{ $home | quote }}
+            - name: AGENT_BROWSER_AUTO_CONNECT
+              value: "1"
             {{- end }}
             {{- end }}
             {{- with .Values.extraEnv }}
@@ -164,6 +190,31 @@ spec:
               mountPath: /opt/opendesign-agents
               readOnly: true
             {{- end }}
+        {{- range $agent := $agents }}
+        {{- if eq $agent.type "agent-browser" }}
+        {{- $browserImage := default "mcr.microsoft.com/playwright:v1.57.0-noble" $agent.browserImage }}
+        {{- $browserPullPolicy := default "IfNotPresent" $agent.browserPullPolicy }}
+        - name: agent-browser-chrome
+          image: {{ $browserImage | quote }}
+          imagePullPolicy: {{ $browserPullPolicy }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              chrome="$(find /ms-playwright -path '*/chrome-linux*/chrome' -type f | head -1)"
+              exec "$chrome" \
+                --headless=new \
+                --no-sandbox \
+                --disable-dev-shm-usage \
+                --remote-debugging-address=0.0.0.0 \
+                --remote-debugging-port=9223 \
+                about:blank
+          ports:
+            - name: cdp
+              containerPort: 9223
+              protocol: TCP
+        {{- end }}
+        {{- end }}
       volumes:
         {{- if .Values.persistence.enabled }}
         - name: storage
