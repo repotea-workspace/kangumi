@@ -194,6 +194,7 @@ spec:
         {{- if eq $agent.type "agent-browser" }}
         {{- $browserImage := default "mcr.microsoft.com/playwright:v1.57.0-noble" $agent.browserImage }}
         {{- $browserPullPolicy := default "IfNotPresent" $agent.browserPullPolicy }}
+        {{- $browserPort := default 9222 $agent.browserPort }}
         - name: agent-browser-chrome
           image: {{ $browserImage | quote }}
           imagePullPolicy: {{ $browserPullPolicy }}
@@ -207,11 +208,11 @@ spec:
                 --no-sandbox \
                 --disable-dev-shm-usage \
                 --remote-debugging-address=0.0.0.0 \
-                --remote-debugging-port=9223 \
+                --remote-debugging-port={{ $browserPort }} \
                 about:blank
           ports:
             - name: cdp
-              containerPort: 9223
+              containerPort: {{ $browserPort }}
               protocol: TCP
         {{- end }}
         {{- end }}
