@@ -73,8 +73,16 @@ spec:
                   name: {{ include "kanbn.secretName" . }}
                   key: {{ .Values.secret.betterAuthSecretKey }}
             {{- range $k, $v := .Values.env }}
+            {{- if and (kindIs "map" $v) (hasKey $v "secretName") (hasKey $v "secretKey") }}
+            - name: {{ $k }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $v.secretName }}
+                  key: {{ $v.secretKey }}
+            {{- else }}
             - name: {{ $k }}
               value: {{ $v | quote }}
+            {{- end }}
             {{- end }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
