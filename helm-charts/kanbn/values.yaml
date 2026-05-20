@@ -8,7 +8,7 @@ image:
 migrateImage:
   repository: ghcr.io/kanbn/kan-migrate
   pullPolicy: IfNotPresent
-  tag: ""
+  tag: "latest"
 
 imagePullSecrets: []
 nameOverride: ""
