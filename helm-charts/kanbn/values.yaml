@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: ghcr.io/kanbn/kan
   pullPolicy: IfNotPresent
-  tag: ""
+  tag: "latest"
 
 migrateImage:
   repository: ghcr.io/kanbn/kan-migrate
