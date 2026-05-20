@@ -1,0 +1,11 @@
+Kan has been installed.
+
+{{- if .Values.ingress.enabled }}
+Ingress:
+{{- range .Values.ingress.hosts }}
+  https://{{ .host }}
+{{- end }}
+{{- else }}
+Port-forward:
+  kubectl port-forward svc/{{ include "kanbn.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+{{- end }}

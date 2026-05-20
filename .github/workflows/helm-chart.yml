@@ -30,6 +30,8 @@ jobs:
             path: helm-charts/obsidian-fns
           - package: opendesign-helm
             path: helm-charts/opendesign
+          - package: kanbn-helm
+            path: helm-charts/kanbn
     steps:
       - uses: actions/checkout@v6
 

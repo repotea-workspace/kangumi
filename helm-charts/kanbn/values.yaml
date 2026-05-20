@@ -1,0 +1,101 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/kanbn/kan
+  pullPolicy: IfNotPresent
+  tag: ""
+
+migrateImage:
+  repository: ghcr.io/kanbn/kan-migrate
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 3000
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+env:
+  NEXT_PUBLIC_BASE_URL: "http://localhost:3000"
+  NEXT_PUBLIC_ALLOW_CREDENTIALS: "true"
+  NEXT_PUBLIC_DISABLE_EMAIL: "true"
+  LOG_LEVEL: "info"
+
+secret:
+  name: ""
+  betterAuthSecretKey: better-auth-secret
+  postgresPasswordKey: postgres-password
+
+postgresql:
+  enabled: true
+  image:
+    repository: docker.io/library/postgres
+    tag: "15"
+    pullPolicy: IfNotPresent
+  database: kan_db
+  username: kan
+  port: 5432
+  persistence:
+    enabled: true
+    storageClassName: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 10Gi
+  resources: {}
+
+resources: {}
+
+livenessProbe:
+  httpGet:
+    path: /api/health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 5
+
+readinessProbe:
+  httpGet:
+    path: /api/health
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
