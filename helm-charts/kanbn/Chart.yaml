@@ -2,5 +2,5 @@ apiVersion: v2
 name: kanbn-helm
 description: Kan open source kanban service
 type: application
-version: 0.1.3
+version: 0.1.4
 appVersion: "latest"

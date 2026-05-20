@@ -4,6 +4,7 @@ metadata:
   name: {{ include "kanbn.fullname" . }}
   labels:
     {{- include "kanbn.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
@@ -19,6 +20,7 @@ spec:
       {{- end }}
       labels:
         {{- include "kanbn.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: web
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
