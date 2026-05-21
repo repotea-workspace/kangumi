@@ -4,15 +4,13 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   namespace: {{ .Release.Namespace }}
-  name: {{ .Release.Name }}-pi-api-migrate-{{ now | date "20060102-150405" }}
+  name: {{ .Release.Name }}-pi-api-migrate-{{ .Values.planeVersion | replace "." "-" }}
 spec:
   backoffLimit: 3
   template:
     metadata:
       labels:
         app.name: {{ .Release.Namespace }}-{{ .Release.Name }}-pi-api-migrate
-      annotations:
-        timestamp: {{ now | quote }}
     spec:
       {{- include "plane.podScheduling" .Values.services.pi }}
       {{- with (include "plane.s3CAVolumes" .) }}

@@ -1,7 +1,7 @@
 planeVersion: v2.6.0
 
 migration:
-  enabled: false
+  enabled: true
 
 dockerRegistry:
   enabled: false

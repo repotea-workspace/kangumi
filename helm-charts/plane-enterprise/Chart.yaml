@@ -8,4 +8,4 @@ name: plane-enterprise-helm
 sources:
 - https://github.com/makeplane/plane-ee
 type: application
-version: 0.1.0
+version: 0.1.1

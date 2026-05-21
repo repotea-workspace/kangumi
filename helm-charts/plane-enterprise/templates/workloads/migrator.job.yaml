@@ -3,7 +3,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   namespace: {{ .Release.Namespace }}
-  name: {{ .Release.Name }}-api-migrate-{{ now | date "20060102-150405" }}
+  name: {{ .Release.Name }}-api-migrate-{{ .Values.planeVersion | replace "." "-" }}
   {{- include "plane.labelsAndAnnotations" .Values.services.api }}
 spec:
   backoffLimit: 3
@@ -11,8 +11,6 @@ spec:
     metadata:
       labels:
         app.name: {{ .Release.Namespace }}-{{ .Release.Name }}-api-migrate
-      annotations:
-        timestamp: {{ now | quote }}
     spec:
       {{- include "plane.podScheduling" .Values.services.api }}
       containers:
