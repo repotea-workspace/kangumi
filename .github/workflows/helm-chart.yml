@@ -35,7 +35,7 @@ jobs:
           - package: plane-mcp-helm
             path: helm-charts/plane-mcp
           - package: plane-enterprise-helm
-            path: helm-charts/plane-enterprise
+            path: helm-charts/plane-enterprise/.generated
     steps:
       - uses: actions/checkout@v6
 
