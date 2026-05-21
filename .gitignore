@@ -11,3 +11,4 @@
 .vscode/
 
 *.tgz
+/helm-charts/plane-enterprise/

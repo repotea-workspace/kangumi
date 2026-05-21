@@ -39,6 +39,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Prepare Plane Enterprise Chart
+        if: matrix.package == 'plane-enterprise-helm'
+        run: ./scripts/prepare-plane-enterprise-chart.sh
+
       - name: Get Chart Version
         id: chart_version
         run: |

@@ -1,0 +1,39 @@
+--- templates/workloads/migrator.job.yaml
++++ templates/workloads/migrator.job.yaml
+@@ -3,7 +3,7 @@
+ kind: Job
+ metadata:
+   namespace: {{ .Release.Namespace }}
+-  name: {{ .Release.Name }}-api-migrate-{{ now | date "20060102-150405" }}
++  name: {{ .Release.Name }}-api-migrate-{{ .Values.planeVersion | replace "." "-" }}
+   {{- include "plane.labelsAndAnnotations" .Values.services.api }}
+ spec:
+   backoffLimit: 3
+@@ -11,8 +11,6 @@
+     metadata:
+       labels:
+         app.name: {{ .Release.Namespace }}-{{ .Release.Name }}-api-migrate
+-      annotations:
+-        timestamp: {{ now | quote }}
+     spec:
+       {{- include "plane.podScheduling" .Values.services.api }}
+       containers:
+--- templates/workloads/pi-migrator.job.yaml
++++ templates/workloads/pi-migrator.job.yaml
+@@ -4,15 +4,13 @@
+ kind: Job
+ metadata:
+   namespace: {{ .Release.Namespace }}
+-  name: {{ .Release.Name }}-pi-api-migrate-{{ now | date "20060102-150405" }}
++  name: {{ .Release.Name }}-pi-api-migrate-{{ .Values.planeVersion | replace "." "-" }}
+ spec:
+   backoffLimit: 3
+   template:
+     metadata:
+       labels:
+         app.name: {{ .Release.Namespace }}-{{ .Release.Name }}-pi-api-migrate
+-      annotations:
+-        timestamp: {{ now | quote }}
+     spec:
+       {{- include "plane.podScheduling" .Values.services.pi }}
+       {{- with (include "plane.s3CAVolumes" .) }}
