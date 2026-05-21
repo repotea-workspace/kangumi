@@ -1,0 +1,87 @@
+{{- if .Values.services.rabbitmq.local_setup }}
+
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: {{ .Release.Name }}-rabbitmq
+  labels:
+    app.name: {{ .Release.Namespace }}-{{ .Release.Name }}-rabbitmq
+spec:
+  type: ClusterIP
+  {{- if not .Values.services.rabbitmq.assign_cluster_ip }}
+  clusterIP: None
+  {{- end }}
+  ports:
+  - name: rabbitmq-{{ .Values.services.rabbitmq.servicePort }}
+    port: {{ .Values.services.rabbitmq.servicePort }}
+    protocol: TCP
+    targetPort: 5672
+  - name: rabbitmq-mgmt-{{ .Values.services.rabbitmq.managementPort }}
+    port: {{ .Values.services.rabbitmq.managementPort }}
+    protocol: TCP
+    targetPort: 15672
+  selector:
+    app.name: {{ .Release.Namespace }}-{{ .Release.Name }}-rabbitmq
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: {{ .Release.Name }}-rabbitmq-wl
+  {{- include "plane.labelsAndAnnotations" .Values.services.rabbitmq }}
+spec:
+  selector:
+    matchLabels:
+      app.name: {{ .Release.Namespace }}-{{ .Release.Name }}-rabbitmq
+  serviceName:  {{ .Release.Name }}-rabbitmq
+  template:
+    metadata:
+      labels:
+        app.name: {{ .Release.Namespace }}-{{ .Release.Name }}-rabbitmq
+    spec:
+      {{- include "plane.podScheduling" .Values.services.rabbitmq }}
+      containers:
+      - image: {{ .Values.services.rabbitmq.image }}
+        imagePullPolicy: {{ .Values.services.rabbitmq.pullPolicy | default "IfNotPresent" }}
+        name: {{ .Release.Name }}-rabbitmq
+        stdin: true
+        tty: true
+        envFrom:
+          - secretRef:
+              name: {{ if not (empty .Values.external_secrets.rabbitmq_existingSecret) }}{{ .Values.external_secrets.rabbitmq_existingSecret }}{{ else }}{{ .Release.Name }}-rabbitmq-secrets{{ end }}
+              optional: false
+        {{- if .Values.extraEnv }}
+        env:
+          {{- toYaml .Values.extraEnv | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+        - mountPath: /var/lib/rabbitmq
+          name: pvc-{{ .Release.Name }}-rabbitmq-vol
+          subPath: ''
+        readinessProbe:
+          exec:
+            command: ["rabbitmq-diagnostics", "check_port_connectivity"]
+          initialDelaySeconds: 5
+          periodSeconds: 30
+          timeoutSeconds: 30
+          failureThreshold: 50
+      serviceAccount: {{ .Release.Name }}-srv-account
+      serviceAccountName: {{ .Release.Name }}-srv-account
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      creationTimestamp: null
+      namespace: {{ .Release.Namespace }}
+      name: pvc-{{ .Release.Name }}-rabbitmq-vol
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: {{ .Values.services.rabbitmq.volumeSize | default "100Mi" | quote }}
+      storageClassName: {{ .Values.env.storageClass }}
+      volumeMode: Filesystem
+      
+{{- end }}

@@ -34,6 +34,8 @@ jobs:
             path: helm-charts/kanbn
           - package: plane-mcp-helm
             path: helm-charts/plane-mcp
+          - package: plane-enterprise-helm
+            path: helm-charts/plane-enterprise
     steps:
       - uses: actions/checkout@v6
 

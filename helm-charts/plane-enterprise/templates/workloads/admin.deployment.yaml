@@ -1,0 +1,63 @@
+
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: {{ .Release.Name }}-admin
+  labels:
+    app.name: {{ .Release.Namespace }}-{{ .Release.Name }}-admin
+spec:
+  type: ClusterIP
+  {{- if not .Values.services.admin.assign_cluster_ip }}
+  clusterIP: None
+  {{- end }}
+  ports:
+  - name: admin-3000
+    port: 3000
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    app.name: {{ .Release.Namespace }}-{{ .Release.Name }}-admin
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: {{ .Release.Name }}-admin-wl
+  {{- include "plane.labelsAndAnnotations" .Values.services.admin }}
+spec:
+  replicas: {{ .Values.services.admin.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app.name: {{ .Release.Namespace }}-{{ .Release.Name }}-admin
+  template:
+    metadata:
+      namespace: {{ .Release.Namespace }}
+      labels:
+        app.name: {{ .Release.Namespace }}-{{ .Release.Name }}-admin
+      annotations:
+        timestamp: {{ now | quote }}
+    spec:
+      {{- include "plane.podScheduling" .Values.services.admin }}
+      containers:
+      - name: {{ .Release.Name }}-admin
+        imagePullPolicy: {{ .Values.services.admin.pullPolicy | default "Always" }}
+        image: {{ .Values.services.admin.image | default "makeplane/admin-commercial" }}:{{ .Values.planeVersion }}
+        stdin: true
+        tty: true
+        resources:
+          requests:
+            memory: {{ .Values.services.admin.memoryRequest | default "50Mi" | quote }}
+            cpu: {{ .Values.services.admin.cpuRequest | default "50m" | quote }}
+          limits:
+            memory: {{ .Values.services.admin.memoryLimit  | default "1000Mi" | quote }}
+            cpu: {{ .Values.services.admin.cpuLimit | default "500m" | quote}}
+        {{- if .Values.extraEnv }}
+        env:
+          {{- toYaml .Values.extraEnv | nindent 10 }}
+        {{- end }}
+      serviceAccount: {{ .Release.Name }}-srv-account
+      serviceAccountName: {{ .Release.Name }}-srv-account
+---
