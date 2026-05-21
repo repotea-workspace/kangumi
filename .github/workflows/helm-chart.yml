@@ -32,6 +32,8 @@ jobs:
             path: helm-charts/opendesign
           - package: kanbn-helm
             path: helm-charts/kanbn
+          - package: plane-mcp-helm
+            path: helm-charts/plane-mcp
     steps:
       - uses: actions/checkout@v6
 
