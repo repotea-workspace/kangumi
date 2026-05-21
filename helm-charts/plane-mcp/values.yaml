@@ -21,6 +21,9 @@ podSecurityContext: {}
 
 securityContext: {}
 
+command: []
+args: []
+
 service:
   type: ClusterIP
   port: 8211
