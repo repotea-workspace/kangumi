@@ -28,3 +28,4 @@ sed -i \
   "$BUILD_DIR/Chart.yaml"
 
 patch -d "$BUILD_DIR" -p0 < "$CHART_DIR/patches/stabilize-migration-job.patch"
+patch -d "$BUILD_DIR" -p0 < "$CHART_DIR/patches/normalize-monitor-base-url.patch"
