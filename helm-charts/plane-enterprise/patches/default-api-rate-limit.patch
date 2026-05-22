@@ -1,0 +1,7 @@
+--- templates/config-secrets/app-env.yaml
++++ templates/config-secrets/app-env.yaml
+@@ -61,5 +61,6 @@
+ 
+   API_KEY_RATE_LIMIT: {{ .Values.env.api_key_rate_limit | default "60/minute" | quote }}
++  DEFAULT_API_RATE_LIMIT: {{ .Values.env.api_key_rate_limit | default "60/minute" | quote }}
+   MINIO_ENDPOINT_SSL: {{ .Values.services.minio.env.minio_endpoint_ssl | default false | ternary "1" "0" | quote }}
