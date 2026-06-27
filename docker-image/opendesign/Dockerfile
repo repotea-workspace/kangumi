@@ -1,6 +1,6 @@
 ARG NODE_IMAGE=docker.io/library/node:24-alpine
 ARG RUNTIME_IMAGE=docker.io/library/node:24-alpine
-ARG OPEN_DESIGN_REF=open-design-v0.7.0
+ARG OPEN_DESIGN_REF=open-design-v0.12.0
 
 FROM ${NODE_IMAGE} AS build
 
@@ -85,7 +85,7 @@ ENV NODE_ENV=production
 ENV NODE_OPTIONS=--max-old-space-size=192
 ENV OD_BIND_HOST=0.0.0.0
 ENV OD_PORT=7456
-ENV OD_APP_VERSION=0.7.0
+ENV OD_APP_VERSION=0.12.0
 
 EXPOSE 7456
 

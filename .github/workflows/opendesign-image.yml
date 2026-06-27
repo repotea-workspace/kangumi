@@ -11,8 +11,8 @@ on:
 env:
   DOCKER_REGISTRY: ghcr.io
   IMAGE_NAME: opendesign
-  OPEN_DESIGN_REF: open-design-v0.7.0
-  OPEN_DESIGN_VERSION: 0.7.0
+  OPEN_DESIGN_REF: open-design-v0.12.0
+  OPEN_DESIGN_VERSION: 0.12.0
 
 jobs:
   build:
