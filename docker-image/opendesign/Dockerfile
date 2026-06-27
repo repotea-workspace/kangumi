@@ -71,7 +71,9 @@ RUN apk add --no-cache tini && \
 WORKDIR /app
 COPY --from=build --chown=open-design:open-design /app/deploy/daemon ./apps/daemon
 COPY --from=build --chown=open-design:open-design /app/apps/web/out ./apps/web/out
+COPY --from=build --chown=open-design:open-design /app/plugins ./plugins
 COPY --from=build --chown=open-design:open-design /app/skills ./skills
+COPY --from=build --chown=open-design:open-design /app/design-templates ./design-templates
 COPY --from=build --chown=open-design:open-design /app/design-systems ./design-systems
 COPY --from=build --chown=open-design:open-design /app/craft ./craft
 COPY --from=build --chown=open-design:open-design /app/prompt-templates ./prompt-templates
