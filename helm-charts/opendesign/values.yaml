@@ -78,6 +78,7 @@ env:
   OD_WEB_PORT: "7456"
   OD_ALLOWED_ORIGINS: "https://opendesign.kahub.in"
   OD_DISABLE_API_AUTH: "1"
+  OD_CODEX_SANDBOX: danger-full-access
 
 extraEnv: []
 extraEnvFrom: []
