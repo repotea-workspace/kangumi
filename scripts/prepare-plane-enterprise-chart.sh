@@ -29,4 +29,3 @@ sed -i \
 
 patch -d "$BUILD_DIR" -p0 < "$CHART_DIR/patches/stabilize-migration-job.patch"
 patch -d "$BUILD_DIR" -p0 < "$CHART_DIR/patches/normalize-monitor-base-url.patch"
-patch -d "$BUILD_DIR" -p0 < "$CHART_DIR/patches/default-api-rate-limit.patch"
