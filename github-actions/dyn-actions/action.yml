@@ -19,7 +19,7 @@ inputs:
   owner:
     description: 'dynamic actions repo owner'
     required: false
-    default: 'repotea-workflow'
+    default: '0xfe10'
 runs:
   using: "composite"
   steps:
@@ -40,22 +40,23 @@ runs:
     - name: Trigger dynamic actions
       shell: bash
       run: |
-        INPUT_DOT_GITHUB=${{ inputs.dot_github }}
-        INPUT_GIT_EMAIL=${{ inputs.git_email }}
-        INPUT_GIT_NAME=${{ inputs.git_name }}
+        set -euo pipefail
+
+        INPUT_DOT_GITHUB="${{ inputs.dot_github }}"
+        INPUT_GIT_EMAIL="${{ inputs.git_email }}"
+        INPUT_GIT_NAME="${{ inputs.git_name }}"
 
         # repository is the full github repo path, e.g. prtmax/endfather
-        REPOSITORY=${{ github.repository }}
+        REPOSITORY="${GITHUB_REPOSITORY}"
         # project_name is just the repo name, e.g. endfather (used for git tag)
-        PROJECT_NAME=$(echo ${{ github.repository }} | cut -d'/' -f2)
+        PROJECT_NAME="${GITHUB_REPOSITORY#*/}"
 
-        T_BRANCH=${{ github.repository }}
+        T_BRANCH="${GITHUB_REPOSITORY}"
 
         git clone git@github.com:${{ inputs.owner }}/dynamic-actions.git
         cd dynamic-actions
-        git fetch
-        git checkout -b $T_BRANCH origin/$T_BRANCH || (git branch $T_BRANCH && git checkout $T_BRANCH)
-        git pull || true
+        git fetch origin
+        git checkout -B "$T_BRANCH" "origin/$T_BRANCH" || git checkout -b "$T_BRANCH"
 
         # prepare changes
 
@@ -64,25 +65,25 @@ runs:
 
         # only copy dyn-workflows as workflows, ignore other directories like instructions
         if [ -d "../$INPUT_DOT_GITHUB/dyn-workflows" ]; then
-          mv ../$INPUT_DOT_GITHUB/dyn-workflows .github/workflows
+          cp -R "../$INPUT_DOT_GITHUB/dyn-workflows" .github/workflows
         else
-          echo 'not found dyn-workflows dir'
+          echo "not found dyn-workflows dir: ../$INPUT_DOT_GITHUB/dyn-workflows"
           exit 1
         fi
 
         date -u +"%Y-%m-%dT%H:%M:%SZ" > .github/date.txt
 
-        REPO_BRANCH=${{ steps.extract_branch.outputs.branch }}
-        REPO_TAG=${{ env.GIT_TAG_NAME }}
-        COMMIT_SHA=${{ env.SHA }}
+        REPO_BRANCH="${{ steps.extract_branch.outputs.branch }}"
+        REPO_TAG="${GIT_TAG_NAME:-}"
+        COMMIT_SHA="${SHA:-$GITHUB_SHA}"
 
         if [ -n "${REPO_TAG}" ]; then
-          echo ${REPO_TAG} > .github/tag.txt
-          echo ${REPO_TAG} > .github/ref.txt
+          printf "%s\n" "${REPO_TAG}" > .github/tag.txt
+          printf "%s\n" "${REPO_TAG}" > .github/ref.txt
           rm -rf .github/branch.txt || true
         else
-          echo ${REPO_BRANCH} > .github/branch.txt
-          echo ${REPO_BRANCH} > .github/ref.txt
+          printf "%s\n" "${REPO_BRANCH}" > .github/branch.txt
+          printf "%s\n" "${REPO_BRANCH}" > .github/ref.txt
           rm -rf .github/tag.txt || true
         fi
 
@@ -125,7 +126,12 @@ runs:
         git commit -F /tmp/commit_message.txt
         rm /tmp/commit_message.txt
 
-        git push origin $T_BRANCH
+        if ! git push origin "$T_BRANCH"; then
+          echo "Branch push failed; rebasing onto latest origin/$T_BRANCH and retrying."
+          git fetch origin "+refs/heads/$T_BRANCH:refs/remotes/origin/$T_BRANCH"
+          git rebase -X theirs "origin/$T_BRANCH"
+          git push origin "$T_BRANCH"
+        fi
 
         if [ -z "${REPO_TAG}" ]; then
           echo "This is pushed a branch (${REPO_BRANCH}). completed to push Github Actions."
@@ -133,8 +139,8 @@ runs:
         fi
 
         TAG_NAME=${REPO_TAG}-${PROJECT_NAME}
-        git tag -d ${TAG_NAME} || true
-        git push origin :${TAG_NAME} || true
+        git tag -d "${TAG_NAME}" || true
+        git push origin ":${TAG_NAME}" || true
 
-        git tag ${TAG_NAME}
-        git push origin ${TAG_NAME}
+        git tag "${TAG_NAME}"
+        git push origin "${TAG_NAME}"
