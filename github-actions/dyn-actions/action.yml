@@ -16,10 +16,10 @@ inputs:
   ssh_key:
     description: 'SSH private key'
     required: true
-  dyn_owner:
+  owner:
     description: 'dynamic actions repo owner'
     required: false
-    default: '0xfe10'
+    default: 'repotea-workflow'
 runs:
   using: "composite"
   steps:
@@ -51,7 +51,7 @@ runs:
 
         T_BRANCH=${{ github.repository }}
 
-        git clone git@github.com:${{ inputs.dyn_owner }}/dynamic-actions.git
+        git clone git@github.com:${{ inputs.owner }}/dynamic-actions.git
         cd dynamic-actions
         git fetch
         git checkout -b $T_BRANCH origin/$T_BRANCH || (git branch $T_BRANCH && git checkout $T_BRANCH)
