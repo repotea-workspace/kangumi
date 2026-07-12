@@ -59,9 +59,6 @@ jobs:
             context: docker-image/wait-for-port
             build-args: ""
 
-          - package: mem0-mcp
-            context: https://github.com/mem0ai/mem0-mcp.git#main
-
           - package: lanhu-mcp
             context: https://github.com/dsphper/lanhu-mcp.git#main
 

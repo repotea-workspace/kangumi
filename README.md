@@ -49,7 +49,6 @@ Optimized container images for various use cases:
 | [harmonytools](docker-image/harmonytools)                   | Open Harmony tools                            |
 | [k8ops](docker-image/k8ops)                                 | Kubernetes operations utilities               |
 | [lanhu-mcp](docker-image/lanhu-mcp)                         | Lanhu MCP server image                        |
-| [mem0-mcp](docker-image/mem0-mcp)                           | Mem0 MCP server image                         |
 | [node-liveness-probe](docker-image/node-liveness-probe)     | Node health monitoring probe                  |
 | [nubit](docker-image/nubit)                                 | Nubit blockchain node                         |
 | [srtool](docker-image/srtool)                               | Substrate runtime building tools              |

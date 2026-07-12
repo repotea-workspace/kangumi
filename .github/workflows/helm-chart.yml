@@ -20,8 +20,6 @@ jobs:
             path: helm-charts/dev-toolchain
           - package: any-tunnel-helm
             path: helm-charts/any-tunnel
-          - package: mem0-mcp-helm
-            path: helm-charts/mem0-mcp
           - package: lanhu-mcp-helm
             path: helm-charts/lanhu-mcp
           - package: graphiti-helm
