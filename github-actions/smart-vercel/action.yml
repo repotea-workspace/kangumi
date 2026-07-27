@@ -101,27 +101,27 @@ runs:
   using: "composite"
   steps:
     - name: Setup NodeJS
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
       if: ${{ inputs.script_run == 'true' }}
       with:
         node-version: ${{ inputs.node_version }}
 
     - name: Cache yarn
-      uses: actions/cache@v3
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
       if: ${{ (inputs.script_run == 'true') && (inputs.enable_cache == 'true') && (inputs.cache_key == 'none') && (inputs.cache_type == 'yarn') }}
       with:
         path: ${{ inputs.cache_path }}
         key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
 
     - name: Cache npm
-      uses: actions/cache@v3
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
       if: ${{ (inputs.script_run == 'true') && (inputs.enable_cache == 'true') && (inputs.cache_key == 'none') && (inputs.cache_type == 'npm') }}
       with:
         path: ${{ inputs.cache_path }}
         key: ${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
 
     - name: Cache custom
-      uses: actions/cache@v3
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
       if: ${{ (inputs.script_run == 'true') && (inputs.enable_cache == 'true') && (inputs.cache_key != 'none') }}
       with:
         path: ${{ inputs.cache_path }}
@@ -300,14 +300,14 @@ runs:
         fi
 
     - name: Comment deploy ouput
-      uses: marocchino/sticky-pull-request-comment@v2
+      uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88
       if: ${{ inputs.enable_notify_comment == 'true' }}
       with:
         append: true
         message: ${{ steps.deploy_vercel.outputs.PREVIEW_OUTPUT }}
 
     - name: Slack Notification
-      uses: rtCamp/action-slack-notify@v2
+      uses: rtCamp/action-slack-notify@33ca3be66c6f378fe1610fd1d5258632dbed5e58
       if: ${{ (inputs.enable_notify_slack == 'true') && (inputs.slack_channel != 'none') && (inputs.slack_webhook != 'none') }}
       env:
         SLACK_CHANNEL: ${{ inputs.slack_channel }}

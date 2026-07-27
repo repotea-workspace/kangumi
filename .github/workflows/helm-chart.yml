@@ -35,7 +35,7 @@ jobs:
           - package: plane-enterprise-helm
             path: helm-charts/plane-enterprise/.generated
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Prepare Plane Enterprise Chart
         if: matrix.package == 'plane-enterprise-helm'
@@ -48,7 +48,7 @@ jobs:
           echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: Chart | Push
-        uses: appany/helm-oci-chart-releaser@v0.5.0
+        uses: appany/helm-oci-chart-releaser@d94988c92bed2e09c6113981f15f8bb495d10943
         with:
           name: ${{ matrix.package }}
           repository: ${{ github.repository }}

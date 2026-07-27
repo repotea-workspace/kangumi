@@ -60,7 +60,7 @@ runs:
         echo "TEMP_BACKUP=$TEMP_BACKUP" >> $GITHUB_ENV
         echo "Backed up files to $TEMP_BACKUP/__origin__"
 
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
         repository: ${{ inputs.repository }}
         ref: ${{ steps.prepare_options.outputs.GIT_REF }}

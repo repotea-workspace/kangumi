@@ -76,7 +76,8 @@ runs:
 
     - name: Get branch names.
       id: branch-names
-      uses: tj-actions/branch-names@v8
+      shell: bash
+      run: echo "current_branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> "$GITHUB_OUTPUT"
 
     - uses: repotea-workspace/kangumi/github-actions/read-files@main
       id: read-files
@@ -111,7 +112,7 @@ runs:
 
     - name: Render template
       id: render_template
-      uses: chuhlomin/render-template@v1
+      uses: chuhlomin/render-template@a473db625a96c98e519d188812dc22bcaf54ffba
       with:
         template: ${{ steps.prepare_template.outputs.TEMPLATE }}
         vars_path: _____tepusher_____/vars.yml
@@ -134,4 +135,3 @@ runs:
         receiver: ${{ inputs.receiver }}
         content: ${{ inputs.pattos }}
         template: pat
-

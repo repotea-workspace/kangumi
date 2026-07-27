@@ -20,7 +20,7 @@ runs:
   using: "composite"
   steps:
     - name: Setup NodeJS
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
 
     - name: Install railway
       shell: bash

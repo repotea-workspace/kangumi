@@ -31,19 +31,18 @@ runs:
   using: "composite"
   steps:
 
-    - name: Get repository name
-      id: repo-name
-      uses: MariachiBear/get-repo-name-action@v1.1.0
-
-    - name: Get branch names
-      id: branch-names
-      uses: tj-actions/branch-names@v8
+    - name: Resolve repository context
+      id: repo-context
+      shell: bash
+      run: |
+        echo "repository-name=${GITHUB_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
+        echo "current_branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> "$GITHUB_OUTPUT"
 
     - name: Deploy
       shell: bash
       env:
-        DEFAULT_PROJECT_NAME: ${{ steps.repo-name.outputs.repository-name }}
-        DEFAULT_BRANCH_NAME: ${{ steps.branch-names.outputs.current_branch }}
+        DEFAULT_PROJECT_NAME: ${{ steps.repo-context.outputs.repository-name }}
+        DEFAULT_BRANCH_NAME: ${{ steps.repo-context.outputs.current_branch }}
       run: |
         set -xe
         INPUT_PROJECT_NAME=${{ inputs.project_name }}
@@ -105,5 +104,4 @@ runs:
             --raw-field="changes=${TRIGGER_CHANGES}" \
             --raw-field="message=${MESSAGE}"
         fi
-
 

@@ -38,7 +38,7 @@ runs:
       shell: bash
       run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
       id: extract_branch
-    - uses: kielabokkie/ssh-key-and-known-hosts-action@v1
+    - uses: kielabokkie/ssh-key-and-known-hosts-action@ff80dac93ba2346f20dbc7f331286c400f0109f7
       with:
         ssh-private-key: ${{ inputs.ssh_key }}
         ssh-host: github.com

@@ -43,7 +43,7 @@ runs:
         pip3 install cmake --upgrade
 
     - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
       with:
         toolchain: ${{ inputs.rust_toolchain }}
 
@@ -76,5 +76,4 @@ runs:
         echo ''
         echo "PACKAGE_BINARY_BZ2=$PACKAGE_BINARY_BZ2" >> $GITHUB_OUTPUT
         echo "PACKAGE_BINARY_ZST=$PACKAGE_BINARY_ZST" >> $GITHUB_OUTPUT
-
 

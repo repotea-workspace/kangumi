@@ -34,7 +34,7 @@ jobs:
       public-ip: ${{ steps.start.outputs.public-ip }}
       instance-password: ${{ steps.start.outputs.instance-password }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Start Aliyun ECS GitHub runner
         id: start
         uses: ./github-actions/ecs-github-runner
@@ -82,7 +82,7 @@ jobs:
           echo "::notice::Username: root"
 
       - name: Execute remote commands via SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
         with:
           host: ${{ needs.provision-runner.outputs.public-ip }}
           username: root
@@ -121,7 +121,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Destroy Aliyun ECS GitHub runner
         uses: ./github-actions/ecs-github-runner
         with:

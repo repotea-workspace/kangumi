@@ -289,14 +289,14 @@ runs:
         echo "token=$token" >> "$GITHUB_OUTPUT"
 
     - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
+      uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e
       with:
         terraform_version: ${{ inputs.terraform_version }}
         # terraform_wrapper: false
 
     - name: Download Terraform state artifact (destroy)
       if: ${{ inputs.mode == 'destroy' }}
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
       with:
         name: ${{ inputs.state_artifact_name }}
         path: ${{ env.TF_WORKDIR }}
@@ -441,7 +441,7 @@ runs:
 
     - name: Upload Terraform state artifact
       if: ${{ inputs.mode == 'start' }}
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
         name: ${{ inputs.state_artifact_name }}
         path: |
@@ -459,7 +459,7 @@ runs:
 
     - name: Delete Terraform state artifact
       if: ${{ always() && inputs.mode == 'destroy' }}
-      uses: geekyeggo/delete-artifact@v5
+      uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118
       with:
         name: ${{ inputs.state_artifact_name }}
         failOnError: false

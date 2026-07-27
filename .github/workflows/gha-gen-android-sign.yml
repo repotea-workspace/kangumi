@@ -10,7 +10,7 @@ jobs:
     name: Test gen android sign
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Install dependencies
         run: cd github-actions/gen-android-sign && npm i
@@ -18,11 +18,15 @@ jobs:
       - name: Run tests
         run: cd github-actions/gen-android-sign && npm run test
 
-      - uses: pCYSl5EDgo/cat@1.0.0
-        name: Cat for GitHub Actions
+      - name: Read test signing key
         id: get_key
-        with:
-          path: github-actions/gen-android-sign/__tests__/test_key_b64.txt
+        shell: bash
+        run: |
+          {
+            echo 'text<<EOF'
+            cat github-actions/gen-android-sign/__tests__/test_key_b64.txt
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
 
       - uses: ./github-actions/gen-android-sign
         name: Generate sign file
@@ -40,4 +44,3 @@ jobs:
           echo ${ANDROID_KEY_PROPERTIES}
           echo ${{ steps.gen_key.outputs.path }}
           cat android/key.properties
-

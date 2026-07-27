@@ -120,9 +120,9 @@ runs:
   steps:
     # Step 0: Install deps
     - name: Install yq
-      uses: dcarbone/install-yq-action@v1
+      uses: dcarbone/install-yq-action@4075b4dca348d74bd83f2bf82d30f25d7c54539b
     - name: Install jq
-      uses: dcarbone/install-jq-action@v3
+      uses: dcarbone/install-jq-action@4fcb5062d7ce9bc4382d1a352d19ba3ba2c317c1
 
     # Step 1: Login to registries and pull images
     - name: Login to registries and pull images
@@ -464,7 +464,7 @@ runs:
     # Step 4: Upload tar files to ECS via SCP (skip if no images to mirror)
     - name: Upload images to ECS
       if: ${{ steps.pull.outputs.has_images == 'true' }}
-      uses: appleboy/scp-action@v1
+      uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345
       with:
         host: ${{ steps.provision.outputs.public-ip }}
         username: root
@@ -480,7 +480,7 @@ runs:
     - name: Load, tag and push images on ECS
       id: push
       if: ${{ steps.pull.outputs.has_images == 'true' }}
-      uses: appleboy/ssh-action@v1
+      uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
       env:
         REGISTRY_CREDENTIALS: ${{ inputs.registry_credentials }}
         SOURCES_JSON: ${{ steps.pull.outputs.sources }}
