@@ -23,10 +23,17 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Tag
-      uses: olegtarasov/get-tag@v2.1
-    - name: Sha
-      uses: benjlevesque/short-sha@v3.0
+    - name: Expose tag name
+      shell: bash
+      run: |
+        if [ "${GITHUB_REF_TYPE:-}" = "tag" ]; then
+          echo "GIT_TAG_NAME=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+        elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+          echo "GIT_TAG_NAME=${GITHUB_REF#refs/tags/}" >> "$GITHUB_ENV"
+        fi
+    - name: Expose short SHA
+      shell: bash
+      run: echo "SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
     - name: Extract branch name
       shell: bash
       run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
@@ -35,8 +42,6 @@ runs:
       with:
         ssh-private-key: ${{ inputs.ssh_key }}
         ssh-host: github.com
-    - name: Expose git commit data
-      uses: jcputney/git-commit-data-action@v2
     - name: Trigger dynamic actions
       shell: bash
       run: |
