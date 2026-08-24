@@ -1,0 +1,14 @@
+{{- range $name, $config := .Values.toolchains }}
+{{- if and $config.enabled (dig "proxy" "enabled" false $config) (dig "proxy" "config" "" $config) }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tch-{{ $name }}-mihomo
+  labels:
+    {{- include "dev-toolchain.instanceLabels" (dict "root" $ "name" $name) | nindent 4 }}
+data:
+  config.yaml: |
+    {{- $config.proxy.config | nindent 4 }}
+{{- end }}
+{{- end }}

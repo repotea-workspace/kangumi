@@ -122,14 +122,23 @@ toolchains: {}
   #       accessMode: ReadWriteMany
   #       mountPath: /data/wwwroot
   #
-  #   # Optional Mihomo native sidecar. The referenced Secret must contain
-  #   # config.yaml and enable the TUN interface plus the configured probe port.
+  #   # Optional Mihomo native sidecar. Prefer public config in config and keep
+  #   # only subscription-url in the referenced Secret. The legacy configSecretName
+  #   # mode remains supported when config is empty.
   #   proxy:
   #     enabled: false
   #     image: metacubex/mihomo:v1.19.30
   #     imagePullPolicy: IfNotPresent
-  #     configSecretName: ""
-  #     configKey: config.yaml
+  #     config: |
+  #       proxy-providers:
+  #         subscription:
+  #           type: http
+  #           url: "__MIHOMO_SUBSCRIPTION_URL__"
+  #     subscriptionSecretName: ""
+  #     subscriptionSecretKey: subscription-url
+  #     # Legacy full-config Secret mode:
+  #     # configSecretName: ""
+  #     # configKey: config.yaml
   #     args: []
   #     startupProbe: {}
   #     readinessProbe: {}

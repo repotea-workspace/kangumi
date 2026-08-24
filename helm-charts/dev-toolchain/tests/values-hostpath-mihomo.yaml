@@ -41,7 +41,13 @@ toolchains:
     proxy:
       enabled: true
       image: example.invalid/mihomo:v1.19.30
-      configSecretName: tch-birch-mihomo
+      config: |
+        mode: rule
+        proxy-providers:
+          subscription:
+            type: http
+            url: "__MIHOMO_SUBSCRIPTION_URL__"
+      subscriptionSecretName: tch-birch-mihomo
       startupProbe:
         tcpSocket:
           port: 9090

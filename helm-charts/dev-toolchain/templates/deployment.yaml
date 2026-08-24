@@ -3,8 +3,16 @@
 {{- $pvcEnabled := dig "storage" "pvc" "enabled" false $config }}
 {{- $hostPathEnabled := dig "storage" "hostPath" "enabled" false $config }}
 {{- $proxyEnabled := dig "proxy" "enabled" false $config }}
+{{- $proxyConfig := dig "proxy" "config" "" $config }}
+{{- $proxySplitEnabled := and $proxyEnabled (ne $proxyConfig "") }}
 {{- if and $pvcEnabled $hostPathEnabled }}
 {{- fail (printf "toolchains.%s.storage.pvc and storage.hostPath cannot both be enabled" $name) }}
+{{- end }}
+{{- if and $proxySplitEnabled $config.proxy.configSecretName }}
+{{- fail (printf "toolchains.%s.proxy.config and configSecretName cannot both be set" $name) }}
+{{- end }}
+{{- if and $proxySplitEnabled (not (contains "__MIHOMO_SUBSCRIPTION_URL__" $proxyConfig)) }}
+{{- fail (printf "toolchains.%s.proxy.config must contain __MIHOMO_SUBSCRIPTION_URL__" $name) }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -25,6 +33,9 @@ spec:
       annotations:
         {{- with $.Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if $proxySplitEnabled }}
+        checksum/mihomo-config: {{ $proxyConfig | sha256sum }}
         {{- end }}
       labels:
         {{- include "dev-toolchain.instanceSelectorLabels" (dict "root" $ "name" $name) | nindent 8 }}
@@ -51,6 +62,40 @@ spec:
 
       {{- if $proxyEnabled }}
       initContainers:
+      {{- if $proxySplitEnabled }}
+      - name: mihomo-config-renderer
+        image: {{ required (printf "toolchains.%s.proxy.image is required" $name) $config.proxy.image | quote }}
+        imagePullPolicy: {{ $config.proxy.imagePullPolicy | default "IfNotPresent" }}
+        command:
+          - /bin/sh
+          - -c
+        args:
+          - |
+            set -eu
+            case "$SUBSCRIPTION_URL" in
+              https://*) ;;
+              *) echo "subscription-url must use https" >&2; exit 1 ;;
+            esac
+            if printf '%s' "$SUBSCRIPTION_URL" | grep -q '[[:space:]"\\|]'; then
+              echo "subscription-url contains unsupported characters" >&2
+              exit 1
+            fi
+            escaped_url=$(printf '%s' "$SUBSCRIPTION_URL" | sed 's/[&|]/\\&/g')
+            sed "s|__MIHOMO_SUBSCRIPTION_URL__|${escaped_url}|g" /config-template/config.yaml > /config/config.yaml
+            chmod 0400 /config/config.yaml
+        env:
+          - name: SUBSCRIPTION_URL
+            valueFrom:
+              secretKeyRef:
+                name: {{ required (printf "toolchains.%s.proxy.subscriptionSecretName is required" $name) $config.proxy.subscriptionSecretName }}
+                key: {{ $config.proxy.subscriptionSecretKey | default "subscription-url" }}
+        volumeMounts:
+          - name: mihomo-config-template
+            mountPath: /config-template
+            readOnly: true
+          - name: mihomo-config
+            mountPath: /config
+      {{- end }}
       - name: mihomo
         image: {{ required (printf "toolchains.%s.proxy.image is required" $name) $config.proxy.image | quote }}
         imagePullPolicy: {{ $config.proxy.imagePullPolicy | default "IfNotPresent" }}
@@ -349,6 +394,17 @@ spec:
           defaultMode: 0755
       {{- end }}
       {{- if $proxyEnabled }}
+      {{- if $proxySplitEnabled }}
+      - name: mihomo-config-template
+        configMap:
+          name: tch-{{ $name }}-mihomo
+          defaultMode: 0400
+          items:
+          - key: config.yaml
+            path: config.yaml
+      - name: mihomo-config
+        emptyDir: {}
+      {{- else }}
       - name: mihomo-config
         secret:
           secretName: {{ required (printf "toolchains.%s.proxy.configSecretName is required" $name) $config.proxy.configSecretName }}
@@ -356,6 +412,7 @@ spec:
           items:
           - key: {{ $config.proxy.configKey | default "config.yaml" }}
             path: config.yaml
+      {{- end }}
       - name: tun-device
         hostPath:
           path: /dev/net/tun

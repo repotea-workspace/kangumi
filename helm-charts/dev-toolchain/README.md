@@ -334,12 +334,20 @@ storage:
 proxy:
   enabled: true
   image: metacubex/mihomo:v1.19.30
-  configSecretName: tch-birch-mihomo
+  config: |
+    proxy-providers:
+      subscription:
+        type: http
+        url: "__MIHOMO_SUBSCRIPTION_URL__"
+  subscriptionSecretName: tch-birch-mihomo
 ```
 
-The Secret must contain `config.yaml`. Its Mihomo configuration is responsible for
-enabling TUN routing and excluding Kubernetes, node, metadata, and proxy-server
-destinations that must stay direct.
+The chart stores `proxy.config` in a ConfigMap. An init container replaces the fixed
+URL placeholder from the Secret's `subscription-url` key and writes the final config
+to an `emptyDir` for Mihomo. The config is responsible for enabling TUN routing and
+excluding Kubernetes, node, metadata, and proxy-server destinations that must stay
+direct. Updating the external Secret requires restarting the Pod. The legacy
+`configSecretName`/`configKey` full-config Secret mode remains supported.
 
 ### Resource Limits
 
