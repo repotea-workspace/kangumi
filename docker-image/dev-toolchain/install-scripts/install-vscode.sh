@@ -27,7 +27,7 @@ print_info "Downloading VSCode CLI (latest stable)..."
 DOWNLOAD_URL="https://code.visualstudio.com/sha/download?build=stable&os=cli-alpine-x64"
 TMP_FILE="/tmp/vscode-cli.tar.gz"
 
-if ! curl -fsSLk "${DOWNLOAD_URL}" -o "${TMP_FILE}"; then
+if ! curl -fsSL "${DOWNLOAD_URL}" -o "${TMP_FILE}"; then
   print_error "Failed to download VSCode CLI"
   exit 1
 fi

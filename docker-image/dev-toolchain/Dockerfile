@@ -1,15 +1,16 @@
 ##
 # MAIN STAGE - Minimal base image with Homebrew
 ##
-FROM ubuntu:24.04 AS runner
+FROM ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea2648d2c0e09b AS runner
 
-ARG DOCKER_VERSION=27.5.1
-ARG S6_OVERLAY_VERSION=3.2.1.0
+ARG DEBIAN_FRONTEND=noninteractive
+ARG DOCKER_VERSION=29.7.2
+ARG DOCKER_SHA256=803d433f226db4776e1768fd319fc6c6e4935a456acf84fcc0080818b854bc8f
+ARG S6_OVERLAY_VERSION=3.2.3.2
+ARG S6_OVERLAY_NOARCH_SHA256=5379750ed30a84bbd2e2dd74847ba6b5bd29cd0b2e3ea2ec58049b57eb2eda12
+ARG S6_OVERLAY_X86_64_SHA256=e6befcc96a437a3831386ecfc51808c5d3e939dc5fe3c02ae9284599e8aa2408
 
 SHELL ["/bin/bash", "-c"]
-
-## Restore full Ubuntu installation (from minimized state)
-RUN yes | unminimize || true
 
 ## Install base dependencies
 RUN apt-get update -y \
@@ -34,15 +35,17 @@ RUN apt-get update -y \
     && rm -rf /var/lib/apt/lists/*
 
 ## s6-overlay (process supervisor)
-ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz /tmp/
-ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-x86_64.tar.xz /tmp/
-
-RUN tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \
+RUN curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" -o /tmp/s6-overlay-noarch.tar.xz \
+    && curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-x86_64.tar.xz" -o /tmp/s6-overlay-x86_64.tar.xz \
+    && echo "${S6_OVERLAY_NOARCH_SHA256}  /tmp/s6-overlay-noarch.tar.xz" | sha256sum -c - \
+    && echo "${S6_OVERLAY_X86_64_SHA256}  /tmp/s6-overlay-x86_64.tar.xz" | sha256sum -c - \
+    && tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \
     && tar -C / -Jxpf /tmp/s6-overlay-x86_64.tar.xz \
     && rm -rf /tmp/s6-overlay-*.tar.xz
 
 ## Install full Docker engine (daemon + CLI)
 RUN curl -fsSL "https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz" -o /tmp/docker.tgz \
+    && echo "${DOCKER_SHA256}  /tmp/docker.tgz" | sha256sum -c - \
     && tar -xzf /tmp/docker.tgz -C /tmp \
     && install -m 755 /tmp/docker/docker /usr/local/bin/docker \
     && install -m 755 /tmp/docker/dockerd /usr/local/bin/dockerd \

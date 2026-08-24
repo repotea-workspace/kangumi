@@ -10,6 +10,7 @@ source "${SCRIPT_DIR}/common.sh"
 HARMONY_VERSION="${HARMONY_VERSION:-5.0.3.500}"
 BASE_DIR="/opt/harmony"
 ARCH="${ARCH:-linux}"
+DOWNLOAD_URL="${DOWNLOAD_URL:-https://github.com/0xfe10/dynamic-actions/releases/download/v0.0.1-ohtools/commandline-tools-linux-x64-${HARMONY_VERSION}.tar.gz}"
 
 # Environment variable block
 ENV_BLOCK='# HarmonyOS Command-Line Tools

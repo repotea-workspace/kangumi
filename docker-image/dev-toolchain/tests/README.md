@@ -7,8 +7,8 @@ Comprehensive test suite for the dev-toolchain Docker image.
 This test suite validates:
 - **Basic functionality**: Image build, container startup, environment configuration
 - **User-init scripts**: Custom initialization script execution
-- **Docker Compose**: Multi-container deployment with DinD sidecar
-- **Environment variables**: Homebrew, DOCKER_HOST, custom variables
+- **Docker Compose**: Privileged deployment with the built-in Docker daemon
+- **Environment variables**: Homebrew and custom variables
 - **File system**: Directory structure, configuration files
 
 ## Directory Structure
@@ -20,9 +20,7 @@ tests/
 ├── docker-compose.test.yml        # Docker Compose test configuration
 └── fixtures/
     └── user-scripts/              # Test user-init scripts
-        ├── 00-setup-env.sh        # Environment setup test
-        ├── 10-create-workspace.sh # Workspace creation test
-        └── 20-verify.sh           # Verification test
+        └── 10-test-init.sh        # Environment and workspace fixture
 ```
 
 ## Quick Start
@@ -67,7 +65,7 @@ cd /path/to/dev-toolchain
 
 **Expected behavior:**
 - Container starts successfully
-- `DOCKER_HOST` is set to `tcp://localhost:2375`
+- Docker is available through the local Unix socket
 - `HOMEBREW_PREFIX` is set to `/home/linuxbrew/.linuxbrew`
 - s6-overlay supervisor is running
 - Environment script exists and is sourced
@@ -87,13 +85,11 @@ cd /path/to/dev-toolchain
 ./tests/run-tests.sh user-init
 ```
 
-**Test fixtures used:**
-- `00-setup-env.sh`: Adds custom environment variables
-- `10-create-workspace.sh`: Creates `/code/test-project` structure
-- `20-verify.sh`: Verifies setup was successful
+**Test fixture:**
+- `10-test-init.sh`: Adds custom environment variables and creates `/code/test-project`
 
 **Expected behavior:**
-- All three user scripts execute in order
+- The user-init script executes successfully
 - `TEST_PROJECT`, `TEST_ENV`, `CUSTOM_MESSAGE` variables are set
 - `/code/test-project/` directory structure is created
 - `README.md` and `hello.sh` files are created
@@ -102,11 +98,10 @@ cd /path/to/dev-toolchain
 ### 3. Docker Compose Test
 
 **What it tests:**
-- Multi-container deployment
-- Docker-in-Docker (DinD) sidecar connectivity
+- Privileged container deployment
+- Built-in Docker daemon connectivity
 - Volume mounting
-- Network connectivity between services
-- Docker client can communicate with DinD daemon
+- Docker client can communicate with the built-in daemon
 
 **Usage:**
 ```bash
@@ -115,12 +110,11 @@ cd /path/to/dev-toolchain
 
 **Services:**
 - `dev-toolchain`: Main development container
-- `dind`: Docker-in-Docker daemon (sidecar)
 
 **Expected behavior:**
-- Both services start successfully
-- `dev-toolchain` can execute `docker` commands via DinD
-- Volumes `dev-code`, `dev-data`, `dind-storage` are created
+- The dev-toolchain service starts successfully
+- `dev-toolchain` can execute Docker commands through its built-in daemon
+- Volumes `dev-code`, `dev-data`, and `docker-data` are created
 - SSH port 2222 is exposed
 - `INSTALL_PACKAGES` environment variable triggers package installation
 
@@ -130,14 +124,13 @@ cd /path/to/dev-toolchain
 
 Located in `tests/fixtures/user-scripts/`, these scripts demonstrate and test the user-init functionality:
 
-#### `00-setup-env.sh`
+#### `10-test-init.sh`
 Adds custom environment variables to `/etc/profile.d/99-dev-tools-env.sh`:
 - `TEST_PROJECT=dev-toolchain-test`
 - `TEST_ENV=local-docker`
 - `CUSTOM_MESSAGE=Hello from user-init script!`
 
-#### `10-create-workspace.sh`
-Creates a sample workspace structure:
+It also creates a sample workspace structure:
 ```
 /code/
 ├── test-project/
@@ -151,12 +144,6 @@ Creates a sample workspace structure:
     ├── tools/
     └── data/
 ```
-
-#### `20-verify.sh`
-Verifies that previous scripts executed successfully by checking:
-- Environment variables are in config file
-- Directories were created
-- Files exist and have correct permissions
 
 ## Writing Your Own Tests
 
@@ -238,18 +225,6 @@ jobs:
           ./tests/run-tests.sh
 ```
 
-### GitLab CI Example
-
-```yaml
-test:dev-toolchain:
-  image: docker:latest
-  services:
-    - docker:dind
-  script:
-    - cd kangumi/docker-image/dev-toolchain
-    - ./tests/run-tests.sh
-```
-
 ## Troubleshooting
 
 ### Tests Hang or Timeout
@@ -272,12 +247,12 @@ test:dev-toolchain:
 
 ### Docker Compose Test Fails
 
-**Issue:** DinD connectivity fails or services don't start
+**Issue:** The built-in Docker daemon or service does not start
 
 **Solution:**
 - Ensure Docker Compose is installed: `docker compose version`
 - Check if ports are already in use: `lsof -i :2222`
-- Verify privileged mode is allowed for DinD
+- Verify privileged mode is allowed for the dev-toolchain container
 - Check compose logs: `docker compose -f tests/docker-compose.test.yml logs`
 
 ### Environment Variables Not Available

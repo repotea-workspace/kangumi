@@ -3,29 +3,15 @@ services:
     image: dev-toolchain:test
     container_name: dev-toolchain-test-compose
     hostname: dev-toolchain-test
+    privileged: true
     ports:
       - "2222:22"
     volumes:
       - dev-data:/data
       - dev-code:/code
-    environment:
-      - DOCKER_HOST=tcp://dind:2375
-      - INSTALL_PACKAGES=nodejs,rust
-    depends_on:
-      - dind
+      - docker-data:/var/lib/docker
     stdin_open: true
     tty: true
-    restart: unless-stopped
-
-  dind:
-    image: docker:29-dind
-    container_name: dev-toolchain-test-dind
-    hostname: dev-toolchain-test-dind
-    privileged: true
-    environment:
-      - DOCKER_TLS_CERTDIR=
-    volumes:
-      - dind-storage:/var/lib/docker
     restart: unless-stopped
 
 volumes:
@@ -33,5 +19,5 @@ volumes:
     driver: local
   dev-code:
     driver: local
-  dind-storage:
+  docker-data:
     driver: local

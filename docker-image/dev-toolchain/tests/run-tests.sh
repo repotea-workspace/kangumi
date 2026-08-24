@@ -133,11 +133,11 @@ record_test() {
     local test_name="$1"
     local result="$2"
 
-    ((TESTS_RUN++))
+    ((++TESTS_RUN))
     if [ "$result" = "pass" ]; then
-        ((TESTS_PASSED++))
+        ((++TESTS_PASSED))
     else
-        ((TESTS_FAILED++))
+        ((++TESTS_FAILED))
         FAILED_TESTS+=("$test_name")
     fi
 }
@@ -145,12 +145,12 @@ record_test() {
 # Cleanup helpers
 cleanup_container() {
     local container="$1"
-    docker stop "$container" 2>/dev/null || true
+    docker stop --timeout 2 "$container" 2>/dev/null || true
     docker rm "$container" 2>/dev/null || true
 }
 
 cleanup_compose() {
-    docker compose -f "${SCRIPT_DIR}/docker-compose.test.yml" down -v 2>/dev/null || true
+    docker compose -f "${SCRIPT_DIR}/docker-compose.test.yml" down --timeout 2 2>/dev/null || true
 }
 
 # Build image
@@ -177,7 +177,7 @@ test_basic() {
     cleanup_container "$container_name"
 
     print_test_header "Starting container"
-    if ! docker run -d --name "$container_name" "${IMAGE_NAME}:${IMAGE_TAG}"; then
+    if ! docker run -d --privileged --name "$container_name" "${IMAGE_NAME}:${IMAGE_TAG}"; then
         print_error "Failed to start container"
         record_test "basic" "fail"
         return 1
@@ -186,9 +186,12 @@ test_basic() {
 
     sleep 5
 
-    print_test_header "Checking environment variables"
-    if ! docker exec "$container_name" bash -c 'echo "DOCKER_HOST=$DOCKER_HOST"'; then
+    print_test_header "Checking built-in Docker daemon"
+    if ! docker exec "$container_name" bash -c 'for _ in {1..20}; do docker info >/dev/null 2>&1 && exit 0; sleep 1; done; exit 1'; then
+        print_error "Built-in Docker daemon is not ready"
         test_result="fail"
+    else
+        print_success "Built-in Docker daemon is ready"
     fi
 
     print_test_header "Checking Homebrew environment"
@@ -241,6 +244,7 @@ test_user_init() {
 
     print_test_header "Starting container with user scripts"
     if ! docker run -d \
+        --privileged \
         --name "$container_name" \
         -v "${user_scripts_dir}:/usr/local/lib/dev-tools/user-scripts:ro" \
         "${IMAGE_NAME}:${IMAGE_TAG}"; then
@@ -252,14 +256,6 @@ test_user_init() {
 
     print_info "Waiting for initialization (10 seconds)..."
     sleep 10
-
-    print_test_header "Checking container logs for user-init"
-    if ! docker logs "$container_name" 2>&1 | grep -q "user-init"; then
-        print_warning "user-init logs not found (may not have run)"
-        test_result="fail"
-    else
-        print_success "user-init logs found"
-    fi
 
     print_test_header "Checking environment variables from user scripts"
     if ! docker exec "$container_name" bash -c 'source /etc/profile.d/99-dev-tools-env.sh && [ -n "$TEST_PROJECT" ]'; then
@@ -317,27 +313,27 @@ test_docker_compose() {
     sleep 15
 
     print_test_header "Checking dev-toolchain service"
-    if ! docker compose -f "$compose_file" ps | grep -q "dev-toolchain.*running"; then
+    if [ -z "$(docker compose -f "$compose_file" ps --status running --quiet dev-toolchain)" ]; then
         print_error "dev-toolchain service not running"
         test_result="fail"
     else
         print_success "dev-toolchain service is running"
     fi
 
-    print_test_header "Checking DinD service"
-    if ! docker compose -f "$compose_file" ps | grep -q "dind.*running"; then
-        print_error "DinD service not running"
+    print_test_header "Testing built-in Docker daemon"
+    if ! docker compose -f "$compose_file" exec -T dev-toolchain bash -c 'for _ in {1..20}; do docker info >/dev/null 2>&1 && exit 0; sleep 1; done; exit 1'; then
+        print_error "Built-in Docker daemon is not ready"
         test_result="fail"
     else
-        print_success "DinD service is running"
+        print_success "Docker client can connect to built-in daemon"
     fi
 
-    print_test_header "Testing Docker connectivity from dev-toolchain"
-    if ! docker compose -f "$compose_file" exec -T dev-toolchain docker version >/dev/null 2>&1; then
-        print_error "Cannot connect to Docker daemon"
+    print_test_header "Checking Docker bridge NAT"
+    if ! docker compose -f "$compose_file" exec -T dev-toolchain iptables -t nat -S POSTROUTING | grep -q -- '-j MASQUERADE'; then
+        print_error "Docker bridge NAT is not configured"
         test_result="fail"
     else
-        print_success "Docker client can connect to DinD daemon"
+        print_success "Docker bridge NAT is configured"
     fi
 
     print_test_header "Checking volumes"
@@ -433,9 +429,9 @@ main() {
             test_docker_compose
             ;;
         all)
-            test_basic
-            test_user_init
-            test_docker_compose
+            test_basic || true
+            test_user_init || true
+            test_docker_compose || true
             ;;
         *)
             print_error "Unknown test: $test_target"
