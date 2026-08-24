@@ -41,7 +41,7 @@ A Helm chart for deploying development toolchain containers with a built-in Dock
 │  │  │ (s6 service) │                  ││
 │  │  └──────────────┘                  ││
 │  │                                     ││
-│  │  Dev Tools, SSH, VSCode Server      ││
+│  │  Dev Tools and SSH                  ││
 │  │                                     ││
 │  │  Shared filesystem for mounts       ││
 │  └─────────────────────────────────────┘│
@@ -434,7 +434,7 @@ helm install dev-tc ./dev-toolchain \
   -n dev-toolchain \
   --create-namespace \
   --set toolchains.fewensa.devTools.autoInstall=true \
-  --set toolchains.fewensa.devTools.packages="{nodejs,rust,gcm,vscode}"
+  --set toolchains.fewensa.devTools.packages="{nodejs,rust,gcm}"
 ```
 
 Or use a values file:
@@ -450,7 +450,6 @@ toolchains:
         - rust
         - k8s-tools
         - gcm
-        - vscode
 ```
 
 ```bash

@@ -1,0 +1,29 @@
+toolchains:
+  unsafe:
+    enabled: true
+    network:
+      mode: nodePort
+    devTools:
+      autoInstall: false
+    ports:
+      ssh:
+        containerPort: 22
+        nodePort: 32023
+      extra: []
+    storage:
+      pvc:
+        enabled: false
+      hostPath:
+        enabled: false
+      volumes: {}
+      sharedPVC:
+        enabled: false
+    sshConfig:
+      root:
+        id_ed25519: |
+          placeholder-private-key
+    resources: {}
+    env: []
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}

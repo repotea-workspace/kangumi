@@ -32,7 +32,8 @@ toolchains: {}
   #
   #   machineId: ""
   #
-  #   # SSH Configuration
+  #   # SSH Configuration. Inline values are for public material only;
+  #   # private keys must use an existing Secret through secretRef.
   #   # sshConfig:
   #   #   root:
   #   #     authorized_keys: |

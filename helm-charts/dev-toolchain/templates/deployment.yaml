@@ -129,7 +129,7 @@ spec:
                   echo "Installing {{ $pkg }}..."
 
                   # Check if it's a custom tool (not in brew)
-                  if [ "{{ $pkg }}" = "devtools" ] || [ "{{ $pkg }}" = "harmonytools" ] || [ "{{ $pkg }}" = "vscode" ]; then
+                  if [ "{{ $pkg }}" = "devtools" ] || [ "{{ $pkg }}" = "harmonytools" ]; then
                     # Use custom install script
                     if [ -f /usr/local/lib/dev-tools/install-scripts/install-{{ $pkg }}.sh ]; then
                       /usr/local/lib/dev-tools/install-scripts/install-{{ $pkg }}.sh || echo "⚠ Failed to install {{ $pkg }}"
@@ -301,10 +301,10 @@ spec:
       {{- end }}
       {{- end }}
       {{- if $hasInlineContent }}
-      # SSH inline content for user: {{ $user }}
+      # SSH inline public content for user: {{ $user }}
       - name: ssh-{{ $user }}
-        secret:
-          secretName: tch-{{ $name }}-ssh-{{ $user }}
+        configMap:
+          name: tch-{{ $name }}-ssh-{{ $user }}
           defaultMode: 0600
       {{- end }}
       {{- range $filename, $content := $userFiles }}
@@ -352,6 +352,7 @@ spec:
       - name: mihomo-config
         secret:
           secretName: {{ required (printf "toolchains.%s.proxy.configSecretName is required" $name) $config.proxy.configSecretName }}
+          defaultMode: 0400
           items:
           - key: {{ $config.proxy.configKey | default "config.yaml" }}
             path: config.yaml

@@ -1,17 +1,20 @@
+{{- $privateKeyFiles := list "id_rsa" "id_dsa" "id_ecdsa" "id_ed25519" }}
 {{- range $name, $toolchain := .Values.toolchains }}
 {{- if and $toolchain.enabled (hasKey $toolchain "sshConfig") }}
-{{- $sshConfig := $toolchain.sshConfig }}
-{{- range $user, $userFiles := $sshConfig }}
+{{- range $user, $userFiles := $toolchain.sshConfig }}
 {{- $hasInlineContent := false }}
 {{- range $filename, $content := $userFiles }}
 {{- if not (kindIs "map" $content) }}
+{{- if or (has $filename $privateKeyFiles) (and (kindIs "string" $content) (regexMatch "(?m)^-----BEGIN ([A-Z0-9]+ )?PRIVATE KEY-----" $content)) }}
+{{- fail (printf "toolchains.%s.sshConfig.%s.%s must use secretRef" $name $user $filename) }}
+{{- end }}
 {{- $hasInlineContent = true }}
 {{- end }}
 {{- end }}
 {{- if $hasInlineContent }}
 ---
 apiVersion: v1
-kind: Secret
+kind: ConfigMap
 metadata:
   name: tch-{{ $name }}-ssh-{{ $user }}
   labels:
@@ -19,8 +22,7 @@ metadata:
     app.kubernetes.io/component: {{ $name | quote }}
     dev-toolchain/instance: {{ $name | quote }}
     dev-toolchain/ssh-user: {{ $user | quote }}
-type: Opaque
-stringData:
+data:
   {{- range $filename, $content := $userFiles }}
   {{- if kindIs "string" $content }}
   {{ $filename }}: |
