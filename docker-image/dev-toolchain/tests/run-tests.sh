@@ -194,6 +194,12 @@ test_basic() {
         print_success "Built-in Docker daemon is ready"
     fi
 
+    print_test_header "Checking Docker Compose plugin"
+    if ! docker exec "$container_name" docker compose version; then
+        print_error "Docker Compose plugin is not available"
+        test_result="fail"
+    fi
+
     print_test_header "Checking Homebrew environment"
     if ! docker exec "$container_name" bash -c 'echo "HOMEBREW_PREFIX=$HOMEBREW_PREFIX"'; then
         test_result="fail"

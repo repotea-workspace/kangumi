@@ -6,6 +6,8 @@ FROM ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea264
 ARG DEBIAN_FRONTEND=noninteractive
 ARG DOCKER_VERSION=29.7.2
 ARG DOCKER_SHA256=803d433f226db4776e1768fd319fc6c6e4935a456acf84fcc0080818b854bc8f
+ARG DOCKER_COMPOSE_VERSION=5.5.0
+ARG DOCKER_COMPOSE_SHA256=c57ab918abd5b05ca7e7d0f275875dd1330a695074f309dc9eab1b49efafcd4b
 ARG S6_OVERLAY_VERSION=3.2.3.2
 ARG S6_OVERLAY_NOARCH_SHA256=5379750ed30a84bbd2e2dd74847ba6b5bd29cd0b2e3ea2ec58049b57eb2eda12
 ARG S6_OVERLAY_X86_64_SHA256=e6befcc96a437a3831386ecfc51808c5d3e939dc5fe3c02ae9284599e8aa2408
@@ -56,6 +58,11 @@ RUN curl -fsSL "https://download.docker.com/linux/static/stable/x86_64/docker-${
     && install -m 755 /tmp/docker/ctr /usr/local/bin/ctr \
     && install -m 755 /tmp/docker/runc /usr/local/bin/runc \
     && rm -rf /tmp/docker.tgz /tmp/docker \
+    && mkdir -p /usr/local/lib/docker/cli-plugins \
+    && curl -fsSL "https://github.com/docker/compose/releases/download/v${DOCKER_COMPOSE_VERSION}/docker-compose-linux-x86_64" -o /tmp/docker-compose \
+    && echo "${DOCKER_COMPOSE_SHA256}  /tmp/docker-compose" | sha256sum -c - \
+    && install -m 755 /tmp/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose \
+    && rm -f /tmp/docker-compose \
     && mkdir -p /var/lib/docker
 
 ## SSH config
