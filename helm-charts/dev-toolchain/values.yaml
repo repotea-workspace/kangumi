@@ -97,6 +97,8 @@ toolchains: {}
   #       storageClassName: ""
   #       size: 100Gi
   #       accessMode: ReadWriteOnce
+  #     hostPath:
+  #       enabled: false
   #     volumes: {}
   #     # volumes:
   #     #   root:
@@ -105,6 +107,12 @@ toolchains: {}
   #     #   code:
   #     #     mountPath: /code
   #     #     subPath: workspace/code
+  #     # For hostPath storage, disable pvc, enable hostPath, and replace each
+  #     # subPath with an absolute hostPath. Include /var/lib/docker explicitly.
+  #     #   docker:
+  #     #     mountPath: /var/lib/docker
+  #     #     hostPath: /data/dev-toolchain/foo/docker
+  #     #     type: DirectoryOrCreate
   #     sharedPVC:
   #       enabled: false
   #       name: dev-shared-wwwroot
@@ -112,6 +120,19 @@ toolchains: {}
   #       size: 50Gi
   #       accessMode: ReadWriteMany
   #       mountPath: /data/wwwroot
+  #
+  #   # Optional Mihomo native sidecar. The referenced Secret must contain
+  #   # config.yaml and enable the TUN interface plus the configured probe port.
+  #   proxy:
+  #     enabled: false
+  #     image: metacubex/mihomo:v1.19.30
+  #     imagePullPolicy: IfNotPresent
+  #     configSecretName: ""
+  #     configKey: config.yaml
+  #     args: []
+  #     startupProbe: {}
+  #     readinessProbe: {}
+  #     resources: {}
   #
   #   resources:
   #     limits:

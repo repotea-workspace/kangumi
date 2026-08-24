@@ -16,6 +16,9 @@ toolchains:
     hostname: tch-alice
     image: repotea-workspace/kangumi/dev-toolchain:latest
 
+    network:
+      mode: nodePort
+
     # SSH Configuration
     # Mix of inline content and external secret references
     sshConfig:
@@ -116,12 +119,6 @@ toolchains:
         accessMode: ReadWriteMany
         mountPath: /data/wwwroot
 
-    dind:
-      enabled: true
-      image: docker:29-dind
-      storage:
-        type: emptyDir
-
     resources:
       limits:
         cpu: "8"
@@ -141,6 +138,9 @@ toolchains:
     enabled: true
     hostname: tch-bob
     image: repotea-workspace/kangumi/dev-toolchain:latest
+
+    network:
+      mode: nodePort
 
     # SSH Configuration - simpler example with just authorized_keys
     sshConfig:
@@ -187,9 +187,6 @@ toolchains:
         name: dev-shared-wwwroot
         mountPath: /data/wwwroot
 
-    dind:
-      enabled: true
-
     resources:
       limits:
         cpu: "4"
@@ -197,17 +194,3 @@ toolchains:
       requests:
         cpu: "1"
         memory: 2Gi
-
-# DinD defaults
-dindDefaults:
-  image: docker:29-dind
-  pullPolicy: IfNotPresent
-  env:
-    DOCKER_TLS_CERTDIR: ""
-  resources:
-    limits:
-      cpu: "4"
-      memory: 8Gi
-    requests:
-      cpu: "1"
-      memory: 2Gi

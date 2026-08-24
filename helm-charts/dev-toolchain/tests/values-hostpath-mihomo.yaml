@@ -1,0 +1,59 @@
+global:
+  imageRegistry: ""
+
+toolchains:
+  birch:
+    enabled: true
+    hostname: tch-birch
+    image: example.invalid/dev-toolchain:test
+    network:
+      mode: nodePort
+    devTools:
+      autoInstall: false
+    ports:
+      ssh:
+        containerPort: 22
+        nodePort: 32022
+      extra: []
+    storage:
+      pvc:
+        enabled: false
+      hostPath:
+        enabled: true
+      volumes:
+        root:
+          mountPath: /root
+          hostPath: /data/dev-toolchain/birch/root
+        home:
+          mountPath: /home
+          hostPath: /data/dev-toolchain/birch/home
+        code:
+          mountPath: /code
+          hostPath: /data/dev-toolchain/birch/code
+        data:
+          mountPath: /data
+          hostPath: /data/dev-toolchain/birch/data
+        docker:
+          mountPath: /var/lib/docker
+          hostPath: /data/dev-toolchain/birch/docker
+      sharedPVC:
+        enabled: false
+    proxy:
+      enabled: true
+      image: example.invalid/mihomo:v1.19.30
+      configSecretName: tch-birch-mihomo
+      startupProbe:
+        tcpSocket:
+          port: 9090
+        periodSeconds: 2
+        failureThreshold: 30
+      readinessProbe:
+        tcpSocket:
+          port: 9090
+        periodSeconds: 10
+    resources: {}
+    env: []
+    nodeSelector:
+      kubernetes.io/hostname: ek-cn1
+    tolerations: []
+    affinity: {}

@@ -1,5 +1,11 @@
 {{- range $name, $config := .Values.toolchains }}
 {{- if $config.enabled }}
+{{- $pvcEnabled := dig "storage" "pvc" "enabled" false $config }}
+{{- $hostPathEnabled := dig "storage" "hostPath" "enabled" false $config }}
+{{- $proxyEnabled := dig "proxy" "enabled" false $config }}
+{{- if and $pvcEnabled $hostPathEnabled }}
+{{- fail (printf "toolchains.%s.storage.pvc and storage.hostPath cannot both be enabled" $name) }}
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -41,6 +47,44 @@ spec:
       {{- end }}
       {{- if $config.hostname }}
       hostname: {{ $config.hostname }}
+      {{- end }}
+
+      {{- if $proxyEnabled }}
+      initContainers:
+      - name: mihomo
+        image: {{ required (printf "toolchains.%s.proxy.image is required" $name) $config.proxy.image | quote }}
+        imagePullPolicy: {{ $config.proxy.imagePullPolicy | default "IfNotPresent" }}
+        restartPolicy: Always
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
+          runAsUser: 0
+          capabilities:
+            add:
+              - NET_ADMIN
+        {{- with $config.proxy.args }}
+        args:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+        - name: mihomo-config
+          mountPath: /root/.config/mihomo/config.yaml
+          subPath: config.yaml
+          readOnly: true
+        - name: tun-device
+          mountPath: /dev/net/tun
+        {{- with $config.proxy.startupProbe }}
+        startupProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with $config.proxy.readinessProbe }}
+        readinessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with $config.proxy.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       {{- end }}
 
       containers:
@@ -209,13 +253,19 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
-        {{- if $config.storage.pvc.enabled }}
+        {{- if $pvcEnabled }}
         {{- range $volName, $volConfig := $config.storage.volumes }}
         - name: toolchain-data
           mountPath: {{ $volConfig.mountPath }}
           {{- if $volConfig.subPath }}
           subPath: {{ $volConfig.subPath }}
           {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if $hostPathEnabled }}
+        {{- range $volName, $volConfig := $config.storage.volumes }}
+        - name: toolchain-{{ $volName }}
+          mountPath: {{ $volConfig.mountPath }}
         {{- end }}
         {{- end }}
         {{- if and $config.storage.sharedPVC $config.storage.sharedPVC.enabled }}
@@ -228,7 +278,7 @@ spec:
           mountPath: /usr/local/lib/dev-tools/user-scripts
           readOnly: true
         {{- end }}
-        {{- if $config.storage.pvc.enabled }}
+        {{- if $pvcEnabled }}
         # Docker storage (dockerd runs in main container, from PVC subPath)
         - name: toolchain-data
           mountPath: /var/lib/docker
@@ -273,10 +323,18 @@ spec:
       {{- end }}
       {{- end }}
       {{- end }}
-      {{- if $config.storage.pvc.enabled }}
+      {{- if $pvcEnabled }}
       - name: toolchain-data
         persistentVolumeClaim:
           claimName: {{ include "dev-toolchain.pvcName" (dict "root" $ "name" $name "config" $config) }}
+      {{- end }}
+      {{- if $hostPathEnabled }}
+      {{- range $volName, $volConfig := $config.storage.volumes }}
+      - name: toolchain-{{ $volName }}
+        hostPath:
+          path: {{ required (printf "toolchains.%s.storage.volumes.%s.hostPath is required" $name $volName) $volConfig.hostPath }}
+          type: {{ $volConfig.type | default "DirectoryOrCreate" }}
+      {{- end }}
       {{- end }}
       {{- if and $config.storage.sharedPVC $config.storage.sharedPVC.enabled }}
       - name: shared-wwwroot
@@ -289,6 +347,18 @@ spec:
         configMap:
           name: {{ include "dev-toolchain.userScriptsConfigMapName" (dict "root" $ "name" $name "config" $config) }}
           defaultMode: 0755
+      {{- end }}
+      {{- if $proxyEnabled }}
+      - name: mihomo-config
+        secret:
+          secretName: {{ required (printf "toolchains.%s.proxy.configSecretName is required" $name) $config.proxy.configSecretName }}
+          items:
+          - key: {{ $config.proxy.configKey | default "config.yaml" }}
+            path: config.yaml
+      - name: tun-device
+        hostPath:
+          path: /dev/net/tun
+          type: CharDevice
       {{- end }}
       {{- with $config.nodeSelector }}
       nodeSelector:

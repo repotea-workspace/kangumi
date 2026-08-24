@@ -1,11 +1,12 @@
 # Dev Toolchain Helm Chart
 
-A Helm chart for deploying development toolchain containers with Docker-in-Docker (DinD) support on Kubernetes.
+A Helm chart for deploying development toolchain containers with a built-in Docker daemon on Kubernetes.
 
 ## Features
 
-- 🐳 **Docker-in-Docker Support**: Run Docker commands inside containers with built-in dockerd
-- 💾 **Persistent Storage**: PVC-based storage with flexible mount configurations
+- 🐳 **Built-in Docker**: Run Docker CLI and dockerd in the main container
+- 💾 **Persistent Storage**: PVC or per-directory hostPath storage
+- 🌐 **Optional TUN Proxy**: Run Mihomo as a native sidecar for pod-wide egress
 - 🌐 **NodePort + ClusterIP Services**: external node ports plus optional in-cluster discovery for hostNetwork toolchains
 - 🚀 **Multi-Instance**: Deploy multiple independent toolchain instances
 - 📦 **Flexible Configuration**: Comprehensive values.yaml with sensible defaults
@@ -16,7 +17,8 @@ A Helm chart for deploying development toolchain containers with Docker-in-Docke
 
 - Kubernetes cluster (1.19+)
 - Helm 3.0+
-- StorageClass supporting ReadWriteOnce (for main PVC)
+- StorageClass supporting ReadWriteOnce (when using a main PVC)
+- Kubernetes 1.29+ and `/dev/net/tun` on the selected node (when using the Mihomo sidecar)
 - StorageClass supporting ReadWriteMany (optional, for shared storage)
 - NodePort range 17000-18000 available
 
@@ -44,7 +46,7 @@ A Helm chart for deploying development toolchain containers with Docker-in-Docke
 │  │  Shared filesystem for mounts       ││
 │  └─────────────────────────────────────┘│
 │                   ↓                     │
-│           PVC Volumes                   │
+│        PVC or hostPath Volumes          │
 └─────────────────────────────────────────┘
 ```
 
@@ -290,6 +292,27 @@ The PVC is organized with subPaths for different purposes:
 | `/opt` | `workspace/opt` | Software installations |
 | `/code` | `workspace/code` | Code repositories |
 
+#### Per-directory hostPath
+
+Disable the PVC and give every mounted directory an absolute node path. This pins
+the data to the selected node, so use a `nodeSelector` and the `Recreate` strategy
+already provided by the chart.
+
+```yaml
+storage:
+  pvc:
+    enabled: false
+  hostPath:
+    enabled: true
+  volumes:
+    root:
+      mountPath: /root
+      hostPath: /data/dev-toolchain/birch/root
+    docker:
+      mountPath: /var/lib/docker
+      hostPath: /data/dev-toolchain/birch/docker
+```
+
 #### Shared PVC (optional)
 
 For shared storage across instances (requires ReadWriteMany):
@@ -305,16 +328,18 @@ storage:
     mountPath: /data/wwwroot
 ```
 
-### Docker-in-Docker Configuration
+### Mihomo TUN sidecar
 
 ```yaml
-dind:
+proxy:
   enabled: true
-  image: docker:29-dind
-  storage:
-    type: emptyDir  # or 'pvc' for persistence
-    # size: 50Gi    # only if type: pvc
+  image: metacubex/mihomo:v1.19.30
+  configSecretName: tch-birch-mihomo
 ```
+
+The Secret must contain `config.yaml`. Its Mihomo configuration is responsible for
+enabling TUN routing and excluding Kubernetes, node, metadata, and proxy-server
+destinations that must stay direct.
 
 ### Resource Limits
 
@@ -465,9 +490,9 @@ Main container:
 kubectl logs deployment/<deployment-name> -n dev-toolchain
 ```
 
-DinD sidecar:
+Built-in Docker daemon:
 ```bash
-kubectl logs deployment/<deployment-name> -c dind -n dev-toolchain
+kubectl exec deployment/<deployment-name> -n dev-toolchain -- docker info
 ```
 
 ### Access Container Shell
@@ -483,8 +508,8 @@ kubectl exec -it deployment/<deployment-name> -n dev-toolchain -- /bin/bash
 **Symptom**: `Cannot connect to the Docker daemon`
 
 **Solution**: 
-- Check DinD sidecar is running: `kubectl logs <pod> -c dind`
-- Verify DOCKER_HOST environment variable: `echo $DOCKER_HOST` (should be `tcp://localhost:2375`)
+- Check the built-in s6 service: `s6-svstat /var/run/s6/legacy-services/dockerd`
+- Check the local daemon: `docker info`
 
 #### 2. PVC not binding
 
@@ -626,7 +651,7 @@ toolchains:
 
 ## Security Considerations
 
-1. **Privileged Containers**: Only the DinD sidecar runs with `privileged: true`. The main container runs without privileges.
+1. **Privileged Container**: The main container runs privileged so its built-in Docker daemon works. Restrict namespace and node access accordingly.
 
 2. **Network Isolation**: Consider using NetworkPolicy to restrict traffic.
 
