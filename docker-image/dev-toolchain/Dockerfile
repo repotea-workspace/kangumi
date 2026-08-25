@@ -83,8 +83,7 @@ ENV PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}
     HOMEBREW_REPOSITORY="/home/linuxbrew/.linuxbrew" \
     HOMEBREW_ALLOW_ROOT=1 \
     HOMEBREW_NO_ENV_HINTS=1 \
-    HOMEBREW_NO_AUTO_UPDATE=1 \
-    HOMEBREW_NO_INSTALL_FROM_API=1
+    HOMEBREW_NO_AUTO_UPDATE=1
 
 ## Create directories
 RUN mkdir -p /usr/local/lib/dev-tools/install-scripts \
