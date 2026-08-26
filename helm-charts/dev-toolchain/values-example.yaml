@@ -88,6 +88,30 @@ toolchains:
           containerPort: 8443
           nodePort: 17101
 
+    # Optional dynamic HTTP/WebSocket gateway. A request for
+    # p3000.alice-dev.example.com is proxied to 127.0.0.1:3000 in this Pod.
+    portGateway:
+      enabled: true
+      image: nginx:1.29-alpine
+      hostSuffix: alice-dev.example.com
+      listenPort: 18080
+      allowedPortRanges:
+        - start: 3000
+          end: 4000
+        - start: 8000
+          end: 9000
+      ingress:
+        className: nginx
+        clusterIssuer: letsencrypt-prd
+        tlsSecretName: tls-cert-alice-dev-example-com
+      resources:
+        requests:
+          cpu: 10m
+          memory: 16Mi
+        limits:
+          cpu: 100m
+          memory: 64Mi
+
     storage:
       pvc:
         enabled: true

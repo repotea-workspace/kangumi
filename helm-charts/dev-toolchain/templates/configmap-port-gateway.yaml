@@ -1,0 +1,100 @@
+{{- range $name, $config := .Values.toolchains }}
+{{- if and $config.enabled (dig "portGateway" "enabled" false $config) }}
+{{- $gateway := $config.portGateway }}
+{{- $hostSuffix := required (printf "toolchains.%s.portGateway.hostSuffix is required" $name) $gateway.hostSuffix }}
+{{- if not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)+$" $hostSuffix) }}
+{{- fail (printf "toolchains.%s.portGateway.hostSuffix must be a lowercase DNS name" $name) }}
+{{- end }}
+{{- $ranges := required (printf "toolchains.%s.portGateway.allowedPortRanges is required" $name) $gateway.allowedPortRanges }}
+{{- if eq (len $ranges) 0 }}
+{{- fail (printf "toolchains.%s.portGateway.allowedPortRanges cannot be empty" $name) }}
+{{- end }}
+{{- $seenPorts := dict }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dev-toolchain.portGatewayName" (dict "root" $ "name" $name) }}
+  labels:
+    {{- include "dev-toolchain.instanceLabels" (dict "root" $ "name" $name) | nindent 4 }}
+data:
+  nginx.conf: |
+    worker_processes auto;
+    error_log /dev/stderr info;
+    pid /dev/shm/nginx.pid;
+
+    events {
+      worker_connections 1024;
+    }
+
+    http {
+      access_log /dev/stdout;
+      client_body_temp_path /dev/shm/client-temp;
+      proxy_temp_path /dev/shm/proxy-temp;
+      fastcgi_temp_path /dev/shm/fastcgi-temp;
+      uwsgi_temp_path /dev/shm/uwsgi-temp;
+      scgi_temp_path /dev/shm/scgi-temp;
+
+      map $host $dev_port {
+        default "";
+        "~^p(?<gateway_port>[0-9]{1,5})\.{{ replace "." "\\." $hostSuffix }}$" $gateway_port;
+      }
+
+      map $dev_port $dev_port_allowed {
+        default 0;
+        {{- range $range := $ranges }}
+        {{- $start := int (required (printf "toolchains.%s.portGateway.allowedPortRanges[].start is required" $name) $range.start) }}
+        {{- $end := int (required (printf "toolchains.%s.portGateway.allowedPortRanges[].end is required" $name) $range.end) }}
+        {{- if or (lt $start 1) (gt $end 65535) (gt $start $end) }}
+        {{- fail (printf "toolchains.%s.portGateway range %d-%d must be within 1-65535 and ordered" $name $start $end) }}
+        {{- end }}
+        {{- range $port := untilStep $start (add1 $end | int) 1 }}
+        {{- $portKey := printf "%d" $port }}
+        {{- if hasKey $seenPorts $portKey }}
+        {{- fail (printf "toolchains.%s.portGateway port %s is present in overlapping ranges" $name $portKey) }}
+        {{- end }}
+        {{- $_ := set $seenPorts $portKey true }}
+        {{ $port }} 1;
+        {{- end }}
+        {{- end }}
+      }
+
+      map $http_upgrade $connection_upgrade {
+        default upgrade;
+        "" close;
+      }
+
+      map $http_x_forwarded_proto $forwarded_proto {
+        default $http_x_forwarded_proto;
+        "" $scheme;
+      }
+
+      server {
+        listen {{ $gateway.listenPort | default 18080 }};
+
+        if ($dev_port_allowed = 0) {
+          return 404;
+        }
+
+        location / {
+          proxy_pass http://127.0.0.1:$dev_port;
+          proxy_http_version 1.1;
+          proxy_set_header Host $http_host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Host $http_host;
+          proxy_set_header X-Forwarded-Proto $forwarded_proto;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection $connection_upgrade;
+          proxy_connect_timeout 5s;
+          proxy_read_timeout 3600s;
+          proxy_send_timeout 3600s;
+          proxy_buffering off;
+          proxy_request_buffering off;
+          proxy_hide_header Cache-Control;
+          add_header Cache-Control "no-store" always;
+        }
+      }
+    }
+{{- end }}
+{{- end }}

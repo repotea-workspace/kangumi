@@ -5,6 +5,7 @@
 {{- $proxyEnabled := dig "proxy" "enabled" false $config }}
 {{- $proxyConfig := dig "proxy" "config" "" $config }}
 {{- $proxySplitEnabled := and $proxyEnabled (ne $proxyConfig "") }}
+{{- $portGatewayEnabled := dig "portGateway" "enabled" false $config }}
 {{- if and $pvcEnabled $hostPathEnabled }}
 {{- fail (printf "toolchains.%s.storage.pvc and storage.hostPath cannot both be enabled" $name) }}
 {{- end }}
@@ -36,6 +37,9 @@ spec:
         {{- end }}
         {{- if $proxySplitEnabled }}
         checksum/mihomo-config: {{ $proxyConfig | sha256sum }}
+        {{- end }}
+        {{- if $portGatewayEnabled }}
+        checksum/port-gateway-config: {{ toJson $config.portGateway | sha256sum }}
         {{- end }}
       labels:
         {{- include "dev-toolchain.instanceSelectorLabels" (dict "root" $ "name" $name) | nindent 8 }}
@@ -329,6 +333,53 @@ spec:
           mountPath: /var/lib/docker
           subPath: docker
         {{- end }}
+      {{- if $portGatewayEnabled }}
+      - name: port-gateway
+        image: {{ required (printf "toolchains.%s.portGateway.image is required" $name) $config.portGateway.image | quote }}
+        imagePullPolicy: {{ $config.portGateway.imagePullPolicy | default "IfNotPresent" }}
+        command:
+          - nginx
+          - -c
+          - /etc/nginx-gateway/nginx.conf
+          - -g
+          - daemon off;
+        ports:
+          - name: port-gateway
+            containerPort: {{ $config.portGateway.listenPort | default 18080 }}
+            protocol: TCP
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 101
+          runAsGroup: 101
+          capabilities:
+            drop:
+              - ALL
+          seccompProfile:
+            type: RuntimeDefault
+        readinessProbe:
+          tcpSocket:
+            port: port-gateway
+          periodSeconds: 5
+          timeoutSeconds: 1
+          failureThreshold: 3
+        livenessProbe:
+          tcpSocket:
+            port: port-gateway
+          periodSeconds: 10
+          timeoutSeconds: 1
+          failureThreshold: 3
+        volumeMounts:
+          - name: port-gateway-config
+            mountPath: /etc/nginx-gateway
+            readOnly: true
+        {{- with $config.portGateway.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- end }}
       volumes:
       {{- if eq ($config.network.mode | default "nodePort") "hostNetwork" }}
       # hostNetwork mode: SSH port configuration
@@ -417,6 +468,11 @@ spec:
         hostPath:
           path: /dev/net/tun
           type: CharDevice
+      {{- end }}
+      {{- if $portGatewayEnabled }}
+      - name: port-gateway-config
+        configMap:
+          name: {{ include "dev-toolchain.portGatewayName" (dict "root" $ "name" $name) }}
       {{- end }}
       {{- with $config.nodeSelector }}
       nodeSelector:
