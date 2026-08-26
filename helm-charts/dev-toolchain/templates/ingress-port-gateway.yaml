@@ -1,0 +1,40 @@
+{{- range $name, $config := .Values.toolchains }}
+{{- if and $config.enabled (dig "portGateway" "enabled" false $config) }}
+{{- $gateway := $config.portGateway }}
+{{- $hostSuffix := required (printf "toolchains.%s.portGateway.hostSuffix is required" $name) $gateway.hostSuffix }}
+{{- $tlsSecretName := required (printf "toolchains.%s.portGateway.ingress.tlsSecretName is required" $name) $gateway.ingress.tlsSecretName }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "dev-toolchain.portGatewayName" (dict "root" $ "name" $name) }}
+  labels:
+    {{- include "dev-toolchain.instanceLabels" (dict "root" $ "name" $name) | nindent 4 }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ $gateway.ingress.clusterIssuer | default "letsencrypt-prd" | quote }}
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    {{- with $gateway.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ $gateway.ingress.className | default "nginx" | quote }}
+  tls:
+    - hosts:
+        - {{ printf "*.%s" $hostSuffix | quote }}
+      secretName: {{ $tlsSecretName }}
+  rules:
+    - host: {{ printf "*.%s" $hostSuffix | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "dev-toolchain.portGatewayName" (dict "root" $ "name" $name) }}
+                port:
+                  name: http
+{{- end }}
+{{- end }}

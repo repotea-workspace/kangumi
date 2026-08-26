@@ -140,6 +140,13 @@ Truncates fullname portion to ensure total length <= 63 chars.
 {{- end }}
 
 {{/*
+Generate port gateway resource name for a toolchain instance
+*/}}
+{{- define "dev-toolchain.portGatewayName" -}}
+{{- printf "tch-%s-port-gateway" .name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
 Generate config map name for a toolchain instance
 Usage: include "dev-toolchain.configMapName" (dict "root" $ "name" "fewensa")
 */}}

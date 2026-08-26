@@ -144,6 +144,33 @@ toolchains: {}
   #     readinessProbe: {}
   #     resources: {}
   #
+  #   # Optional HTTP/WebSocket gateway for dynamically started development
+  #   # services. Requests use p<port>.<hostSuffix> and are proxied to the same
+  #   # Pod network namespace. Only the configured numeric ranges are allowed.
+  #   portGateway:
+  #     enabled: false
+  #     image: nginx:1.29-alpine
+  #     imagePullPolicy: IfNotPresent
+  #     hostSuffix: birch.example.com
+  #     listenPort: 18080
+  #     allowedPortRanges:
+  #       - start: 3000
+  #         end: 4000
+  #       - start: 8000
+  #         end: 9000
+  #     ingress:
+  #       className: nginx
+  #       clusterIssuer: letsencrypt-prd
+  #       tlsSecretName: tls-cert-birch-example-com
+  #       annotations: {}
+  #     resources:
+  #       requests:
+  #         cpu: 10m
+  #         memory: 16Mi
+  #       limits:
+  #         cpu: 100m
+  #         memory: 64Mi
+  #
   #   resources:
   #     limits:
   #       cpu: "8"

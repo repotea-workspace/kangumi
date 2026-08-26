@@ -7,6 +7,7 @@ A Helm chart for deploying development toolchain containers with a built-in Dock
 - 🐳 **Built-in Docker**: Run Docker CLI and dockerd in the main container
 - 💾 **Persistent Storage**: PVC or per-directory hostPath storage
 - 🌐 **Optional TUN Proxy**: Run Mihomo as a native sidecar for pod-wide egress
+- 🌍 **Optional Port Gateway**: Publish dynamic HTTP/WebSocket development ports through one wildcard Ingress
 - 🌐 **NodePort + ClusterIP Services**: external node ports plus optional in-cluster discovery for hostNetwork toolchains
 - 🚀 **Multi-Instance**: Deploy multiple independent toolchain instances
 - 📦 **Flexible Configuration**: Comprehensive values.yaml with sensible defaults
@@ -348,6 +349,38 @@ to an `emptyDir` for Mihomo. The config is responsible for enabling TUN routing 
 excluding Kubernetes, node, metadata, and proxy-server destinations that must stay
 direct. Updating the external Secret requires restarting the Pod. The legacy
 `configSecretName`/`configKey` full-config Secret mode remains supported.
+
+### Dynamic HTTP/WebSocket port gateway
+
+The optional gateway exposes development services without `hostNetwork` or one
+NodePort per service. The hostname encodes the target port: for example,
+`p3018.birch.example.com` proxies to `127.0.0.1:3018` in the toolchain Pod.
+
+```yaml
+portGateway:
+  enabled: true
+  image: nginx:1.29-alpine
+  hostSuffix: birch.example.com
+  listenPort: 18080
+  allowedPortRanges:
+    - start: 3000
+      end: 4000
+    - start: 8000
+      end: 9000
+  ingress:
+    className: nginx
+    clusterIssuer: letsencrypt-prd
+    tlsSecretName: tls-cert-birch-example-com
+```
+
+Create a wildcard DNS record for `*.birch.example.com` that points to the
+Ingress endpoint. The chart creates a wildcard Ingress and asks cert-manager for
+the origin certificate. Only HTTP, WebSocket, and SSE traffic is supported;
+use SSH tunnels or explicit Service ports for raw TCP and UDP protocols.
+
+The gateway validates the numeric port against `allowedPortRanges`, fixes the
+upstream host to `127.0.0.1`, disables response caching, and uses a separate
+ClusterIP Service so the gateway cannot bypass the Ingress through NodePort.
 
 ### Resource Limits
 
