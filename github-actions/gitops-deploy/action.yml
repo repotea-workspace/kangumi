@@ -28,15 +28,12 @@ inputs:
   commit_message:
     description: 'commit message'
     required: false
-    default: '__origin__/.github/message.txt'
   ac_git_ref:
     description: 'action context: git ref'
     required: false
-    default: '__origin__/.github/ref.txt'
   commit_id:
     description: 'action context: commit id'
     required: false
-    default: '__origin__/.github/commit.txt'
 
   argocd_server:
     description: 'ArgoCD server URL'
@@ -93,10 +90,17 @@ runs:
       id: generate-commit-message
       shell: bash
       run: |
+        source "${GITHUB_ACTION_PATH}/metadata.sh"
+        METADATA_DIR=$(gitops_metadata_dir)
+
         INPUT_SOURCE_REPOSITORY="${{ inputs.source_repository }}"
         INPUT_COMMIT_MESSAGE="${{ inputs.commit_message }}"
         INPUT_AC_GIT_REF="${{ inputs.ac_git_ref }}"
         INPUT_COMMIT_ID="${{ inputs.commit_id }}"
+
+        INPUT_COMMIT_MESSAGE=${INPUT_COMMIT_MESSAGE:-${METADATA_DIR}/message.txt}
+        INPUT_AC_GIT_REF=${INPUT_AC_GIT_REF:-${METADATA_DIR}/ref.txt}
+        INPUT_COMMIT_ID=${INPUT_COMMIT_ID:-${METADATA_DIR}/commit.txt}
 
         # read commit_message
         if [ -f "${INPUT_COMMIT_MESSAGE}" ]; then
@@ -121,21 +125,21 @@ runs:
 
         # read commit_date if exists
         COMMIT_DATE=""
-        if [ -f "__origin__/.github/date.txt" ]; then
-          COMMIT_DATE=$(cat __origin__/.github/date.txt)
+        if [ -f "${METADATA_DIR}/date.txt" ]; then
+          COMMIT_DATE=$(cat "${METADATA_DIR}/date.txt")
         fi
 
         # read author if exists
         COMMIT_AUTHOR=""
-        if [ -f "__origin__/.github/author.txt" ]; then
-          COMMIT_AUTHOR=$(cat __origin__/.github/author.txt)
+        if [ -f "${METADATA_DIR}/author.txt" ]; then
+          COMMIT_AUTHOR=$(cat "${METADATA_DIR}/author.txt")
         fi
 
         # read source_repository, use input first, if not set use repository.txt
         if [ -n "${INPUT_SOURCE_REPOSITORY}" ]; then
           SOURCE_REPOSITORY="${INPUT_SOURCE_REPOSITORY}"
-        elif [ -f "__origin__/.github/repository.txt" ]; then
-          SOURCE_REPOSITORY=$(cat __origin__/.github/repository.txt)
+        elif [ -f "${METADATA_DIR}/repository.txt" ]; then
+          SOURCE_REPOSITORY=$(cat "${METADATA_DIR}/repository.txt")
         else
           SOURCE_REPOSITORY="${{ github.repository }}"
         fi
