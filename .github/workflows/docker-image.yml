@@ -60,7 +60,7 @@ jobs:
             build-args: ""
 
           - package: lanhu-mcp
-            context: https://github.com/dsphper/lanhu-mcp.git#main
+            context: https://github.com/dsphper/lanhu-mcp.git#0f2a4375ded5ebcb97d18f279fdc09e513c05cba
 
           - package: graphiti-mcp
             context: docker-image/graphiti-mcp
