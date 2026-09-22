@@ -15,6 +15,7 @@ spec:
   type: ClusterIP
   {{- else }}
   type: NodePort
+  externalTrafficPolicy: {{ $config.network.externalTrafficPolicy | default "Cluster" }}
   {{- end }}
   selector:
     {{- include "dev-toolchain.instanceSelectorLabels" (dict "root" $ "name" $name) | nindent 4 }}
