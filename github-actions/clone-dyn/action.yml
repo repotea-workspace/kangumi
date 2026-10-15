@@ -29,16 +29,11 @@ runs:
     - name: Prepare Options
       shell: bash
       id: prepare_options
-      run: |
-        set -xe
-        GIT_REF=${{ inputs.ref }}
-        GIT_REF_FILE=${{ inputs.ref_file }}
-
-        if [ -z "${GIT_REF}" ]; then
-          GIT_REF=$(cat ${GIT_REF_FILE})
-        fi
-
-        echo "GIT_REF=$GIT_REF" >> $GITHUB_OUTPUT
+      env:
+        SOURCE_REPOSITORY: ${{ inputs.repository }}
+        SOURCE_REF: ${{ inputs.ref }}
+        SOURCE_REF_FILE: ${{ inputs.ref_file }}
+      run: python3 "$GITHUB_ACTION_PATH/resolve.py"
 
     - name: Prepare Git Repository
       shell: bash

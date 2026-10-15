@@ -1,0 +1,22 @@
+name: Dynamic CI protocol tests
+on:
+  push:
+    paths:
+      - 'github-actions/dyn-*/**'
+      - 'github-actions/clone-dyn/**'
+      - '.github/workflows/dyn-protocol.yml'
+  pull_request:
+    paths:
+      - 'github-actions/dyn-*/**'
+      - 'github-actions/clone-dyn/**'
+      - '.github/workflows/dyn-protocol.yml'
+permissions:
+  contents: read
+jobs:
+  protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: python3 -m unittest discover -s github-actions/dyn-common -v
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'

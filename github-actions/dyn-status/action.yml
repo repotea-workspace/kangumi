@@ -1,0 +1,25 @@
+name: Report dynamic CI status
+description: Verify source-owned dispatch receipts and reconcile downstream results.
+inputs:
+  config:
+    description: Trusted config checked out from the execution repository default branch.
+    required: true
+  source:
+    description: Trusted source key in config; never read from forwarded metadata.
+    required: true
+  execution-token:
+    description: Execution repository token with actions and contents read.
+    required: true
+  source-token:
+    description: Source token with contents/actions/statuses read and statuses write.
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        STATUS_CONFIG: ${{ inputs.config }}
+        SOURCE_KEY: ${{ inputs.source }}
+        EXECUTION_READ_TOKEN: ${{ inputs.execution-token }}
+        SOURCE_STATUS_TOKEN: ${{ inputs.source-token }}
+      run: python3 "$GITHUB_ACTION_PATH/main.py"

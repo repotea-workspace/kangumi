@@ -1,0 +1,28 @@
+name: Resolve dynamic source
+description: Resolve the immutable source identity from forwarded metadata.
+inputs:
+  repository:
+    description: Expected source repository (never inferred from untrusted metadata).
+    required: true
+  token:
+    description: Source read token, used only to resolve legacy short SHA metadata.
+    required: false
+outputs:
+  sha:
+    description: Full immutable source SHA.
+    value: ${{ steps.source.outputs.sha }}
+  branch:
+    description: Source branch name (empty for a tag).
+    value: ${{ steps.source.outputs.branch }}
+  repository:
+    description: Validated source repository.
+    value: ${{ steps.source.outputs.repository }}
+runs:
+  using: composite
+  steps:
+    - id: source
+      shell: bash
+      env:
+        EXPECTED_REPOSITORY: ${{ inputs.repository }}
+        SOURCE_READ_TOKEN: ${{ inputs.token }}
+      run: python3 "$GITHUB_ACTION_PATH/main.py"
