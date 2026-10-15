@@ -49,11 +49,19 @@ workflow filenames and names and optionally `missing_after_seconds` (60–3600).
 Policy versions are immutable; add a new version when changing required checks
 and retain old versions while batches may still be active.
 
-Listen for requested/in_progress/completed workflow_run events for the configured
-workflow names and `Dynamic CI receipt`. These event filters are glob patterns:
-escape literal metacharacters (for example, single-quoted `\[project\] Checks`
-in YAML), while keeping the plain literal name in the JSON policy. Unescaped
-brackets can silently prevent completion events from reaching the receiver.
+Listen for requested/in_progress/completed workflow_run events on the registered
+source execution branches (for example, `owner/repository`), accepting all workflow
+names on those branches. GitHub shares workflow IDs and current names by file path
+across branches: another project using `check.yml` can overwrite the registered
+name and cause a name-filtered receiver to miss completion events. The policy still
+verifies the literal name and path of each immutable run before reporting.
+
+Exclude the receiver's default branch at the event-filter level so its own runs
+cannot recursively trigger it. Each source job should also ignore events from
+other source execution branches; this avoids unrelated events replacing queued
+reconciliation jobs. For tag forwarding, explicitly register the execution tag
+patterns and source job routing as well, without admitting the default branch.
+
 Run scheduled reconciliation every ten
 minutes, plus workflow_dispatch with an optional full execution SHA. Serialize
 receiver jobs per source/context with cancel-in-progress false. GitHub may replace
