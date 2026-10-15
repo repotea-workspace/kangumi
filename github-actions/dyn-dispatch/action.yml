@@ -1,0 +1,17 @@
+name: Finalize failed dynamic dispatch
+description: Close a source-owned pending dispatch when its Trigger terminates unsuccessfully.
+inputs:
+  token:
+    description: The source repository GITHUB_TOKEN with statuses write permission.
+    required: true
+  trigger-workflow:
+    description: Trusted source Trigger workflow path.
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        SOURCE_STATUS_TOKEN: ${{ inputs.token }}
+        TRIGGER_WORKFLOW: ${{ inputs.trigger-workflow }}
+      run: python3 "$GITHUB_ACTION_PATH/main.py"

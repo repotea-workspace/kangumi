@@ -1,0 +1,13 @@
+name: Dynamic CI receipt
+on:
+  push:
+    branches: ['**']
+    tags: ['**']
+permissions:
+  contents: read
+jobs:
+  receipt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - run: echo "Immutable dynamic execution registered."
