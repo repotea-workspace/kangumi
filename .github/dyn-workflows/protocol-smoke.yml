@@ -1,0 +1,24 @@
+name: Dynamic protocol smoke
+on:
+  push:
+    branches: ['repotea-workspace/kangumi']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Verify full source identity
+        run: |
+          python3 - <<'PY'
+          import json, re
+          from pathlib import Path
+          source = json.loads(Path(".github/source.json").read_text())
+          assert source["source"]["repository"] == "repotea-workspace/kangumi"
+          assert re.fullmatch("[0-9a-f]{40}", source["source"]["sha"])
+          assert source["policy"] is None
+          PY
+      - name: Allow cancellation and pending-state verification
+        run: sleep 45
