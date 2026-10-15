@@ -50,7 +50,11 @@ Policy versions are immutable; add a new version when changing required checks
 and retain old versions while batches may still be active.
 
 Listen for requested/in_progress/completed workflow_run events for the configured
-workflow names and `Dynamic CI receipt`. Run scheduled reconciliation every ten
+workflow names and `Dynamic CI receipt`. These event filters are glob patterns:
+escape literal metacharacters (for example, single-quoted `\[project\] Checks`
+in YAML), while keeping the plain literal name in the JSON policy. Unescaped
+brackets can silently prevent completion events from reaching the receiver.
+Run scheduled reconciliation every ten
 minutes, plus workflow_dispatch with an optional full execution SHA. Serialize
 receiver jobs per source/context with cancel-in-progress false. GitHub may replace
 a pending concurrency job; each invocation scans 48 hours of injected receipt
