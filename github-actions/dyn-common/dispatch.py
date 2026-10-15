@@ -26,6 +26,7 @@ def prepare_dispatch(api, env, event, owner, policy, metadata_dir, sentinel_path
     directory.mkdir(parents=True, exist_ok=True)
     (directory / "source.json").write_text(json.dumps(metadata, indent=2) + "\n")
     if not policy:
+        inject_receipt(directory, sentinel_path)
         return metadata
     source = metadata["source"]
     context = dispatch_context(source["repository"])
@@ -45,11 +46,15 @@ def prepare_dispatch(api, env, event, owner, policy, metadata_dir, sentinel_path
     )
     if not is_source_bot(status):
         raise ValueError("status_token must be the source repository GITHUB_TOKEN")
+    inject_receipt(directory, sentinel_path)
+    return metadata
+
+
+def inject_receipt(directory, sentinel_path):
     target = directory / "workflows" / "dyn-receipt.yml"
     if target.exists():
         raise ValueError("dyn-receipt.yml is reserved by the forwarding protocol")
     target.write_bytes(Path(sentinel_path).read_bytes())
-    return metadata
 
 
 def finish_dispatch(api, env, metadata, execution_sha=None):

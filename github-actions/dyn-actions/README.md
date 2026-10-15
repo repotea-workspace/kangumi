@@ -1,3 +1,50 @@
+# Automatic dynamic CI reporting
+
+Calling `dyn-actions` now always records the full source SHA and uploads a
+source-owned forwarding receipt. Existing callers following `@main` pick this up
+on their next Trigger run. No per-project status token, status permission,
+observer, or workflow list is needed for automatic reporting. A caller pinned to
+an older action commit must update its pin before receiving the new behavior.
+
+The central receiver routes source owners to the existing credential groups in
+`credential_groups`. Projects under those owners are discovered automatically.
+Another execution repository needs this receiver installed once; changing the
+shared action alone cannot install a receiver in a different repository.
+
+Auto mode reports each actually scheduled workflow under a stable filename-based
+status context, linking directly to its execution run. Queued/running is pending;
+success is success; failed, cancelled, timed-out or skipped is failure. Workflows
+that do not trigger do not create checks. Auto mode does not guess required checks
+or change branch protection. Existing explicit aggregate policies below remain
+supported, including missing-required-workflow detection.
+
+The source artifact binds source repository ID, full SHA, Trigger run/attempt,
+execution SHA, and a SHA-256 manifest of the forwarded workflow files. The receiver
+validates that evidence using GitHub API data and reads only its trusted default
+branch code. It never executes forwarded code. Generation guards prevent old
+source attempts from overwriting newer observed results; scheduled reconciliation
+repairs event/upload races. A failed forward remains visible as a failing native
+Trigger and creates no automatic result that could remain pending.
+
+Absent an explicit checkout ref, `clone-dyn` uses the full source SHA. Auto mode
+preserves a caller's explicit branch/tag ref for compatibility; its status observes
+that workflow and does not claim the workflow tested an immutable checkout.
+Explicit aggregate policies retain their strict exact-SHA checkout contract.
+
+The receiver listens to all execution workflow names while excluding its own
+default branch. Scheduled repair scans 48 hours every ten minutes; manual repair with an
+explicit SHA handles older retained receipts. The wide repair window also covers
+long-running jobs whose completion events were missed.
+Artifacts are retained seven days. Event processing handles only the event SHA.
+API/scheduler delays can defer reporting, and expired artifacts cannot be verified.
+The existing tag-forwarding naming convention is unchanged.
+
+Run the manual `Dynamic CI automatic integration` workflow in Kangumi to validate
+the no-policy/no-source-status-permission path end to end. The forwarded smoke
+workflow permits pending/cancellation/rerun checks without running product builds.
+
+## Explicit aggregate policy compatibility
+
 # Dynamic CI source status protocol
 
 Existing callers remain opt-in compatible. Set `status_policy: checks-v1` and

@@ -6,7 +6,10 @@ inputs:
     required: true
   source:
     description: Trusted source key in config; never read from forwarded metadata.
-    required: true
+    required: false
+  credential-group:
+    description: Central credential group; automatically handles every source under its allowed owners.
+    required: false
   execution-token:
     description: Execution repository token with actions and contents read.
     required: true
@@ -20,6 +23,7 @@ runs:
       env:
         STATUS_CONFIG: ${{ inputs.config }}
         SOURCE_KEY: ${{ inputs.source }}
+        CREDENTIAL_GROUP: ${{ inputs.credential-group }}
         EXECUTION_READ_TOKEN: ${{ inputs.execution-token }}
         SOURCE_STATUS_TOKEN: ${{ inputs.source-token }}
       run: python3 "$GITHUB_ACTION_PATH/main.py"

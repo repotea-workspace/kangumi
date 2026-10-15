@@ -84,9 +84,15 @@ def read_metadata(directory, expected_repository=None):
 
 
 def checkout_ref(workspace, repository, explicit_ref="", ref_file=""):
-    metadata = read_metadata(metadata_directory(workspace), repository)
+    metadata = read_metadata(metadata_directory(workspace))
+    if metadata and metadata["source"]["repository"] != repository:
+        if metadata["policy"]:
+            raise ValueError("source repository does not match the caller")
+        # Existing callers may use clone-dyn for an explicitly selected
+        # auxiliary repository; automatic metadata must not change that ref.
+        metadata = None
     if explicit_ref:
-        if metadata and explicit_ref != metadata["source"]["sha"]:
+        if metadata and metadata["policy"] and explicit_ref != metadata["source"]["sha"]:
             raise ValueError("explicit ref differs from immutable dynamic source SHA")
         return explicit_ref
     if metadata:

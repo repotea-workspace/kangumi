@@ -21,7 +21,7 @@ inputs:
     required: false
     default: '0xfe10'
   status_policy:
-    description: Opt in to versioned source metadata, immutable checkout and status reporting (for example checks-v1).
+    description: Optional explicit aggregate policy (for example checks-v1); automatic per-workflow reporting is enabled without it.
     required: false
     default: ''
   status_token:
@@ -50,6 +50,7 @@ runs:
         ssh-private-key: ${{ inputs.ssh_key }}
         ssh-host: github.com
     - name: Trigger dynamic actions
+      id: forward
       shell: bash
       env:
         INPUT_DOT_GITHUB: ${{ inputs.dot_github }}
@@ -124,8 +125,8 @@ runs:
           # The receipt survives a failed push; the source observer also covers
           # a forcibly cancelled Trigger where this EXIT trap cannot run.
           trap 'result=$?; if [ "$result" -ne 0 ]; then python3 "$GITHUB_ACTION_PATH/forward.py" fail || true; fi' EXIT
-          python3 "$GITHUB_ACTION_PATH/forward.py" prepare
         fi
+        python3 "$GITHUB_ACTION_PATH/forward.py" prepare
 
         # push
         git config user.name "${INPUT_GIT_NAME}"
@@ -147,9 +148,7 @@ runs:
         fi
 
         if [ -z "${REPO_TAG}" ]; then
-          if [ -n "$STATUS_POLICY" ]; then
-            python3 "$GITHUB_ACTION_PATH/forward.py" finish --execution-sha "$(git rev-parse HEAD)"
-          fi
+          python3 "$GITHUB_ACTION_PATH/forward.py" finish --execution-sha "$(git rev-parse HEAD)"
 
           echo "This is pushed a branch (${REPO_BRANCH}). completed to push Github Actions."
           exit 0
@@ -162,6 +161,12 @@ runs:
         git tag "${TAG_NAME}"
         git push origin "${TAG_NAME}"
 
-        if [ -n "$STATUS_POLICY" ]; then
-          python3 "$GITHUB_ACTION_PATH/forward.py" finish --execution-sha "$(git rev-parse HEAD)"
-        fi
+        python3 "$GITHUB_ACTION_PATH/forward.py" finish --execution-sha "$(git rev-parse HEAD)"
+    - name: Publish source-owned dispatch receipt
+      if: inputs.status_policy == ''
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: dyn-dispatch-${{ github.run_id }}-${{ github.run_attempt }}
+        path: ${{ steps.forward.outputs.receipt }}
+        if-no-files-found: error
+        retention-days: 7
