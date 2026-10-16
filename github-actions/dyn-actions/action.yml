@@ -27,6 +27,10 @@ inputs:
   status_token:
     description: Source repository GITHUB_TOKEN with statuses write; required when status_policy is set.
     required: false
+  metadata-format:
+    description: Forwarded metadata format. Keep legacy until every consumer supports source-yml.
+    required: false
+    default: legacy
 runs:
   using: "composite"
   steps:
@@ -60,6 +64,7 @@ runs:
         REPO_BRANCH: ${{ steps.extract_branch.outputs.branch }}
         STATUS_POLICY: ${{ inputs.status_policy }}
         SOURCE_STATUS_TOKEN: ${{ inputs.status_token }}
+        METADATA_FORMAT: ${{ inputs['metadata-format'] }}
       run: |
         set -euo pipefail
 
@@ -89,37 +94,53 @@ runs:
           exit 1
         fi
 
-        date -u +"%Y-%m-%dT%H:%M:%SZ" > .github/date.txt
-
         REPO_TAG="${GIT_TAG_NAME:-}"
         COMMIT_SHA="${SHA:-$GITHUB_SHA}"
-
-        if [ -n "${REPO_TAG}" ]; then
-          printf "%s\n" "${REPO_TAG}" > .github/tag.txt
-          printf "%s\n" "${REPO_TAG}" > .github/ref.txt
-          rm -rf .github/branch.txt || true
-        else
-          printf "%s\n" "${REPO_BRANCH}" > .github/branch.txt
-          printf "%s\n" "${REPO_BRANCH}" > .github/ref.txt
-          rm -rf .github/tag.txt || true
-        fi
+        DYN_FORWARD_COMMIT_FILE="${RUNNER_TEMP}/dyn-forward-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.txt"
+        export REPOSITORY REPO_BRANCH REPO_TAG COMMIT_SHA T_BRANCH DYN_FORWARD_COMMIT_FILE
 
         # Read event values as data, never interpolate commit messages into shell.
+        # Legacy remains the default until every consumer has migrated.
         python3 - <<'PY'
-        import json, os
+        from datetime import datetime, timezone
+        import json
+        import os
         from pathlib import Path
+
         event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
         head = event.get("head_commit") or {}
-        Path(".github/message.txt").write_text(head.get("message") or "Dynamic workflow dispatch")
-        authors = sorted({c.get("author", {}).get("username") for c in event.get("commits", [])
-                          if c.get("author", {}).get("username")})
-        if not authors:
-            authors = [head.get("author", {}).get("username") or os.environ["GITHUB_ACTOR"]]
-        Path(".github/author.txt").write_text("".join("@" + name + "\n" for name in authors))
+        message = head.get("message") or "Dynamic workflow dispatch"
+        Path(os.environ["DYN_FORWARD_COMMIT_FILE"]).write_text(
+            f'[{os.environ["T_BRANCH"]}]: {message}', encoding="utf-8"
+        )
+        if os.environ["METADATA_FORMAT"] == "legacy":
+            metadata = Path(".github")
+            (metadata / "date.txt").write_text(
+                datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z") + "\n",
+                encoding="utf-8",
+            )
+            ref_name = os.environ["REPO_TAG"] or os.environ["REPO_BRANCH"]
+            (metadata / "ref.txt").write_text(ref_name + "\n", encoding="utf-8")
+            ref_file = "tag.txt" if os.environ["REPO_TAG"] else "branch.txt"
+            (metadata / ref_file).write_text(ref_name + "\n", encoding="utf-8")
+            (metadata / "message.txt").write_text(message, encoding="utf-8")
+            authors = sorted({
+                commit.get("author", {}).get("username")
+                for commit in event.get("commits", [])
+                if commit.get("author", {}).get("username")
+            })
+            if not authors:
+                authors = [head.get("author", {}).get("username") or os.environ["GITHUB_ACTOR"]]
+            (metadata / "author.txt").write_text(
+                "".join("@" + name + "\n" for name in authors), encoding="utf-8"
+            )
+            (metadata / "commit.txt").write_text(os.environ["COMMIT_SHA"] + "\n", encoding="utf-8")
+            (metadata / "repository.txt").write_text(
+                os.environ["REPOSITORY"] + "\n", encoding="utf-8"
+            )
+        elif os.environ["METADATA_FORMAT"] != "source-yml":
+            raise ValueError("metadata-format must be legacy or source-yml")
         PY
-        COMMIT_MSG=$(cat .github/message.txt)
-        echo "${COMMIT_SHA}" > .github/commit.txt
-        echo "${REPOSITORY}" > .github/repository.txt
 
         if [ -n "$STATUS_POLICY" ]; then
           # The receipt survives a failed push; the source observer also covers
@@ -135,10 +156,7 @@ runs:
         git status
         git add .
 
-        # Write commit message to temp file to handle special characters safely
-        printf "[%s]: %s" "${T_BRANCH}" "${COMMIT_MSG}" > /tmp/commit_message.txt
-        git commit -F /tmp/commit_message.txt
-        rm /tmp/commit_message.txt
+        git commit -F "${DYN_FORWARD_COMMIT_FILE}"
 
         if ! git push origin "$T_BRANCH"; then
           echo "Branch push failed; rebasing onto latest origin/$T_BRANCH and retrying."

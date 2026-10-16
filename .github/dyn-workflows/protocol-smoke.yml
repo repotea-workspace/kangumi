@@ -10,15 +10,42 @@ jobs:
     timeout-minutes: 3
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - name: Verify full source identity
+      - name: Resolve full source identity
+        id: source
+        uses: repotea-workspace/kangumi/github-actions/dyn-source@main
+        with:
+          repository: repotea-workspace/kangumi
+          branches: '*'
+          tags: '*'
+      - name: Verify source-yml contract
+        env:
+          SOURCE_REPOSITORY: ${{ steps.source.outputs.repository }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          SOURCE_REF_TYPE: ${{ steps.source.outputs.ref_type }}
+          SOURCE_REF_NAME: ${{ steps.source.outputs.ref_name }}
+          SOURCE_BRANCH: ${{ steps.source.outputs.branch }}
+          SOURCE_TAG: ${{ steps.source.outputs.tag }}
+          SOURCE_MATCHES: ${{ steps.source.outputs.matches }}
         run: |
           python3 - <<'PY'
-          import json, re
+          import os
+          import re
           from pathlib import Path
-          source = json.loads(Path(".github/source.json").read_text())
-          assert source["source"]["repository"] == "repotea-workspace/kangumi"
-          assert re.fullmatch("[0-9a-f]{40}", source["source"]["sha"])
-          assert source["policy"] is None
+
+          metadata = Path('.github')
+          assert (metadata / 'source.yml').is_file()
+          assert not (metadata / 'source.json').exists()
+          assert not list(metadata.glob('*.txt'))
+
+          assert os.environ['SOURCE_REPOSITORY'] == 'repotea-workspace/kangumi'
+          assert re.fullmatch('[0-9a-f]{40}', os.environ['SOURCE_SHA'])
+          ref_type = os.environ['SOURCE_REF_TYPE']
+          ref_name = os.environ['SOURCE_REF_NAME']
+          assert ref_type in ('branch', 'tag')
+          assert ref_name
+          assert os.environ['SOURCE_MATCHES'] == 'true'
+          assert os.environ['SOURCE_BRANCH'] == (ref_name if ref_type == 'branch' else '')
+          assert os.environ['SOURCE_TAG'] == (ref_name if ref_type == 'tag' else '')
           PY
       - name: Allow cancellation and pending-state verification
         run: sleep 45

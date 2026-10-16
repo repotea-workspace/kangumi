@@ -25,8 +25,11 @@ def main():
     api = GitHub(env.get("SOURCE_STATUS_TOKEN", ""), env["GITHUB_API_URL"]) if policy else None
     if args.operation == "prepare":
         event = json.loads(Path(env["GITHUB_EVENT_PATH"]).read_text())
-        prepare_dispatch(api, env, event, env["EXECUTION_OWNER"], policy, args.metadata_dir,
-                         Path(__file__).with_name("receipt.yml"))
+        prepare_dispatch(
+            api, env, event, env["EXECUTION_OWNER"], policy, args.metadata_dir,
+            Path(__file__).with_name("receipt.yml"),
+            metadata_format=env.get("METADATA_FORMAT", "legacy"),
+        )
     else:
         metadata = read_metadata(args.metadata_dir, env["GITHUB_REPOSITORY"])
         finish_dispatch(api, env, metadata, args.execution_sha if args.operation == "finish" else None)

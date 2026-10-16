@@ -1,22 +1,28 @@
 # Automatic dynamic CI reporting
 
-Calling `dyn-actions` now always records the full source SHA and uploads a
-source-owned forwarding receipt. Existing callers following `@main` pick this up
-on their next Trigger run. No per-project status token, status permission,
-observer, or workflow list is needed for automatic reporting. A caller pinned to
-an older action commit must update its pin before receiving the new behavior.
+Calling `dyn-actions` now always records the full source SHA. Automatic mode
+uploads a source-owned artifact containing the dispatch identity and forwarded
+workflow manifest. Explicit policy mode instead binds the dispatch through a
+source-owned commit status and injects the receiver sentinel. Existing callers
+following `@main` pick this up on their next Trigger run. No per-project status
+token, status permission, observer, or workflow list is needed for automatic
+reporting. A caller pinned to an older action commit must update its pin before
+receiving the new behavior.
 
 The central receiver routes source owners to the existing credential groups in
 `credential_groups`. Projects under those owners are discovered automatically.
 Another execution repository needs this receiver installed once; changing the
 shared action alone cannot install a receiver in a different repository.
 
-Auto mode reports each actually scheduled workflow under a stable filename-based
-status context, linking directly to its execution run. Queued/running is pending;
-success is success; failed, cancelled, timed-out or skipped is failure. Workflows
-that do not trigger do not create checks. Auto mode does not guess required checks
-or change branch protection. Existing explicit aggregate policies below remain
-supported, including missing-required-workflow detection.
+Auto mode reports each actually scheduled workflow under
+`dynamic / <declared workflow name>`, linking directly to its execution run.
+The name is read from the exact forwarded workflow bytes, not the mutable workflow
+registry or run payload. A missing or unsupported static name falls back to the
+filename; duplicate names append the filename; long contexts use deterministic
+hash truncation. Queued/running is pending; success is success; failed, cancelled,
+timed-out or skipped is failure. The same named detail statuses are emitted beside
+an explicit aggregate policy, while the existing aggregate and dispatch contexts
+remain unchanged. Workflows that do not trigger do not create detail statuses.
 
 The source artifact binds source repository ID, full SHA, Trigger run/attempt,
 execution SHA, and a SHA-256 manifest of the forwarded workflow files. The receiver
@@ -52,12 +58,44 @@ Existing callers remain opt-in compatible. Set `status_policy: checks-v1` and
 `contents: read` and `statuses: write`, and serialize Trigger runs per source SHA
 with `cancel-in-progress: false`.
 
-The forwarding action preserves legacy text metadata and adds version 1
-`.github/source.json`: source repository name and numeric ID, full commit SHA,
-ref type/name, Trigger path/run/attempt, execution repository and policy version.
-`dyn-source` resolves this identity. `clone-dyn` checks out its immutable SHA and
-rejects a conflicting explicit ref. Invalid new metadata fails closed; absent
-metadata retains legacy behavior.
+The forwarding action has a staged metadata format. `metadata-format` defaults
+to `legacy`, which preserves the text files and schema 1 `.github/source.json`
+for existing branches. Migrated callers set `metadata-format: source-yml`; those
+batches write only schema 2 `.github/source.yml`. Schema 2 carries the existing
+source repository/ID, full SHA, ref type/name, Trigger workflow/run/attempt,
+execution repository and policy plus the commit message/authors and dispatch time.
+Its YAML is a versioned strict subset emitted and parsed inside this Action, so
+callers install no parser dependency. If source.yml exists but is invalid, readers
+fail closed rather than falling back to legacy data.
+
+`dyn-source`, `clone-dyn`, `gitops-deploy`, and both receiver modes read schema
+2 and schema 1. The first two locate metadata before or after clone-dyn restores it
+under `__origin__/.github`. `clone-dyn` keeps explicit auxiliary repository refs
+and strict exact-SHA policy behavior.
+
+## Source ref matching
+
+Projects should use `dyn-source` instead of reading metadata files directly:
+
+```yaml
+- uses: repotea-workspace/kangumi/github-actions/dyn-source@main
+  id: source
+  with:
+    repository: owner/project
+    branches: |
+      main
+      release/*
+
+- name: Deploy
+  if: steps.source.outputs.matches == 'true'
+  run: ./deploy.sh
+```
+
+`branches` and `tags` are optional newline-separated, case-sensitive exact
+names or `*`/`?` glob patterns. Blank lines are ignored. Branch filters never
+match tags and tag filters never match branches. With neither input, `matches`
+is true. Invalid patterns or metadata fail the Action. Outputs are `repository`,
+`sha`, `ref_type`, `ref_name`, `branch`, `tag`, and `matches`.
 
 ## Status lifecycle
 
@@ -100,8 +138,10 @@ Listen for requested/in_progress/completed workflow_run events on the registered
 source execution branches (for example, `owner/repository`), accepting all workflow
 names on those branches. GitHub shares workflow IDs and current names by file path
 across branches: another project using `check.yml` can overwrite the registered
-name and cause a name-filtered receiver to miss completion events. The policy still
-verifies the literal name and path of each immutable run before reporting.
+name and cause a name-filtered receiver to miss completion events. Before reporting,
+the policy verifies the full source and execution workflow sets and their exact
+bytes at the attested commits. Required workflow names are read from those bytes;
+the mutable run-name payload is not trusted.
 
 Exclude the receiver's default branch at the event-filter level so its own runs
 cannot recursively trigger it. Each source job should also ignore events from
@@ -117,11 +157,12 @@ runs, so later invocations recover missed events. Manual SHA reconciliation
 covers older executions. Scheduling and API outages can delay reporting.
 
 The receiver verifies a source-owned bot receipt, numeric repository ID,
-Trigger run SHA/path/attempt, and byte equality of required workflow files
-against the source commit. It queries current execution runs (latest run and
-attempt), then checks the receipt again before writing. Older generations are
-ignored. Pending results are reset on reruns when an event or reconciliation
-observes them.
+Trigger run SHA/path/attempt, the complete forwarded workflow set, and byte
+equality of every forwarded workflow against the source commit. It reports each
+started authenticated workflow; only the policy's required subset contributes to
+the aggregate result. It queries current execution runs (latest run and attempt),
+then checks the receipt again before writing. Older generations are ignored.
+Pending results are reset on reruns when an event or reconciliation observes them.
 
 ## Permissions and trust
 

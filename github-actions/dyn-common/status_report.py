@@ -1,11 +1,11 @@
 """Read-only evidence collection followed by a guarded source status write."""
 
-import json
 from datetime import datetime, timezone
 
-from dispatch import generation_description, source_run_url
+from dispatch import generation_description
+from workflow_identity import declared_workflow_name, workflow_contexts
 from github_api import GitHubError, is_source_bot, latest_status, post_status
-from source_metadata import SHA, validate_metadata
+from source_metadata import SHA, read_remote_metadata
 
 RECEIPT_PATH = ".github/workflows/dyn-receipt.yml"
 
@@ -63,13 +63,14 @@ class StatusReporter:
     def metadata(self, execution_sha):
         if not SHA.fullmatch(execution_sha):
             raise ValueError("invalid execution SHA")
-        try:
-            raw = self.execution_api.file(self.execution_repository, ".github/source.json", execution_sha)
-        except GitHubError as error:
-            if error.status == 404:
-                return None  # Legacy/non-opted-in batches have no trusted receipt.
-            raise
-        metadata = validate_metadata(json.loads(raw), expected_execution=self.execution_repository)
+        metadata = read_remote_metadata(
+            self.execution_api,
+            self.execution_repository,
+            execution_sha,
+            expected_execution=self.execution_repository,
+        )
+        if metadata is None:
+            return None  # Legacy/non-opted-in batches have no trusted receipt.
         source = metadata["source"]
         if source["repository"] != self.policy["repository"]:
             return None  # Another explicitly registered source owns this batch.
@@ -100,16 +101,75 @@ class StatusReporter:
             raise ValueError("source run does not match its attested identity")
         return run
 
+    @staticmethod
+    def listed_workflows(api, repository, directory, ref):
+        entries = api.get(f"/repos/{repository}/contents/{directory}", ref=ref)
+        if not isinstance(entries, list):
+            raise ValueError("dynamic workflow directory is not a directory")
+        prefix = directory.rstrip("/") + "/"
+        paths = set()
+        for entry in entries:
+            if not isinstance(entry, dict):
+                raise ValueError("invalid dynamic workflow directory entry")
+            if entry.get("type") != "file":
+                continue
+            path = entry.get("path")
+            if (not isinstance(path, str) or not path.startswith(prefix)
+                    or "/" in path[len(prefix):]):
+                raise ValueError("invalid dynamic workflow path")
+            if not path.endswith((".yml", ".yaml")):
+                continue
+            if path in paths:
+                raise ValueError("duplicate dynamic workflow path")
+            paths.add(path)
+        return paths
+
     def verify_workflows(self, metadata, version):
         source = metadata["source"]
-        for workflow in version["workflows"]:
-            path = workflow["path"]
-            original = self.source_api.file(source["repository"], ".github/dyn-workflows/" + path, source["sha"])
+        source_directory = ".github/dyn-workflows"
+        execution_directory = ".github/workflows"
+        source_paths = self.listed_workflows(
+            self.source_api, source["repository"], source_directory, source["sha"]
+        )
+        execution_paths = self.listed_workflows(
+            self.execution_api, self.execution_repository, execution_directory,
+            self.execution_sha,
+        )
+        if RECEIPT_PATH not in execution_paths:
+            raise ValueError("dynamic receipt workflow is missing")
+        execution_paths.remove(RECEIPT_PATH)
+        expected_paths = {
+            execution_directory + "/" + path[len(source_directory) + 1:]
+            for path in source_paths
+        }
+        if execution_paths != expected_paths:
+            raise ValueError("forwarded workflow set differs from the attested source revision")
+
+        required = {
+            execution_directory + "/" + workflow["path"]: workflow["name"]
+            for workflow in version["workflows"]
+        }
+        if not set(required).issubset(expected_paths):
+            raise ValueError("required workflow is missing from the attested source revision")
+
+        workflows = {}
+        for forwarded_path in sorted(expected_paths):
+            relative = forwarded_path[len(execution_directory) + 1:]
+            original = self.source_api.file(
+                source["repository"], source_directory + "/" + relative,
+                source["sha"],
+            )
             forwarded = self.execution_api.file(
-                self.execution_repository, ".github/workflows/" + path, self.execution_sha
+                self.execution_repository, forwarded_path, self.execution_sha
             )
             if original != forwarded:
-                raise ValueError("required workflow differs from the attested source revision")
+                raise ValueError("workflow differs from the attested source revision")
+            if forwarded_path in required:
+                declared = declared_workflow_name(original)
+                if declared is not None and declared != required[forwarded_path]:
+                    raise ValueError("required workflow name differs from policy")
+            workflows[forwarded_path] = forwarded
+        return workflows
 
     def report(self, execution_sha):
         metadata = self.metadata(execution_sha)
@@ -126,7 +186,7 @@ class StatusReporter:
         try:
             self.verify_source_run(metadata)
             self.execution_sha = execution_sha
-            self.verify_workflows(metadata, version)
+            workflows = self.verify_workflows(metadata, version)
         except (ValueError, GitHubError) as error:
             # API authorization/outage failures must fail the receiver, not turn
             # incomplete evidence into a product failure or a green result.
@@ -142,13 +202,94 @@ class StatusReporter:
         # The API query is not a trust boundary: validate returned identities.
         runs = [run for run in runs if run.get("head_sha") == execution_sha
                 and run.get("head_repository", {}).get("full_name") == self.execution_repository]
-        selected = latest_runs(runs, required, execution_ref(metadata))
-        if any(run.get("name") != required[path] for path, run in selected.items()):
-            return self.write(metadata, execution_sha, receipt, "error", "Required workflow name differs from policy", [])
+        selected = latest_runs(runs, workflows, execution_ref(metadata))
+        required_selected = {
+            path: selected[path] for path in required if path in selected
+        }
+        contexts = workflow_contexts(workflows)
         commit = self.execution_api.get(f"/repos/{self.execution_repository}/commits/{execution_sha}")
         age = (self.now - timestamp(commit["commit"]["committer"]["date"])).total_seconds()
-        state, description = aggregate(selected, required, age, version.get("missing_after_seconds", 600))
-        return self.write(metadata, execution_sha, receipt, state, description, list(selected.values()))
+        state, description = aggregate(
+            required_selected, required, age,
+            version.get("missing_after_seconds", 600),
+        )
+        workflow_results = self.write_workflow_statuses(
+            metadata, execution_sha, receipt, selected, contexts
+        )
+        result = self.write(
+            metadata, execution_sha, receipt, state, description,
+            list(required_selected.values()),
+        )
+        result["workflows"] = workflow_results
+        return result
+
+    def write_workflow_statuses(self, metadata, execution_sha, receipt,
+                                selected, contexts):
+        source = metadata["source"]
+        results = []
+        for path in sorted(selected):
+            run = selected[path]
+            state = (
+                "pending" if run.get("status") != "completed"
+                else "success" if run.get("conclusion") == "success"
+                else "failure"
+            )
+            if state == "pending":
+                result = "queued or running"
+            elif state == "success":
+                result = "passed"
+            else:
+                result = "failed (" + (run.get("conclusion") or "unknown") + ")"
+            description = (
+                f'Source run {source["run_id"]}, attempt '
+                f'{source["run_attempt"]}: {result}'
+            )
+            url = (
+                f'{self.server_url}/{self.execution_repository}/actions/runs/'
+                f'{run["id"]}'
+            )
+            context = contexts[path]
+            previous = latest_status(
+                self.source_api, source["repository"], source["sha"], context
+            )
+            current = self.attestation(metadata, execution_sha)
+            if current is None or current["id"] != receipt["id"]:
+                results.append({
+                    "path": path,
+                    "context": context,
+                    "skipped": "dispatch superseded during evidence collection",
+                    "posted": False,
+                })
+                continue
+            body = {
+                "state": state,
+                "description": description,
+                "target_url": url,
+            }
+            posted = previous is None or any(
+                previous.get(key) != value for key, value in body.items()
+            )
+            if posted:
+                post_status(
+                    self.source_api,
+                    source["repository"],
+                    source["sha"],
+                    context,
+                    state,
+                    description,
+                    url,
+                )
+            results.append({
+                "path": path,
+                "context": context,
+                "state": state,
+                "conclusion": run.get("conclusion"),
+                "run_id": run["id"],
+                "run_attempt": run.get("run_attempt", 1),
+                "url": url,
+                "posted": posted,
+            })
+        return results
 
     def write(self, metadata, execution_sha, receipt, state, description, runs):
         source = metadata["source"]

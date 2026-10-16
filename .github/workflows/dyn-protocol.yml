@@ -4,11 +4,13 @@ on:
     paths:
       - 'github-actions/dyn-*/**'
       - 'github-actions/clone-dyn/**'
+      - 'github-actions/gitops-deploy/**'
       - '.github/workflows/dyn-protocol.yml'
   pull_request:
     paths:
       - 'github-actions/dyn-*/**'
       - 'github-actions/clone-dyn/**'
+      - 'github-actions/gitops-deploy/**'
       - '.github/workflows/dyn-protocol.yml'
 permissions:
   contents: read
@@ -17,6 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - run: python3 -m unittest discover -s github-actions/dyn-common -v
+      - name: Test dynamic protocol
+        run: |
+          python3 -m unittest discover -s github-actions/dyn-common -v
+          python3 -m unittest discover -s github-actions/dyn-source -v
+          python3 -m unittest discover -s github-actions/gitops-deploy -v
         env:
           PYTHONDONTWRITEBYTECODE: '1'

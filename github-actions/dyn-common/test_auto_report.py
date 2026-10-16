@@ -17,6 +17,7 @@ from auto_report import (
     read_receipt,
     workflow_context,
 )
+from github_api import GitHubError
 from source_metadata import build_metadata
 
 
@@ -61,7 +62,10 @@ class FakeAPI:
 
     def file(self, repository, path, ref):
         self.calls.append(("file", repository, path, ref))
-        return self.files[(repository, path, ref)]
+        key = (repository, path, ref)
+        if key not in self.files:
+            raise GitHubError(404, path)
+        return self.files[key]
 
     def get(self, path, **params):
         self.calls.append(("get", path, params))
@@ -179,7 +183,7 @@ class AutoReporterTests(unittest.TestCase):
         result = self.reporter.report(EXECUTION_SHA)
         workflow = result["workflows"][0]
         self.assertEqual(workflow["state"], "success")
-        self.assertEqual(workflow["context"], "dynamic/checks.yml")
+        self.assertEqual(workflow["context"], "dynamic / Checks")
         self.assertTrue(workflow["url"].endswith("/actions/runs/500"))
         self.assertEqual(len(self.source.posts), 1)
         self.assertIn("Source run 100, attempt 1", self.source.posts[0][1]["description"])
@@ -208,7 +212,7 @@ class AutoReporterTests(unittest.TestCase):
         result = self.make_reporter().report(EXECUTION_SHA)
         self.assertEqual(
             {item["context"]: item["state"] for item in result["workflows"]},
-            {"dynamic/checks.yml": "success", "dynamic/deploy.yaml": "failure"},
+            {"dynamic / Checks": "success", "dynamic / Deploy": "failure"},
         )
         self.assertEqual(len(self.source.posts), 2)
 
@@ -391,7 +395,7 @@ class AutoReporterTests(unittest.TestCase):
 
     def test_newer_status_generation_guards_last_write_race(self):
         self.source.history[("Owner/Project", SOURCE_SHA)] = [{
-            "context": "dynamic/checks.yml",
+            "context": "dynamic / Checks",
             "state": "pending",
             "description": "Source run 101, attempt 1: queued or running",
             "target_url": "https://github.com/executor/dynamic-actions/actions/runs/600",
@@ -415,7 +419,7 @@ class AutoReporterTests(unittest.TestCase):
         first = workflow_context(path)
         self.assertEqual(first, workflow_context(path))
         self.assertEqual(len(first), 100)
-        self.assertTrue(first.startswith("dynamic/"))
+        self.assertTrue(first.startswith("dynamic / "))
 
     def test_zip_must_contain_only_receipt(self):
         with self.assertRaises(ValueError):

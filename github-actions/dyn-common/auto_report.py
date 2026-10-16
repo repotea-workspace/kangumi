@@ -11,8 +11,9 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 from zipfile import BadZipFile, ZipFile
 
 from github_api import GitHubError, latest_status, post_status
-from source_metadata import SHA, validate_metadata
+from source_metadata import SHA, read_remote_metadata
 from status_report import RECEIPT_PATH, execution_ref
+from workflow_identity import workflow_contexts
 
 
 ARTIFACT_LIMIT = 2 * 1024 * 1024
@@ -151,14 +152,11 @@ def validate_receipt(receipt, metadata, execution_sha):
 
 
 def workflow_context(path):
+    """Compatibility helper for callers that have only a workflow path."""
     match = WORKFLOW_PATH.fullmatch(path)
     if not match or path == RECEIPT_PATH:
         raise ValueError("invalid workflow path")
-    context = "dynamic/" + match.group(1)
-    if len(context) <= 100:
-        return context
-    suffix = "-" + hashlib.sha256(context.encode()).hexdigest()[:12]
-    return context[:100 - len(suffix)] + suffix
+    return workflow_contexts({path: b""})[path]
 
 
 def _status_description(source, state, conclusion):
@@ -208,18 +206,10 @@ class AutoStatusReporter:
     def metadata(self, execution_sha):
         if not SHA.fullmatch(execution_sha):
             raise ValueError("invalid execution SHA")
-        try:
-            raw = self.execution_api.file(
-                self.execution_repository, ".github/source.json", execution_sha
-            )
-        except GitHubError as error:
-            if error.status == 404:
-                return None
-            raise
-        if len(raw) > RECEIPT_LIMIT:
-            raise ValueError("dynamic source metadata is too large")
-        return validate_metadata(
-            _load_json(raw, "dynamic source metadata"),
+        return read_remote_metadata(
+            self.execution_api,
+            self.execution_repository,
+            execution_sha,
             expected_execution=self.execution_repository,
         )
 
@@ -307,12 +297,15 @@ class AutoStatusReporter:
             raise ValueError("execution receipt workflow is missing")
         if actual != set(manifest):
             raise ValueError("execution workflow set differs from dispatch receipt")
+        workflows = {}
         for path, expected in manifest.items():
             forwarded = self.execution_api.file(
                 self.execution_repository, path, execution_sha
             )
             if hashlib.sha256(forwarded).hexdigest() != expected:
                 raise ValueError("execution workflow differs from dispatch receipt")
+            workflows[path] = forwarded
+        return workflows
 
     def _latest_execution_runs(self, metadata, manifest, execution_sha):
         selected = {}
@@ -367,10 +360,9 @@ class AutoStatusReporter:
                 f"newer source dispatch {newer[0]}, attempt {newer[1]} is available"
             )
 
-    def _write(self, metadata, path, run, state):
+    def _write(self, metadata, path, context, run, state):
         source = metadata["source"]
         self._guard_current(metadata)
-        context = workflow_context(path)
         current_generation = (source["run_id"], source["run_attempt"])
         previous = latest_status(
             self.source_api, source["repository"], source["sha"], context
@@ -431,7 +423,8 @@ class AutoStatusReporter:
             raise
         receipt = read_receipt(archive)
         manifest = validate_receipt(receipt, metadata, execution_sha)
-        self._verify_workflow_manifest(manifest, execution_sha)
+        workflows = self._verify_workflow_manifest(manifest, execution_sha)
+        contexts = workflow_contexts(workflows)
         selected = self._latest_execution_runs(metadata, manifest, execution_sha)
 
         results = []
@@ -439,7 +432,7 @@ class AutoStatusReporter:
             run = selected.get(path)
             if run is None:
                 results.append({
-                    "path": path, "context": workflow_context(path),
+                    "path": path, "context": contexts[path],
                     "status": "not_started", "posted": False,
                 })
                 continue
@@ -449,10 +442,10 @@ class AutoStatusReporter:
                 else "failure"
             )
             try:
-                results.append(self._write(metadata, path, run, state))
+                results.append(self._write(metadata, path, contexts[path], run, state))
             except Superseded as error:
                 results.append({
-                    "path": path, "context": workflow_context(path),
+                    "path": path, "context": contexts[path],
                     "skipped": str(error), "posted": False,
                 })
 

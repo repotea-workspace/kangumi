@@ -1,10 +1,7 @@
 """Route immutable batches using centrally configured credential owner groups."""
 
-import json
-
 from auto_report import AutoStatusReporter
-from github_api import GitHubError
-from source_metadata import validate_metadata
+from source_metadata import read_remote_metadata
 from status_policy import load_policy
 from status_report import StatusReporter
 
@@ -29,13 +26,11 @@ def group_owners(config, key, execution_repository):
 
 def report_group(execution, source, repository, config, group, sha, server_url, summary_url):
     owners = group_owners(config, group, repository)
-    try:
-        raw = execution.file(repository, ".github/source.json", sha)
-    except GitHubError as error:
-        if error.status == 404:
-            return {"execution_sha": sha, "skipped": "legacy batch"}
-        raise
-    metadata = validate_metadata(json.loads(raw), expected_execution=repository)
+    metadata = read_remote_metadata(
+        execution, repository, sha, expected_execution=repository
+    )
+    if metadata is None:
+        return {"execution_sha": sha, "skipped": "legacy batch"}
     origin = metadata["source"]["repository"]
     if origin.split("/", 1)[0].lower() not in owners:
         return {"execution_sha": sha, "skipped": "another credential group"}
