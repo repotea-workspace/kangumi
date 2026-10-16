@@ -41,8 +41,13 @@ def report_group(execution, source, repository, config, group, sha, server_url, 
         return {"execution_sha": sha, "skipped": "another credential group"}
     if metadata["policy"]:
         matching = [key for key, policy in config.get("sources", {}).items() if policy["repository"] == origin]
+        if not matching:
+            # A completion can arrive after its source opts out of aggregate
+            # reporting. Do not turn that retired batch into automatic checks.
+            return {"execution_sha": sha,
+                    "skipped": "explicit aggregate source is not registered"}
         if len(matching) != 1:
-            raise ValueError("explicit aggregate policy requires a registered source")
+            raise ValueError("explicit aggregate source registration is ambiguous")
         policy = load_policy(config, matching[0], repository)
         return StatusReporter(execution, source, repository, policy, server_url, summary_url=summary_url).report(sha)
     return AutoStatusReporter(execution, source, repository, owners, server_url=server_url).report(sha)

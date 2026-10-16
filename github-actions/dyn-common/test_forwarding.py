@@ -11,9 +11,9 @@ import unittest
 from unittest.mock import patch
 
 from dispatch import finish_dispatch, prepare_dispatch
-from receiver import group_owners
-from source_metadata import checkout_ref
-from test_protocol import BOT, ENV, FakeAPI
+from receiver import group_owners, report_group
+from source_metadata import checkout_ref, build_metadata
+from test_protocol import BOT, ENV, FakeAPI, EXEC_SHA, POLICY
 
 
 class AutomaticForwardingTests(unittest.TestCase):
@@ -191,3 +191,32 @@ class AutomaticForwardingTests(unittest.TestCase):
             module.main()
             finish.assert_called_once()
             outputs.assert_not_called()
+
+    def test_retired_explicit_batch_is_skipped_without_any_reporter(self):
+        execution, source = FakeAPI(), FakeAPI()
+        metadata = build_metadata(ENV, {"repository": {"id": 10}}, "executor", "checks-v1")
+        execution.files[("executor/dynamic-actions", ".github/source.json", EXEC_SHA)] = json.dumps(metadata).encode()
+        config = {"schema_version": 1, "execution_repository": "executor/dynamic-actions",
+                  "sources": {}, "credential_groups": {"one": {"owners": ["owner"]}}}
+        with patch("receiver.AutoStatusReporter") as automatic, patch("receiver.StatusReporter") as explicit:
+            result = report_group(execution, source, "executor/dynamic-actions", config,
+                                  "one", EXEC_SHA, "https://github.com", "https://example.test")
+        self.assertEqual(result["skipped"], "explicit aggregate source is not registered")
+        automatic.assert_not_called()
+        explicit.assert_not_called()
+        self.assertEqual(source.posts, [])
+
+    def test_registered_explicit_and_automatic_batches_keep_their_reporters(self):
+        for policy in ("checks-v1", ""):
+            execution, source = FakeAPI(), FakeAPI()
+            metadata = build_metadata(ENV, {"repository": {"id": 10}}, "executor", policy)
+            execution.files[("executor/dynamic-actions", ".github/source.json", EXEC_SHA)] = json.dumps(metadata).encode()
+            config = {"schema_version": 1, "execution_repository": "executor/dynamic-actions",
+                      "sources": {"project": POLICY},
+                      "credential_groups": {"one": {"owners": ["owner"]}}}
+            with self.subTest(policy=policy), patch("receiver.AutoStatusReporter") as automatic, patch("receiver.StatusReporter") as explicit:
+                report_group(execution, source, "executor/dynamic-actions", config,
+                             "one", EXEC_SHA, "https://github.com", "https://example.test")
+                chosen, other = (explicit, automatic) if policy else (automatic, explicit)
+                chosen.return_value.report.assert_called_once_with(EXEC_SHA)
+                other.assert_not_called()
