@@ -7,11 +7,16 @@ inputs:
   trigger-workflow:
     description: Trusted source Trigger workflow path.
     required: true
+  status-policy:
+    description: Set to empty for automatic reporting without an aggregate status.
+    required: false
+    default: checks-v1
 runs:
   using: composite
   steps:
     - shell: bash
       env:
         SOURCE_STATUS_TOKEN: ${{ inputs.token }}
+        STATUS_POLICY: ${{ inputs.status-policy }}
         TRIGGER_WORKFLOW: ${{ inputs.trigger-workflow }}
       run: python3 "$GITHUB_ACTION_PATH/main.py"

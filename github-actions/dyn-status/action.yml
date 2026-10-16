@@ -1,26 +1,45 @@
 name: Report dynamic CI status
-description: Verify source-owned dispatch receipts and reconcile downstream results.
+description: Route trusted credentials and reconcile one dynamic execution.
 inputs:
+  mode:
+    description: Route an execution to its trusted credential group, or report its status.
+    required: false
+    default: report
   config:
-    description: Trusted config checked out from the execution repository default branch.
+    description: Trusted YAML config checked out from the execution repository default branch; legacy JSON remains readable.
     required: true
   source:
-    description: Trusted source key in config; never read from forwarded metadata.
+    description: Legacy explicit source key in trusted config.
     required: false
   credential-group:
-    description: Central credential group; automatically handles every source under its allowed owners.
+    description: Credential group selected by route mode from trusted source owners.
     required: false
   execution-token:
     description: Execution repository token with actions and contents read.
     required: true
   source-token:
-    description: Source token with contents/actions/statuses read and statuses write.
-    required: true
+    description: Required in report mode; selected source token with contents/actions/statuses read and statuses write.
+    required: false
+outputs:
+  matched:
+    description: Whether the execution source belongs to a configured credential group.
+    value: ${{ steps.run.outputs.matched }}
+  group:
+    description: Trusted credential group key.
+    value: ${{ steps.run.outputs.group }}
+  secret_name:
+    description: Secret name from trusted default-branch configuration, never from forwarded metadata.
+    value: ${{ steps.run.outputs.secret_name }}
+  execution_sha:
+    description: Immutable execution SHA selected by the event or manual input.
+    value: ${{ steps.run.outputs.execution_sha }}
 runs:
   using: composite
   steps:
-    - shell: bash
+    - id: run
+      shell: bash
       env:
+        STATUS_MODE: ${{ inputs.mode }}
         STATUS_CONFIG: ${{ inputs.config }}
         SOURCE_KEY: ${{ inputs.source }}
         CREDENTIAL_GROUP: ${{ inputs.credential-group }}

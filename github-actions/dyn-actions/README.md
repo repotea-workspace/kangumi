@@ -4,10 +4,14 @@ Calling `dyn-actions` now always records the full source SHA. Automatic mode
 uploads a source-owned artifact containing the dispatch identity and forwarded
 workflow manifest. Explicit policy mode instead binds the dispatch through a
 source-owned commit status and injects the receiver sentinel. Existing callers
-following `@main` pick this up on their next Trigger run. No per-project status
-token, status permission, observer, or workflow list is needed for automatic
-reporting. A caller pinned to an older action commit must update its pin before
-receiving the new behavior.
+following `@main` pick this up on their next Trigger run. Deployed Triggers pass
+`status_token: ${{ github.token }}` and grant `contents: read` plus
+`statuses: write`. This initializes the source-owned `<repo>/dynamic-dispatch`
+context before forwarding; success means the batch was forwarded, not that tests
+passed. A rerun of the same source Trigger resets previously observed detail
+statuses to pending. A different Trigger run on the same SHA does not reset those
+details, because branch/tag/path filtering may select a different workflow set.
+Tokenless callers remain compatible with artifact-based final reporting.
 
 The central receiver routes source owners to the existing credential groups in
 `credential_groups`. Projects under those owners are discovered automatically.
@@ -28,25 +32,30 @@ The source artifact binds source repository ID, full SHA, Trigger run/attempt,
 execution SHA, and a SHA-256 manifest of the forwarded workflow files. The receiver
 validates that evidence using GitHub API data and reads only its trusted default
 branch code. It never executes forwarded code. Generation guards prevent old
-source attempts from overwriting newer observed results; scheduled reconciliation
-repairs event/upload races. A failed forward remains visible as a failing native
-Trigger and creates no automatic result that could remain pending.
+source attempts from overwriting newer observed results. The event job retries a
+not-yet-uploaded receipt for up to two minutes and fails visibly if evidence is
+still unavailable. A failed forward or receipt upload closes this source attempt's
+dispatch/reset statuses when its cleanup step can run. Forced cancellation or
+runner loss can prevent cleanup; the native Trigger remains the authoritative
+forwarding result, and a failed receiver can be rerun or repaired manually.
 
 Absent an explicit checkout ref, `clone-dyn` uses the full source SHA. Auto mode
 preserves a caller's explicit branch/tag ref for compatibility; its status observes
 that workflow and does not claim the workflow tested an immutable checkout.
 Explicit aggregate policies retain their strict exact-SHA checkout contract.
 
-The receiver listens to all execution workflow names while excluding its own
-default branch. Scheduled repair scans 48 hours every ten minutes; manual repair with an
-explicit SHA handles older retained receipts. The wide repair window also covers
-long-running jobs whose completion events were missed.
-Artifacts are retained seven days. Event processing handles only the event SHA.
-API/scheduler delays can defer reporting, and expired artifacts cannot be verified.
-The existing tag-forwarding naming convention is unchanged.
+The receiver listens to `in_progress` and `completed` events for all execution
+workflow names while excluding its own default branch. First-start events create
+a skipped workflow record but allocate no runner; rerun starts restore pending.
+Completion events, including the injected receipt's completion, reconcile only
+their immutable execution SHA. There is no scheduled scan or `requested` hook.
+A manual invocation requires a full execution SHA. Artifacts are retained seven
+days; expired artifacts cannot be verified. Missed events or API outages require
+rerunning the receiver or manual SHA reconciliation. The existing tag-forwarding
+naming convention is unchanged.
 
 Run the manual `Dynamic CI automatic integration` workflow in Kangumi to validate
-the no-policy/no-source-status-permission path end to end. The forwarded smoke
+the automatic source pending and final status path end to end on either receiver. The forwarded smoke
 workflow permits pending/cancellation/rerun checks without running product builds.
 
 ## Explicit aggregate policy compatibility
@@ -122,39 +131,55 @@ always-running final gate inside that workflow if conditional jobs are mandatory
 ## Trusted receiver
 
 Install dyn-status in the execution repository's default-branch workflow.
-Check out only the default branch (with persist-credentials false), and use an
-explicit source key for each job. Never check out or execute the triggering
-execution revision in the receiver. Pin the shared actions to a reviewed
-Kangumi commit when deploying.
+Check out only the default branch with `persist-credentials: false`; never check
+out or execute the triggering execution revision. All Kangumi actions track
+`@main` so shared fixes take effect without per-project pin updates.
 
-The JSON config has `schema_version: 1`, `execution_repository`, and `sources`.
-Each source declares repository name and numeric ID, the two standard contexts,
-allowed Trigger paths, and versioned policies. Each policy contains required
-workflow filenames and names and optionally `missing_after_seconds` (60–3600).
-Policy versions are immutable; add a new version when changing required checks
-and retain old versions while batches may still be active.
+Use `.github/dynamic-status.yml` with `schema_version: 1`,
+`execution_repository`, `credential_groups`, and optional explicit `sources`.
+Each credential group declares an owner allowlist and a `secret_name` referencing
+an existing receiver repository secret, not its value. Duplicate keys, duplicate
+owners, invalid secret names and unsafe YAML objects/aliases are rejected.
+Legacy JSON remains readable while existing default branches migrate.
 
-Listen for requested/in_progress/completed workflow_run events on the registered
-source execution branches (for example, `owner/repository`), accepting all workflow
-names on those branches. GitHub shares workflow IDs and current names by file path
-across branches: another project using `check.yml` can overwrite the registered
-name and cause a name-filtered receiver to miss completion events. Before reporting,
-the policy verifies the full source and execution workflow sets and their exact
-bytes at the attested commits. Required workflow names are read from those bytes;
-the mutable run-name payload is not trusted.
+Each explicit source retains its repository name/ID, standard contexts, allowed
+Trigger paths and versioned policies. A policy contains required workflow
+filenames/names and optionally `missing_after_seconds` (60–3600). Retain old
+policy versions while their batches may still be active.
 
-Exclude the receiver's default branch at the event-filter level so its own runs
-cannot recursively trigger it. Each source job should also ignore events from
-other source execution branches; this avoids unrelated events replacing queued
-reconciliation jobs. For tag forwarding, explicitly register the execution tag
-patterns and source job routing as well, without admitting the default branch.
+A single receiver job calls `dyn-status` twice: `mode: route` uses only the
+execution read token to resolve the immutable batch and an allowlisted group.
+Its outputs `matched`, `group`, `secret_name`, and `execution_sha` come from
+validated metadata plus the trusted configuration. `mode: report` receives only
+`${{ secrets[steps.route.outputs.secret_name] }}` for that group, then performs the
+existing source-receipt and workflow evidence checks. Forwarded data cannot choose
+a secret name. Unregistered owners skip without receiving source credentials.
 
-Run scheduled reconciliation every ten
-minutes, plus workflow_dispatch with an optional full execution SHA. Serialize
-receiver jobs per source/context with cancel-in-progress false. GitHub may replace
-a pending concurrency job; each invocation scans 48 hours of injected receipt
-runs, so later invocations recover missed events. Manual SHA reconciliation
-covers older executions. Scheduling and API outages can delay reporting.
+Use the following job gate and no `schedule` trigger:
+
+```yaml
+if: >-
+  github.event_name == 'workflow_dispatch' ||
+  github.event.action == 'completed' ||
+  (github.event.action == 'in_progress' &&
+   github.event.workflow_run.run_attempt > 1)
+```
+
+Serialize the reporting job by immutable execution SHA with
+`cancel-in-progress: false`. Put concurrency on the job, after the gate, so a
+skipped first-start event cannot displace a pending completion job. An event
+reconciles the entire batch, so replacing another pending event for the same batch
+does not discard a different batch. Do not use a credential-group-wide queue:
+without periodic repair, GitHub replacing a queued job could lose another SHA.
+
+GitHub shares workflow IDs and names across execution branches. Accept all names,
+then verify the attested paths/bytes instead of filtering on mutable names. The
+current triggering run is read directly from the API, so a stale repository run
+listing cannot turn its terminal event back into pending. For a missing required
+workflow with no active workflow left to produce a later event, the current job
+waits out the configured grace and emits an error; normal running batches return
+immediately. Allow a 75-minute receiver timeout for the maximum one-hour policy
+grace. This exceptional wait replaces periodic repair, not a normal polling lane.
 
 The receiver verifies a source-owned bot receipt, numeric repository ID,
 Trigger run SHA/path/attempt, the complete forwarded workflow set, and byte
@@ -162,7 +187,7 @@ equality of every forwarded workflow against the source commit. It reports each
 started authenticated workflow; only the policy's required subset contributes to
 the aggregate result. It queries current execution runs (latest run and attempt),
 then checks the receipt again before writing. Older generations are ignored.
-Pending results are reset on reruns when an event or reconciliation observes them.
+Pending results are reset when a rerun-start event observes the new attempt.
 
 ## Permissions and trust
 
@@ -180,8 +205,9 @@ repository-wide PATs are a migration option, not a new security boundary.
 The source Trigger and receiver are different workflows in different repositories.
 Commit Status writes offer no compare-and-swap transaction across them; the
 receipt recheck reduces stale-result races but does not make writes atomic.
-Reconciliation repairs transient stale writes. Do not treat this as cryptographic
-attestation or an adversarial merge authorization system.
+A later event or manual reconciliation can repair transient stale writes; no
+periodic repair is installed. Do not treat this as cryptographic attestation or an
+adversarial merge authorization system.
 
 ## Deployment and validation
 
@@ -189,10 +215,27 @@ attestation or an adversarial merge authorization system.
 2. Install the receiver and versioned source registrations on execution default.
 3. Land each source failure observer on its default branch before enabling opt-in.
    A first opt-in PR cannot rely on an observer that exists only on its branch.
-4. Migrate each source Trigger and dyn-workflow to the reviewed action revision;
+4. Migrate each source Trigger to source status permissions and Kangumi `@main`;
    remove its previous status-writing job to avoid competing writers.
 5. Run a source change and verify pending, a real downstream result, and its Details
    link on the exact source SHA. Verify a cancelled rerun and a missing-workflow
    fixture in a disposable registered source before relying on protection.
 
-Offline tests: `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s github-actions/dyn-common -v`.
+Offline tests:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s github-actions/dyn-common -v
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s github-actions/dyn-status -v
+```
+
+Automatic sources also install a completed `workflow_run` failure observer using
+`dyn-dispatch@main` with `status-policy: ''`. It closes the exact source
+run/attempt's pending dispatch and automatic details after forced cancellation;
+completed downstream statuses and newer attempts are preserved.
+
+Event reconciliation is serialized per execution SHA. Each report directly
+refreshes listed execution runs as well as its triggering run, so coalesced
+completion events do not rely on stale run-list state. An otherwise terminal
+automatic batch with undiscovered workflows allows up to 30 seconds for list
+propagation; workflows still absent remain `not_started` (for example path
+filters), without fabricating statuses for workflows that did not run.

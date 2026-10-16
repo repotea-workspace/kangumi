@@ -15,7 +15,7 @@ def main():
     env = os.environ
     api = GitHub(env["SOURCE_STATUS_TOKEN"], env["GITHUB_API_URL"])
     event = json.loads(Path(env["GITHUB_EVENT_PATH"]).read_text())
-    finalize_failed_trigger(api, env, event, env["TRIGGER_WORKFLOW"])
+    finalize_failed_trigger(api, env, event, env["TRIGGER_WORKFLOW"], env.get("STATUS_POLICY", "checks-v1"))
 
 
 if __name__ == "__main__":

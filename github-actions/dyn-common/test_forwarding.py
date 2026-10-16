@@ -10,10 +10,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from dispatch import prepare_dispatch
+from dispatch import finish_dispatch, prepare_dispatch
 from receiver import group_owners
 from source_metadata import checkout_ref
-from test_protocol import ENV
+from test_protocol import BOT, ENV, FakeAPI
 
 
 class AutomaticForwardingTests(unittest.TestCase):
@@ -31,6 +31,121 @@ class AutomaticForwardingTests(unittest.TestCase):
             self.assertEqual(checkout_ref(root, ENV["GITHUB_REPOSITORY"]), ENV["GITHUB_SHA"])
             self.assertEqual(checkout_ref(root, ENV["GITHUB_REPOSITORY"], explicit_ref="main"), "main")
             self.assertEqual(checkout_ref(root, "other/repository", explicit_ref="release"), "release")
+
+    def test_auto_status_token_resets_only_same_run_rerun_workflows(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            directory = root / ".github"
+            (directory / "workflows").mkdir(parents=True)
+            sentinel = root / "receipt.yml"
+            sentinel.write_text("receipt")
+            env = dict(ENV, GITHUB_RUN_ATTEMPT="2")
+            api = FakeAPI()
+            api.history = [
+                {
+                    "creator": {"login": "receiver", "type": "User"},
+                    "context": "dynamic / Checks", "state": "success",
+                    "description": "Source run 100, attempt 1: passed",
+                    "target_url": "https://github.com/executor/dynamic-actions/actions/runs/500",
+                },
+                {
+                    "creator": {"login": "receiver", "type": "User"},
+                    "context": "dynamic / Branch only", "state": "success",
+                    "description": "Source run 99, attempt 1: passed",
+                    "target_url": "https://github.com/executor/dynamic-actions/actions/runs/499",
+                },
+                {
+                    "creator": BOT, "context": "unrelated/check", "state": "success",
+                    "description": "Source run 99, attempt 1: passed", "target_url": "https://example.test",
+                },
+                {
+                    "creator": BOT, "context": "dynamic / Unowned", "state": "success",
+                    "description": "different protocol", "target_url": "https://example.test",
+                },
+            ]
+            prepare_dispatch(api, env, {"repository": {"id": 10}},
+                             "executor", "", directory, sentinel)
+            bodies = [body for _, body in api.posts]
+            self.assertEqual([body["context"] for body in bodies], [
+                "project/dynamic-dispatch", "dynamic / Checks",
+            ])
+            self.assertEqual(bodies[0]["state"], "pending")
+            self.assertEqual(bodies[1]["state"], "pending")
+            self.assertEqual(
+                bodies[1]["description"], "Source run 100, attempt 2: queued or running"
+            )
+            self.assertEqual((directory / "workflows/dyn-receipt.yml").read_text(), "receipt")
+
+    def test_newer_auto_generation_prevents_stale_reset(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            directory = root / ".github"
+            (directory / "workflows").mkdir(parents=True)
+            sentinel = root / "receipt.yml"
+            sentinel.write_text("receipt")
+            api = FakeAPI()
+            api.history = [{
+                "creator": BOT, "context": "dynamic / Checks", "state": "success",
+                "description": "Source run 101, attempt 1: passed",
+                "target_url": "https://example.test",
+            }]
+            with self.assertRaisesRegex(ValueError, "newer source run"):
+                prepare_dispatch(api, ENV, {"repository": {"id": 10}},
+                                 "executor", "", directory, sentinel)
+            self.assertEqual(api.posts, [])
+
+    def test_auto_dispatch_finish_binds_commit_without_finalizing_details(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            directory = root / ".github"
+            (directory / "workflows").mkdir(parents=True)
+            sentinel = root / "receipt.yml"
+            sentinel.write_text("receipt")
+            env = dict(ENV, GITHUB_RUN_ATTEMPT="2")
+            api = FakeAPI()
+            api.history = [{
+                "creator": BOT, "context": "dynamic / Checks", "state": "success",
+                "description": "Source run 100, attempt 1: passed",
+                "target_url": "https://example.test",
+            }]
+            metadata = prepare_dispatch(
+                api, env, {"repository": {"id": 10}}, "executor", "", directory, sentinel
+            )
+            finish_dispatch(api, env, metadata, "f" * 40)
+            self.assertEqual(api.posts[-1][1]["context"], "project/dynamic-dispatch")
+            self.assertEqual(api.posts[-1][1]["state"], "success")
+            self.assertTrue(api.posts[-1][1]["target_url"].endswith("/commit/" + "f" * 40))
+            self.assertFalse(any(
+                body["context"] == "dynamic / Checks" and body["state"] == "success"
+                for _, body in api.posts
+            ))
+
+    def test_auto_receipt_failure_closes_successful_dispatch_and_pending_details(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            directory = root / ".github"
+            (directory / "workflows").mkdir(parents=True)
+            sentinel = root / "receipt.yml"
+            sentinel.write_text("receipt")
+            env = dict(ENV, GITHUB_RUN_ATTEMPT="2")
+            api = FakeAPI()
+            api.history = [{
+                "creator": BOT, "context": "dynamic / Checks", "state": "success",
+                "description": "Source run 100, attempt 1: passed",
+                "target_url": "https://example.test",
+            }]
+            metadata = prepare_dispatch(
+                api, env, {"repository": {"id": 10}}, "executor", "", directory, sentinel
+            )
+            finish_dispatch(api, env, metadata, "f" * 40)
+            finish_dispatch(api, env, metadata)
+            errors = [body for _, body in api.posts if body["state"] == "error"]
+            self.assertEqual(
+                [body["context"] for body in errors],
+                ["project/dynamic-dispatch", "dynamic / Checks"],
+            )
+            self.assertEqual(errors[1]["description"],
+                             "Source run 100, attempt 2: forwarding failed")
 
     def test_finish_emits_source_owned_receipt_without_status_permission(self):
         with tempfile.TemporaryDirectory() as temporary:

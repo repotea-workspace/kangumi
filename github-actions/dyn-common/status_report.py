@@ -177,7 +177,14 @@ class StatusReporter:
             return {"execution_sha": execution_sha, "skipped": "unregistered or legacy batch"}
         receipt = self.attestation(metadata, execution_sha)
         if receipt is None:
-            return {"execution_sha": execution_sha, "skipped": "no current source-owned dispatch receipt"}
+            result = {"execution_sha": execution_sha, "skipped": "no current source-owned dispatch receipt"}
+            source = metadata["source"]
+            current = latest_status(self.source_api, source["repository"], source["sha"],
+                                    self.policy["dispatch_context"])
+            if (current and is_source_bot(current) and current["state"] == "pending"
+                    and current["description"] == generation_description(source["run_id"], source["run_attempt"])):
+                result.update(retry_reason="dispatch_receipt", retry_after_seconds=5)
+            return result
         source = metadata["source"]
         version = self.policy["policies"].get(metadata["policy"])
         if version is None:
@@ -221,6 +228,15 @@ class StatusReporter:
             list(required_selected.values()),
         )
         result["workflows"] = workflow_results
+        missing = set(required) - set(required_selected)
+        # Without a schedule, a missing required workflow may produce no later
+        # completion event. Keep this exceptional event alive until its grace
+        # expires; ordinary running workflows have their own completion event.
+        if (state == "pending" and missing and result.get("state") == "pending"
+                and not any(run.get("status") != "completed" for run in selected.values())):
+            remaining = version.get("missing_after_seconds", 600) - age
+            result.update(retry_reason="missing_workflow",
+                          retry_after_seconds=max(1, min(60, remaining + 1)))
         return result
 
     def write_workflow_statuses(self, metadata, execution_sha, receipt,

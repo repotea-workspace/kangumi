@@ -23,6 +23,7 @@ jobs:
         run: |
           python3 -m unittest discover -s github-actions/dyn-common -v
           python3 -m unittest discover -s github-actions/dyn-source -v
+          python3 -m unittest discover -s github-actions/dyn-status -v
           python3 -m unittest discover -s github-actions/gitops-deploy -v
         env:
           PYTHONDONTWRITEBYTECODE: '1'

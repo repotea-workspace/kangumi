@@ -25,7 +25,7 @@ inputs:
     required: false
     default: ''
   status_token:
-    description: Source repository GITHUB_TOKEN with statuses write; required when status_policy is set.
+    description: Source repository GITHUB_TOKEN with statuses write; enables automatic pending/dispatch status lifecycle and is required when status_policy is set.
     required: false
   metadata-format:
     description: Forwarded metadata format. Keep legacy until every consumer supports source-yml.
@@ -142,7 +142,7 @@ runs:
             raise ValueError("metadata-format must be legacy or source-yml")
         PY
 
-        if [ -n "$STATUS_POLICY" ]; then
+        if [ -n "$STATUS_POLICY" ] || [ -n "$SOURCE_STATUS_TOKEN" ]; then
           # The receipt survives a failed push; the source observer also covers
           # a forcibly cancelled Trigger where this EXIT trap cannot run.
           trap 'result=$?; if [ "$result" -ne 0 ]; then python3 "$GITHUB_ACTION_PATH/forward.py" fail || true; fi' EXIT
@@ -188,3 +188,12 @@ runs:
         path: ${{ steps.forward.outputs.receipt }}
         if-no-files-found: error
         retention-days: 7
+    - name: Close automatic statuses after receipt failure
+      if: failure() && inputs.status_policy == '' && inputs.status_token != ''
+      shell: bash
+      env:
+        SOURCE_STATUS_TOKEN: ${{ inputs.status_token }}
+      run: |
+        if [ -f dynamic-actions/.github/source.yml ] || [ -f dynamic-actions/.github/source.json ]; then
+          python3 "$GITHUB_ACTION_PATH/forward.py" fail --metadata-dir dynamic-actions/.github
+        fi
