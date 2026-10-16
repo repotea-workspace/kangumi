@@ -1,0 +1,23 @@
+name: Finalize failed automatic integration dispatch
+on:
+  workflow_run:
+    workflows: [Dynamic CI automatic integration]
+    types: [completed]
+permissions:
+  contents: read
+jobs:
+  finalize:
+    if: github.event.workflow_run.conclusion != 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      statuses: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: ./github-actions/dyn-dispatch
+        with:
+          token: ${{ github.token }}
+          trigger-workflow: .github/workflows/dyn-protocol-integration.yml
+          status-policy: ''

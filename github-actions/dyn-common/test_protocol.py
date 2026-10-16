@@ -295,6 +295,25 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(len(self.source.posts), 2)
         self.assertTrue(all(body["state"] == "error" for _, body in self.source.posts))
 
+    def test_auto_failure_observer_closes_only_matching_pending_details(self):
+        url = "https://github.com/owner/project/actions/runs/100"
+        self.source.history = [dict(creator=BOT, state="pending", context="project/dynamic-dispatch",
+                                   description="Dynamic dispatch: source run 100, attempt 1", target_url=url)]
+        for name, attempt, state, target in [("Current", 1, "pending", url),
+                                             ("Newer", 2, "pending", url),
+                                             ("Done", 1, "success", url),
+                                             ("Execution", 1, "pending", "https://github.com/executor/run/500")]:
+            self.source.history.append(dict(creator=BOT, state=state, context="dynamic / " + name,
+                description=f"Source run 100, attempt {attempt}: queued or running", target_url=target))
+        event = {"repository": {"full_name": "owner/project", "id": 10},
+                 "workflow_run": {"id": 100, "run_attempt": 1, "head_sha": SOURCE_SHA,
+                                  "repository": {"id": 10}, "path": ".github/workflows/trigger.yml",
+                                  "status": "completed", "conclusion": "cancelled"}}
+        finalize_failed_trigger(self.source, dict(ENV, GITHUB_EVENT_NAME="workflow_run"),
+                                event, ".github/workflows/trigger.yml", "")
+        self.assertEqual([body["context"] for _, body in self.source.posts],
+                         ["project/dynamic-dispatch", "dynamic / Current"])
+
     def test_failure_observer_preserves_successful_dispatch(self):
         event = {"repository": {"full_name": "owner/project", "id": 10},
                  "workflow_run": {"id": 100, "run_attempt": 1, "head_sha": SOURCE_SHA,

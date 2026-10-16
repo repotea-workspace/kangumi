@@ -22,7 +22,8 @@ def main():
     args = parser.parse_args()
     env = os.environ
     policy = env.get("STATUS_POLICY", "")
-    api = GitHub(env.get("SOURCE_STATUS_TOKEN", ""), env["GITHUB_API_URL"]) if policy else None
+    token = env.get("SOURCE_STATUS_TOKEN", "")
+    api = GitHub(token, env["GITHUB_API_URL"]) if policy or token else None
     if args.operation == "prepare":
         event = json.loads(Path(env["GITHUB_EVENT_PATH"]).read_text())
         prepare_dispatch(

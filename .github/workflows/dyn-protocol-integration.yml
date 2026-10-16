@@ -9,15 +9,17 @@ on:
         options: [repotea-workflow, '0xfe10']
 permissions:
   contents: read
+  statuses: write
 jobs:
   forward:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      # Deliberately omit status_policy, status_token and statuses: write.
+      # Exercise automatic source-side pending and trusted on-demand reporting.
       - uses: ./github-actions/dyn-actions
         with:
           owner: ${{ inputs.execution_owner }}
           ssh_key: ${{ secrets.GH_SSH_PRIVATE_KEY_0XFE10 }}
           metadata-format: source-yml
+          status_token: ${{ github.token }}
