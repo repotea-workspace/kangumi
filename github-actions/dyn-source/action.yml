@@ -1,12 +1,20 @@
 name: Resolve dynamic source
-description: Resolve the immutable source identity from forwarded metadata.
+description: Resolve and match the immutable source identity from forwarded metadata.
 inputs:
   repository:
     description: Expected source repository (never inferred from untrusted metadata).
     required: true
   token:
-    description: Source read token, used only to resolve legacy short SHA metadata.
+    description: Source read token, used only to resolve a legacy short SHA.
     required: false
+  branches:
+    description: Optional newline-separated exact source branch names or case-sensitive * and ? glob patterns.
+    required: false
+    default: ''
+  tags:
+    description: Optional newline-separated exact source tag names or case-sensitive * and ? glob patterns.
+    required: false
+    default: ''
 outputs:
   sha:
     description: Full immutable source SHA.
@@ -14,6 +22,18 @@ outputs:
   branch:
     description: Source branch name (empty for a tag).
     value: ${{ steps.source.outputs.branch }}
+  tag:
+    description: Source tag name (empty for a branch).
+    value: ${{ steps.source.outputs.tag }}
+  ref_type:
+    description: Source ref type, branch or tag.
+    value: ${{ steps.source.outputs.ref_type }}
+  ref_name:
+    description: Source branch or tag name.
+    value: ${{ steps.source.outputs.ref_name }}
+  matches:
+    description: Whether the source ref matches the branches or tags filters.
+    value: ${{ steps.source.outputs.matches }}
   repository:
     description: Validated source repository.
     value: ${{ steps.source.outputs.repository }}
@@ -25,4 +45,6 @@ runs:
       env:
         EXPECTED_REPOSITORY: ${{ inputs.repository }}
         SOURCE_READ_TOKEN: ${{ inputs.token }}
+        SOURCE_BRANCH_PATTERNS: ${{ inputs.branches }}
+        SOURCE_TAG_PATTERNS: ${{ inputs.tags }}
       run: python3 "$GITHUB_ACTION_PATH/main.py"

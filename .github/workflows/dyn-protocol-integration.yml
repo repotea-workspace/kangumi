@@ -20,3 +20,4 @@ jobs:
         with:
           owner: ${{ inputs.execution_owner }}
           ssh_key: ${{ secrets.GH_SSH_PRIVATE_KEY_0XFE10 }}
+          metadata-format: source-yml

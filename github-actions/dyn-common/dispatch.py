@@ -1,11 +1,11 @@
 """Source-owned forwarding receipts and failed-trigger finalization."""
 
-import json
 import re
 from pathlib import Path
 
 from github_api import is_source_bot, latest_status, post_status
-from source_metadata import SHA, build_metadata
+from source_metadata import (LEGACY_FORMAT, LEGACY_SCHEMA_VERSION, SCHEMA_VERSION,
+                             SHA, build_metadata, write_metadata)
 
 
 def dispatch_context(repository):
@@ -20,11 +20,15 @@ def source_run_url(server, repository, run_id):
     return f"{server}/{repository}/actions/runs/{run_id}"
 
 
-def prepare_dispatch(api, env, event, owner, policy, metadata_dir, sentinel_path):
-    metadata = build_metadata(env, event, owner, policy)
+def prepare_dispatch(api, env, event, owner, policy, metadata_dir, sentinel_path,
+                     metadata_format=LEGACY_FORMAT):
+    schema_version = (
+        LEGACY_SCHEMA_VERSION if metadata_format == LEGACY_FORMAT else SCHEMA_VERSION
+    )
+    metadata = build_metadata(env, event, owner, policy, schema_version=schema_version)
     directory = Path(metadata_dir)
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "source.json").write_text(json.dumps(metadata, indent=2) + "\n")
+    write_metadata(directory, metadata, metadata_format)
     if not policy:
         inject_receipt(directory, sentinel_path)
         return metadata

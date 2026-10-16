@@ -80,6 +80,15 @@ class ProtocolTests(unittest.TestCase):
         self.execution.files[("executor/dynamic-actions", ".github/source.json", EXEC_SHA)] = json.dumps(self.metadata).encode()
         self.execution.files[("executor/dynamic-actions", ".github/workflows/checks.yml", EXEC_SHA)] = b"trusted checks"
         self.source.files[("owner/project", ".github/dyn-workflows/checks.yml", SOURCE_SHA)] = b"trusted checks"
+        self.source.values["/repos/owner/project/contents/.github/dyn-workflows"] = [
+            {"path": ".github/dyn-workflows/checks.yml", "type": "file"},
+        ]
+        self.execution.values[
+            "/repos/executor/dynamic-actions/contents/.github/workflows"
+        ] = [
+            {"path": ".github/workflows/checks.yml", "type": "file"},
+            {"path": ".github/workflows/dyn-receipt.yml", "type": "file"},
+        ]
         self.source.values["/repos/owner/project/actions/runs/100"] = {
             "repository": {"id": 10}, "head_sha": SOURCE_SHA, "run_attempt": 1,
             "path": ".github/workflows/trigger.yml", "event": "push",
@@ -212,10 +221,45 @@ class ProtocolTests(unittest.TestCase):
         selected["b"] = dict(self.run, conclusion="skipped")
         self.assertEqual(aggregate(selected, {"a", "b"}, 20, 600)[0], "failure")
 
+    def test_additional_started_workflow_gets_status_but_not_aggregate_vote(self):
+        staging_path = ".github/workflows/staging.yml"
+        source_staging_path = ".github/dyn-workflows/staging.yml"
+        staging = b"name: Staging\non: push\njobs: {}\n"
+        self.source.values[
+            "/repos/owner/project/contents/.github/dyn-workflows"
+        ].append({"path": source_staging_path, "type": "file"})
+        self.execution.values[
+            "/repos/executor/dynamic-actions/contents/.github/workflows"
+        ].append({"path": staging_path, "type": "file"})
+        self.source.files[("owner/project", source_staging_path, SOURCE_SHA)] = staging
+        self.execution.files[
+            ("executor/dynamic-actions", staging_path, EXEC_SHA)
+        ] = staging
+        self.execution.runs.append(dict(
+            self.run,
+            id=501,
+            path=staging_path,
+            conclusion="failure",
+        ))
+
+        result = self.reporter.report(EXEC_SHA)
+
+        self.assertEqual(result["state"], "success")
+        self.assertEqual(
+            {item["context"]: item["state"] for item in result["workflows"]},
+            {"dynamic / checks.yml": "success", "dynamic / Staging": "failure"},
+        )
+        aggregate_posts = [
+            body for _, body in self.source.posts
+            if body["context"] == "project/dynamic-checks"
+        ]
+        self.assertEqual(aggregate_posts[-1]["state"], "success")
+
     def test_duplicate_report_is_idempotent(self):
         self.reporter.report(EXEC_SHA)
         self.reporter.report(EXEC_SHA)
-        self.assertEqual(len(self.source.posts), 1)
+        # One stable per-workflow status plus the existing aggregate status.
+        self.assertEqual(len(self.source.posts), 2)
 
     def test_prepare_resets_result_and_finish_attests_exact_execution(self):
         self.source.history = []

@@ -86,109 +86,27 @@ runs:
         propertyPath: ${{ inputs.propertyPath }}
         value: ${{ inputs.value }}
 
-    - name: Generate message
-      id: generate-commit-message
+    - name: Resolve dynamic source metadata
+      id: source-metadata
       shell: bash
-      run: |
-        source "${GITHUB_ACTION_PATH}/metadata.sh"
-        METADATA_DIR=$(gitops_metadata_dir)
-
-        INPUT_SOURCE_REPOSITORY="${{ inputs.source_repository }}"
-        INPUT_COMMIT_MESSAGE="${{ inputs.commit_message }}"
-        INPUT_AC_GIT_REF="${{ inputs.ac_git_ref }}"
-        INPUT_COMMIT_ID="${{ inputs.commit_id }}"
-
-        INPUT_COMMIT_MESSAGE=${INPUT_COMMIT_MESSAGE:-${METADATA_DIR}/message.txt}
-        INPUT_AC_GIT_REF=${INPUT_AC_GIT_REF:-${METADATA_DIR}/ref.txt}
-        INPUT_COMMIT_ID=${INPUT_COMMIT_ID:-${METADATA_DIR}/commit.txt}
-
-        # read commit_message
-        if [ -f "${INPUT_COMMIT_MESSAGE}" ]; then
-          COMMIT_MSG=$(cat ${INPUT_COMMIT_MESSAGE})
-        else
-          COMMIT_MSG="${INPUT_COMMIT_MESSAGE}"
-        fi
-
-        # read ac_git_ref
-        if [ -f "${INPUT_AC_GIT_REF}" ]; then
-          AC_GIT_REF=$(cat ${INPUT_AC_GIT_REF})
-        else
-          AC_GIT_REF="${INPUT_AC_GIT_REF}"
-        fi
-
-        # read commit_id
-        if [ -f "${INPUT_COMMIT_ID}" ]; then
-          COMMIT_ID=$(cat ${INPUT_COMMIT_ID})
-        else
-          COMMIT_ID="${INPUT_COMMIT_ID}"
-        fi
-
-        # read commit_date if exists
-        COMMIT_DATE=""
-        if [ -f "${METADATA_DIR}/date.txt" ]; then
-          COMMIT_DATE=$(cat "${METADATA_DIR}/date.txt")
-        fi
-
-        # read author if exists
-        COMMIT_AUTHOR=""
-        if [ -f "${METADATA_DIR}/author.txt" ]; then
-          COMMIT_AUTHOR=$(cat "${METADATA_DIR}/author.txt")
-        fi
-
-        # read source_repository, use input first, if not set use repository.txt
-        if [ -n "${INPUT_SOURCE_REPOSITORY}" ]; then
-          SOURCE_REPOSITORY="${INPUT_SOURCE_REPOSITORY}"
-        elif [ -f "${METADATA_DIR}/repository.txt" ]; then
-          SOURCE_REPOSITORY=$(cat "${METADATA_DIR}/repository.txt")
-        else
-          SOURCE_REPOSITORY="${{ github.repository }}"
-        fi
-
-        # build commit links
-        COMMIT_LINKS="    - https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
-        if [ -n "${AC_GIT_REF}" ]; then
-          COMMIT_LINKS="${COMMIT_LINKS}"$'\n'"    - https://github.com/${SOURCE_REPOSITORY}/tree/${AC_GIT_REF}"
-        fi
-        if [ -n "${COMMIT_ID}" ]; then
-          COMMIT_LINKS="${COMMIT_LINKS}"$'\n'"    - https://github.com/${SOURCE_REPOSITORY}/commit/${COMMIT_ID}"
-        fi
-
-        # extract first line of commit message as subject
-        COMMIT_MSG_SUBJECT=$(echo "${COMMIT_MSG}" | head -n 1 | cut -c 1-60)
-        if [ ${#COMMIT_MSG_SUBJECT} -ge 60 ]; then
-          COMMIT_MSG_SUBJECT="${COMMIT_MSG_SUBJECT}..."
-        fi
-
-        {
-          echo "message<<EOF"
-          echo "[${SOURCE_REPOSITORY}] ${AC_GIT_REF} :: ${COMMIT_MSG_SUBJECT}"
-          echo ""
-          echo "--- Commit Message ---"
-          echo "${COMMIT_MSG}"
-          echo ""
-          echo "--- Actions Context ---"
-          echo "* Repository: https://github.com/${SOURCE_REPOSITORY}"
-          echo "* Git Ref: ${AC_GIT_REF}"
-          if [ -n "${COMMIT_AUTHOR}" ]; then
-            echo "* Author: ${COMMIT_AUTHOR}"
-          fi
-          if [ -n "${COMMIT_DATE}" ]; then
-            echo "* Commit Date: ${COMMIT_DATE}"
-          fi
-          echo "* Build started at: ${{ github.event.head_commit.timestamp }}"
-          echo "* Source: ${{ github.event_name }}"
-          echo "* Workflows: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          echo "* Commits:"
-          echo "${COMMIT_LINKS}"
-          echo "EOF"
-        } >> "$GITHUB_OUTPUT"
-
+      env:
+        INPUT_SOURCE_REPOSITORY: ${{ inputs.source_repository }}
+        INPUT_COMMIT_MESSAGE: ${{ inputs.commit_message }}
+        INPUT_AC_GIT_REF: ${{ inputs.ac_git_ref }}
+        INPUT_COMMIT_ID: ${{ inputs.commit_id }}
+        FALLBACK_REPOSITORY: ${{ github.repository }}
+        EXECUTION_REPOSITORY: ${{ github.repository }}
+        EXECUTION_SHA: ${{ github.sha }}
+        BUILD_STARTED_AT: ${{ github.event.head_commit.timestamp }}
+        EVENT_NAME: ${{ github.event_name }}
+        RUN_ID: ${{ github.run_id }}
+      run: python3 "${GITHUB_ACTION_PATH}/resolve_metadata.py"
 
     - name: Commit and push GitOps changes
       shell: bash
       working-directory: ./gitops-repo
       env:
-        COMMIT_MESSAGE: ${{ steps.generate-commit-message.outputs.message }}
+        COMMIT_MESSAGE: ${{ steps.source-metadata.outputs.commit_message }}
       run: |
         set -euo pipefail
         git config user.name "github-actions[bot]"
