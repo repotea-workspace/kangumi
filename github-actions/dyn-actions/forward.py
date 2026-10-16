@@ -11,6 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "dyn-common"))
 from dispatch import finish_dispatch, prepare_dispatch
 from github_api import GitHub
+from status_policy import requested_checks
 from source_metadata import SHA, read_metadata, write_outputs
 
 
@@ -21,7 +22,7 @@ def main():
     parser.add_argument("--execution-sha")
     args = parser.parse_args()
     env = os.environ
-    policy = env.get("STATUS_POLICY", "")
+    policy = requested_checks(env.get("CHECKS", ""), env.get("STATUS_POLICY", ""))
     token = env.get("SOURCE_STATUS_TOKEN", "")
     api = GitHub(token, env["GITHUB_API_URL"]) if policy or token else None
     if args.operation == "prepare":
