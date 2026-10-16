@@ -62,8 +62,15 @@ workflow permits pending/cancellation/rerun checks without running product build
 
 # Dynamic CI source status protocol
 
-Existing callers remain opt-in compatible. Set `status_policy: checks-v1` and
-`status_token: ${{ github.token }}` on dyn-actions, grant the source Trigger
+Declare explicit checks on dyn-actions and its failure observer:
+
+```yaml
+with:
+  checks: |
+    version: 1
+```
+
+Grant dyn-actions `status_token: ${{ github.token }}` and the source Trigger
 `contents: read` and `statuses: write`, and serialize Trigger runs per source SHA
 with `cancel-in-progress: false`.
 
@@ -239,3 +246,20 @@ completion events do not rely on stale run-list state. An otherwise terminal
 automatic batch with undiscovered workflows allows up to 30 seconds for list
 propagation; workflows still absent remain `not_started` (for example path
 filters), without fabricating statuses for workflows that did not run.
+
+Receiver sources declare their required checks directly, without a named policy:
+
+```yaml
+checks:
+  version: 1
+  workflows:
+    - path: check.yml
+      name: '[aviary] Check'
+  missing_after_seconds: 600
+```
+
+The source declaration selects checks version 1; the trusted receiver owns the
+required workflow list. Unsupported versions and mixed `checks`/`policies`
+configuration fail validation. Legacy `status_policy: checks-v1` inputs and
+`policies` configuration remain readable during migration. The existing wire
+identifier stays stable so in-flight batches and old branches remain compatible.

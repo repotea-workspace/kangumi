@@ -7,6 +7,10 @@ inputs:
   trigger-workflow:
     description: Trusted source Trigger workflow path.
     required: true
+  checks:
+    description: "Explicit checks declaration as YAML, for example version 1."
+    required: false
+    default: ''
   status-policy:
     description: Set to empty for automatic reporting without an aggregate status.
     required: false
@@ -17,6 +21,7 @@ runs:
     - shell: bash
       env:
         SOURCE_STATUS_TOKEN: ${{ inputs.token }}
+        CHECKS: ${{ inputs.checks }}
         STATUS_POLICY: ${{ inputs.status-policy }}
         TRIGGER_WORKFLOW: ${{ inputs.trigger-workflow }}
       run: python3 "$GITHUB_ACTION_PATH/main.py"

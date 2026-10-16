@@ -20,8 +20,12 @@ inputs:
     description: 'dynamic actions repo owner'
     required: false
     default: '0xfe10'
+  checks:
+    description: "Optional explicit checks declaration as YAML, for example version 1."
+    required: false
+    default: ''
   status_policy:
-    description: Optional explicit aggregate policy (for example checks-v1); automatic per-workflow reporting is enabled without it.
+    description: Legacy aggregate policy identifier; prefer checks with version 1.
     required: false
     default: ''
   status_token:
@@ -62,6 +66,7 @@ runs:
         INPUT_GIT_NAME: ${{ inputs.git_name }}
         EXECUTION_OWNER: ${{ inputs.owner }}
         REPO_BRANCH: ${{ steps.extract_branch.outputs.branch }}
+        CHECKS: ${{ inputs.checks }}
         STATUS_POLICY: ${{ inputs.status_policy }}
         SOURCE_STATUS_TOKEN: ${{ inputs.status_token }}
         METADATA_FORMAT: ${{ inputs['metadata-format'] }}
@@ -181,7 +186,7 @@ runs:
 
         python3 "$GITHUB_ACTION_PATH/forward.py" finish --execution-sha "$(git rev-parse HEAD)"
     - name: Publish source-owned dispatch receipt
-      if: inputs.status_policy == ''
+      if: inputs.status_policy == '' && inputs.checks == ''
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
       with:
         name: dyn-dispatch-${{ github.run_id }}-${{ github.run_attempt }}
@@ -189,7 +194,7 @@ runs:
         if-no-files-found: error
         retention-days: 7
     - name: Close automatic statuses after receipt failure
-      if: failure() && inputs.status_policy == '' && inputs.status_token != ''
+      if: failure() && inputs.status_policy == '' && inputs.checks == '' && inputs.status_token != ''
       shell: bash
       env:
         SOURCE_STATUS_TOKEN: ${{ inputs.status_token }}
