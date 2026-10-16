@@ -97,6 +97,8 @@ def main():
             result = reconcile(report)
             print(json.dumps(result))
             with open(env["GITHUB_STEP_SUMMARY"], "a") as stream:
+                if "skipped" in result:
+                    stream.write(f'- {sha}: **skipped** — {result["skipped"]}\n')
                 if "state" in result:
                     stream.write(f'- {result["source_sha"]}: **{result["state"]}** — [details]({result["url"]})\n')
                     for url in result["runs"]:

@@ -263,3 +263,9 @@ required workflow list. Unsupported versions and mixed `checks`/`policies`
 configuration fail validation. Legacy `status_policy: checks-v1` inputs and
 `policies` configuration remain readable during migration. The existing wire
 identifier stays stable so in-flight batches and old branches remain compatible.
+
+Removing a source registration disables its explicit aggregate reporting. Late
+completion events from older explicit batches are recorded as skipped, without
+writing statuses or falling back to automatic mode. Switch the source Trigger
+and its failure observer to automatic mode when removing that registration;
+new batches then use the normal per-workflow reporter.
