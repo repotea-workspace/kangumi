@@ -67,6 +67,9 @@ def loads(raw):
         text = raw
     else:
         raise ValueError("dynamic source metadata must be text")
+    # Git's Windows checkout may convert the canonical LF document to CRLF.
+    # Normalize only paired line endings; bare CR and literal tabs stay invalid.
+    text = text.replace("\r\n", "\n")
     if not text or not text.endswith("\n") or "\r" in text or "\t" in text:
         raise ValueError("invalid dynamic source YAML layout")
 

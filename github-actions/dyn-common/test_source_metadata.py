@@ -64,6 +64,19 @@ class SourceMetadataV2Tests(unittest.TestCase):
         self.assertNotIn("\u2029", escaped)
         self.assertEqual(load_metadata(escaped, "source.yml"), metadata)
 
+    def test_windows_checkout_crlf_preserves_source_metadata(self):
+        metadata = build_metadata(
+            ENV, EVENT, "executor", None, schema_version=SCHEMA_VERSION,
+            dispatched_at="2026-10-16T10:20:30Z",
+        )
+        canonical = dump_source_yaml(metadata)
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            (directory / "source.yml").write_bytes(canonical.replace("\n", "\r\n").encode())
+            self.assertEqual(read_metadata(directory), metadata)
+        with self.assertRaises(ValueError):
+            load_metadata(canonical.replace("\n", "\r", 1), "source.yml")
+
     def test_boolean_schema_version_is_rejected(self):
         metadata = build_metadata(
             ENV, EVENT, "executor", None, schema_version=LEGACY_SCHEMA_VERSION

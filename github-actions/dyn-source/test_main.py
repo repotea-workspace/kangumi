@@ -40,7 +40,7 @@ class DynamicSourceActionTest(unittest.TestCase):
     def run_action(self, workspace, branches="", tags=""):
         output = workspace / "output"
         subprocess.run(
-            ["python3", str(SCRIPT)],
+            [sys.executable, str(SCRIPT)],
             check=True,
             capture_output=True,
             text=True,
