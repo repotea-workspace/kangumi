@@ -37,6 +37,12 @@ def wait_for_source(source, origin, sha, notification, run_id, branch,
                 or run.get("head_branch") != branch
                 or (run.get("repository") or {}).get("full_name", "").lower() != origin.lower()
                 or (run.get("head_repository") or {}).get("full_name", "").lower() != origin.lower()):
+            # A just-created run can expose its workflow name before the
+            # expression-based run title and repository fields are populated.
+            # Never accept that placeholder as acknowledgment; wait boundedly.
+            if run.get("status") != "completed" and clock() - started < 120:
+                sleep(10)
+                continue
             raise ValueError("source acknowledgment identity does not match notification")
         if run.get("status") == "completed":
             if run.get("conclusion") != "success":
