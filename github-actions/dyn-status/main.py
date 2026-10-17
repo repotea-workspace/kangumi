@@ -15,6 +15,7 @@ from source_metadata import write_outputs
 from status_config import load_config
 from status_policy import load_policy
 from status_report import StatusReporter
+from status_relay import relay, source_report, SourceGitHub
 
 
 RECEIPT_WAIT_SECONDS = 120
@@ -51,8 +52,21 @@ def reconcile(report, sleep=time.sleep, clock=time.monotonic):
 
 def main():
     env = os.environ
-    config = load_config(env["STATUS_CONFIG"])
     mode = env.get("STATUS_MODE", "report") or "report"
+    if mode == "source":
+        if env["GITHUB_EVENT_NAME"] != "workflow_dispatch":
+            raise ValueError("source mode requires workflow_dispatch")
+        event = json.loads(Path(env["GITHUB_EVENT_PATH"]).read_text())
+        execution = GitHub(env["EXECUTION_READ_TOKEN"], env["GITHUB_API_URL"])
+        source = SourceGitHub(env["SOURCE_STATUS_TOKEN"], env["GITHUB_API_URL"], env["GITHUB_REPOSITORY"])
+        summary_url = f'{env["GITHUB_SERVER_URL"]}/{env["GITHUB_REPOSITORY"]}/actions/runs/{env["GITHUB_RUN_ID"]}'
+        result = source_report(execution, source, env["EXECUTION_REPOSITORY"], env["GITHUB_REPOSITORY"],
+                               event, env["GITHUB_SERVER_URL"], summary_url, reconcile)
+        print(json.dumps(result))
+        with open(env["GITHUB_STEP_SUMMARY"], "a") as stream:
+            stream.write("```json\n" + json.dumps(result, indent=2) + "\n```\n")
+        return
+    config = load_config(env["STATUS_CONFIG"])
     if mode not in ("route", "report"):
         raise ValueError("mode must be route or report")
     execution = GitHub(env["EXECUTION_READ_TOKEN"], env["GITHUB_API_URL"])
@@ -85,6 +99,14 @@ def main():
     failures = []
     for sha in shas:
         try:
+            if group:
+                relayed = relay(execution, source, env["GITHUB_REPOSITORY"], config, group, sha, event,
+                                env["GITHUB_RUN_ID"] + "-" + env["GITHUB_RUN_ATTEMPT"])
+                if relayed is not None:
+                    print(json.dumps(relayed))
+                    with open(env["GITHUB_STEP_SUMMARY"], "a") as stream:
+                        stream.write(f'- {sha}: notified **{relayed["source_repository"]}** to report with GitHub Actions.\n')
+                    continue
             def report():
                 if isinstance(execution, EventExecution):
                     execution.refresh()

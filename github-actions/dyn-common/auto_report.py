@@ -10,7 +10,7 @@ from urllib.parse import urljoin, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 from zipfile import BadZipFile, ZipFile
 
-from github_api import GitHubError, latest_status, post_status
+from github_api import GitHubError, is_source_bot, latest_status, post_status
 from source_metadata import SHA, read_remote_metadata
 from status_report import RECEIPT_PATH, execution_ref
 from workflow_identity import workflow_contexts
@@ -374,7 +374,10 @@ class AutoStatusReporter:
         description = _status_description(source, state, conclusion)
         url = f'{self.server_url}/{self.execution_repository}/actions/runs/{run["id"]}'
         body = {"state": state, "description": description, "target_url": url}
-        posted = previous is None or any(previous.get(key) != value for key, value in body.items())
+        posted = (
+            (getattr(self.source_api, "require_source_bot", False) and not is_source_bot(previous or {}))
+            or previous is None or any(previous.get(key) != value for key, value in body.items())
+        )
         if posted:
             post_status(
                 self.source_api, source["repository"], source["sha"],

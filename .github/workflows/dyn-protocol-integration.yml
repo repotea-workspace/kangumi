@@ -9,6 +9,7 @@ on:
         options: [repotea-workflow, '0xfe10']
 permissions:
   contents: read
+  actions: read
   statuses: write
 jobs:
   forward:
@@ -16,6 +17,24 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Verify public execution reads with source token
+        env:
+          SOURCE_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PYTHON'
+          import os, sys
+          sys.path.insert(0, "github-actions/dyn-common")
+          from github_api import GitHub
+          api = GitHub(os.environ["SOURCE_TOKEN"])
+          for repo in ("0xfe10/dynamic-actions", "repotea-workflow/dynamic-actions"):
+              info = api.get(f"/repos/{repo}")
+              assert info["private"] is False
+              api.file(repo, ".github/dynamic-status.yml", info["default_branch"])
+              runs = api.get(f"/repos/{repo}/actions/runs", per_page=1)["workflow_runs"]
+              assert runs
+              api.get(f"/repos/{repo}/actions/runs/{runs[0]['id']}")
+              print(f"Source GITHUB_TOKEN can read public execution evidence: {repo}")
+          PYTHON
       # Exercise automatic source-side pending and trusted on-demand reporting.
       - uses: ./github-actions/dyn-actions
         with:

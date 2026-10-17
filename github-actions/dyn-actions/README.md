@@ -58,6 +58,39 @@ Run the manual `Dynamic CI automatic integration` workflow in Kangumi to validat
 the automatic source pending and final status path end to end on either receiver. The forwarded smoke
 workflow permits pending/cancellation/rerun checks without running product builds.
 
+## GitHub Actions status identity
+
+Status icons follow the authenticated status creator; the statuses API has no
+icon override. To retain the GitHub Actions icon through completion and reruns,
+add an installed source to the receiver config's `source_reporting` repository
+list. Non-enrolled repositories keep the existing central reporter during rollout.
+
+Enrolled receivers dispatch the source default branch's
+`.github/workflows/dynamic-dispatch-status.yml`, passing only the execution
+repository/SHA and optional triggering run ID/attempt/status. The source job calls
+`dyn-status` with `mode: source`, a trusted `execution-repository`, and its own
+`github.token` as `source-token`. It recomputes results from the existing source
+receipt and execution evidence; notification inputs never assert success or
+failure. The source workflow requires `contents: read`, `actions: read`, and
+`statuses: write`. It must not check out or execute the forwarded project.
+
+For the current public execution repositories, the source token also serves as
+`execution-token` to read public contents and run metadata. Private execution
+repositories require a separately authorized read credential; the notification
+must never contain tokens. The central source credential needs Actions write to
+dispatch callbacks (classic PAT: `repo`); source status writes no longer use it.
+No new secret is needed for the public execution routes.
+
+Workflow dispatch uses API version `2026-03-10` to obtain the exact callback run ID.
+The receiver waits for that run and its `Report dynamic CI status` job to succeed;
+missing/failed/skipped callbacks fail visibly. Callback timeout is 65 minutes,
+receiver acknowledgment timeout 70 minutes, and receiver job timeout 75 minutes.
+This adds a source workflow run per processed notification and keeps the receiver
+runner allocated while waiting. Same-execution reporting is serialized. Install
+and validate the source handler on its default branch before enrolling it.
+Historical statuses change creator only when successfully reconciled again;
+expired source artifacts still cannot be reconstructed.
+
 ## Explicit aggregate policy compatibility
 
 # Dynamic CI source status protocol

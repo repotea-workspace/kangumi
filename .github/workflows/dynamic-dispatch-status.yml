@@ -1,0 +1,49 @@
+name: Report dynamic CI status
+run-name: ${{ format('Status report · {0} · {1}', inputs.execution_sha, inputs.notification_id) }}
+on:
+  workflow_dispatch:
+    inputs:
+      execution_repository:
+        description: Trusted execution repository
+        required: true
+        type: string
+      execution_sha:
+        description: Full execution SHA
+        required: true
+        type: string
+      notification_id:
+        description: Receiver run and attempt
+        required: true
+        type: string
+      run_id:
+        description: Triggering execution run ID
+        default: ''
+        type: string
+      run_attempt:
+        description: Triggering execution run attempt
+        default: ''
+        type: string
+      run_status:
+        description: Triggering execution run status
+        default: ''
+        type: string
+permissions:
+  contents: read
+  actions: read
+  statuses: write
+jobs:
+  report:
+    name: Report dynamic CI status
+    if: inputs.execution_repository == '0xfe10/dynamic-actions' || inputs.execution_repository == 'repotea-workflow/dynamic-actions'
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    concurrency:
+      group: source-dynamic-status-${{ inputs.execution_repository }}-${{ inputs.execution_sha }}
+      cancel-in-progress: false
+    steps:
+      - uses: repotea-workspace/kangumi/github-actions/dyn-status@main
+        with:
+          mode: source
+          execution-repository: ${{ inputs.execution_repository }}
+          execution-token: ${{ github.token }}
+          source-token: ${{ github.token }}

@@ -2,12 +2,15 @@ name: Report dynamic CI status
 description: Route trusted credentials and reconcile one dynamic execution.
 inputs:
   mode:
-    description: Route an execution to its trusted credential group, or report its status.
+    description: Route an execution, notify its source, or report inside the source repository.
     required: false
     default: report
   config:
     description: Trusted YAML config checked out from the execution repository default branch; legacy JSON remains readable.
-    required: true
+    required: false
+  execution-repository:
+    description: Fixed trusted execution repository; required only in source mode.
+    required: false
   source:
     description: Legacy explicit source key in trusted config.
     required: false
@@ -18,7 +21,7 @@ inputs:
     description: Execution repository token with actions and contents read.
     required: true
   source-token:
-    description: Required in report mode; selected source token with contents/actions/statuses read and statuses write.
+    description: Source GITHUB_TOKEN in source mode; central token needs Actions write for enrolled callbacks, or statuses write for legacy reporting.
     required: false
 outputs:
   matched:
@@ -41,6 +44,7 @@ runs:
       env:
         STATUS_MODE: ${{ inputs.mode }}
         STATUS_CONFIG: ${{ inputs.config }}
+        EXECUTION_REPOSITORY: ${{ inputs.execution-repository }}
         SOURCE_KEY: ${{ inputs.source }}
         CREDENTIAL_GROUP: ${{ inputs.credential-group }}
         EXECUTION_READ_TOKEN: ${{ inputs.execution-token }}
