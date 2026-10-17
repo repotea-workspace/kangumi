@@ -154,6 +154,15 @@ class RelayTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "did not successfully"):
             self.relay()
 
+    def test_new_run_placeholder_waits_for_verified_identity(self):
+        now = [0]
+        pending = dict(self.ack, display_title="Report dynamic CI status", status="queued", conclusion=None)
+        with patch.object(self.source, "get", side_effect=[pending, self.ack]):
+            result = wait_for_source(self.source, self.origin, EXECUTION_SHA, "800-1", 900, "main",
+                                     sleep=lambda seconds: now.__setitem__(0, now[0] + seconds), clock=lambda: now[0])
+        self.assertEqual(result, 900)
+        self.assertEqual(now[0], 10)
+
     def test_acknowledgment_waits_and_times_out_visibly(self):
         now = [0]
         def sleep(seconds):
