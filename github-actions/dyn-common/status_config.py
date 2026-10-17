@@ -105,6 +105,12 @@ def validate_config(config, execution_repository, require_secrets=False):
             if (not isinstance(secret, str) or not SECRET_NAME.fullmatch(secret)
                     or secret.upper().startswith("GITHUB_")):
                 raise ValueError("credential group requires a valid secret_name")
+    reporting = config.get("source_reporting", [])
+    if (not isinstance(reporting, list)
+            or any(not isinstance(repo, str) or not REPOSITORY.fullmatch(repo) for repo in reporting)
+            or len({repo.lower() for repo in reporting}) != len(reporting)
+            or any(repo.split("/", 1)[0].lower() not in owners_seen for repo in reporting)):
+        raise ValueError("source reporting requires unique allowlisted repositories")
     sources = config.get("sources", {})
     if not isinstance(sources, dict):
         raise ValueError("trusted sources must be a mapping")

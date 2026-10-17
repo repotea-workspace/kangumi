@@ -24,7 +24,7 @@ class GitHub:
         self.token = token
         self.api_url = api_url.rstrip("/")
 
-    def request(self, method, path, body=None, params=None):
+    def request(self, method, path, body=None, params=None, api_version="2022-11-28", attempts=3):
         if not path.startswith("/") or path.startswith("//"):
             raise ValueError("GitHub API requires an absolute API path")
         url = self.api_url + path
@@ -34,20 +34,20 @@ class GitHub:
         request = Request(url, data=data, method=method, headers={
             "Authorization": f"Bearer {self.token}",
             "Accept": "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28",
+            "X-GitHub-Api-Version": api_version,
             "Content-Type": "application/json",
         })
-        for attempt in range(3):
+        for attempt in range(attempts):
             try:
                 with urlopen(request, timeout=30) as response:
-                    return json.load(response)
+                    return None if response.status == 204 else json.load(response)
             except HTTPError as error:
-                if error.code in (429, 502, 503, 504) and attempt < 2:
+                if error.code in (429, 502, 503, 504) and attempt + 1 < attempts:
                     time.sleep(2 ** attempt)
                     continue
                 raise GitHubError(error.code, path) from None
             except (URLError, TimeoutError):
-                if attempt < 2:
+                if attempt + 1 < attempts:
                     time.sleep(2 ** attempt)
                     continue
                 raise GitHubError("unavailable", path) from None
@@ -57,6 +57,12 @@ class GitHub:
 
     def post(self, path, body):
         return self.request("POST", path, body)
+
+    def dispatch_workflow(self, repository, workflow, ref, inputs):
+        # This API version returns an exact run ID. Do not retry a possibly
+        # accepted POST after a network failure and create duplicate callbacks.
+        return self.request("POST", f"/repos/{repository}/actions/workflows/{workflow}/dispatches",
+                            {"ref": ref, "inputs": inputs}, api_version="2026-03-10", attempts=1)
 
     def pages(self, path, key=None, **params):
         for page in range(1, 101):

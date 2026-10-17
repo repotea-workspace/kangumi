@@ -282,8 +282,9 @@ class StatusReporter:
                 "description": description,
                 "target_url": url,
             }
-            posted = previous is None or any(
-                previous.get(key) != value for key, value in body.items()
+            posted = (
+                (getattr(self.source_api, "require_source_bot", False) and not is_source_bot(previous or {}))
+                or previous is None or any(previous.get(key) != value for key, value in body.items())
             )
             if posted:
                 post_status(
@@ -320,7 +321,8 @@ class StatusReporter:
             target = self.summary_url or f"{self.server_url}/{self.execution_repository}/commit/{execution_sha}"
         previous = latest_status(self.source_api, source["repository"], source["sha"], self.policy["status_context"])
         body = {"state": state, "description": description[:140], "target_url": target}
-        if previous is None or any(previous.get(key) != value for key, value in body.items()):
+        if ((getattr(self.source_api, "require_source_bot", False) and not is_source_bot(previous or {}))
+                or previous is None or any(previous.get(key) != value for key, value in body.items())):
             post_status(self.source_api, source["repository"], source["sha"], self.policy["status_context"],
                         state, description, target)
         return {"execution_sha": execution_sha, "source_sha": source["sha"], "state": state,
