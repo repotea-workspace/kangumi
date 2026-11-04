@@ -16,6 +16,9 @@ metadata:
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    {{- if $gateway.uploadBodySize }}
+    nginx.ingress.kubernetes.io/proxy-body-size: {{ $gateway.uploadBodySize | quote }}
+    {{- end }}
     {{- with $gateway.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
     {{- end }}

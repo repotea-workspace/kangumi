@@ -29,6 +29,7 @@ toolchains:
       image: example.invalid/nginx:1.29-alpine
       hostSuffix: birch.iprtapp.com
       listenPort: 18080
+      uploadBodySize: 21m
       allowedPortRanges:
         - start: 3000
           end: 4000
