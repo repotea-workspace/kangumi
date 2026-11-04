@@ -39,7 +39,7 @@ spec:
         checksum/mihomo-config: {{ $proxyConfig | sha256sum }}
         {{- end }}
         {{- if $portGatewayEnabled }}
-        checksum/port-gateway-config: {{ toJson $config.portGateway | sha256sum }}
+        checksum/port-gateway-config: {{ toJson (omit $config.portGateway "uploadBodySize") | sha256sum }}
         {{- end }}
       labels:
         {{- include "dev-toolchain.instanceSelectorLabels" (dict "root" $ "name" $name) | nindent 8 }}
