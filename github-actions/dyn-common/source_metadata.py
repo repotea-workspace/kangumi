@@ -290,3 +290,178 @@ def write_outputs(path, values):
             while delimiter in text:
                 delimiter = "dyn_" + uuid.uuid4().hex
             stream.write(f"{key}<<{delimiter}\n{text}\n{delimiter}\n")
+
+
+SHORT_SHA = re.compile(r"^[0-9a-f]{7,39}$")
+IMAGE_NAME = re.compile(r"^[a-z0-9]+(?:[._/-][a-z0-9]+)*$")
+
+
+def _legacy_scalar(path):
+    raw = path.read_text(encoding="utf-8")
+    value = raw.strip()
+    if not value or "\n" in value or "\r" in value:
+        raise ValueError(f"invalid legacy {path.name}")
+    return value
+
+
+def resolve_source_identity(directory, repository, env):
+    directory = Path(directory)
+    metadata = read_metadata(directory, repository)
+    if metadata:
+        source = metadata["source"]
+        sha = source["sha"]
+        ref_type = source["ref_type"]
+        ref_name = source["ref_name"]
+    else:
+        if not REPOSITORY.fullmatch(repository):
+            raise ValueError("invalid expected source repository")
+        if _legacy_scalar(directory / "repository.txt") != repository:
+            raise ValueError("legacy source repository mismatch")
+
+        sha = _legacy_scalar(directory / "commit.txt")
+        if SHORT_SHA.fullmatch(sha):
+            from github_api import GitHub
+            api = GitHub(env.get("SOURCE_READ_TOKEN", ""), env.get("GITHUB_API_URL", "https://api.github.com"))
+            sha = api.get(f"/repos/{repository}/commits/{sha}")["sha"]
+        elif not SHA.fullmatch(sha):
+            raise ValueError("invalid legacy source SHA")
+
+        refs = [
+            (candidate_type, _legacy_scalar(path))
+            for candidate_type, path in (
+                ("branch", directory / "branch.txt"),
+                ("tag", directory / "tag.txt"),
+            )
+            if path.exists()
+        ]
+        if len(refs) != 1:
+            raise ValueError("legacy metadata must identify exactly one branch or tag")
+        ref_type, ref_name = refs[0]
+
+    if not SHA.fullmatch(sha):
+        raise ValueError("source SHA did not resolve to a full commit")
+    return sha, ref_type, ref_name
+
+
+def parse_bool_flag(value, name="flag"):
+    normalized = (value or "").strip().lower()
+    if normalized in ("", "false", "0", "no"):
+        return False
+    if normalized in ("true", "1", "yes"):
+        return True
+    raise ValueError(f"invalid boolean value for {name}: {value!r}")
+
+
+def build_source_context(
+    repository,
+    sha,
+    ref_type,
+    ref_name,
+    *,
+    run_number="",
+    image_name="",
+    ghcr_registry="ghcr.io",
+    acr_registry="",
+    acr_namespace="xoohub",
+    server_url="https://github.com",
+):
+    if not REPOSITORY.fullmatch(repository):
+        raise ValueError("invalid source repository")
+    if not SHA.fullmatch(sha):
+        raise ValueError("invalid source SHA")
+    if ref_type not in ("branch", "tag"):
+        raise ValueError("invalid source ref type")
+
+    source_repo = repository.lower()
+    repo_name = repository.replace("/", "_")
+    short_sha = sha[:7]
+    branch = ref_name if ref_type == "branch" else ""
+    tag = ref_name if ref_type == "tag" else ""
+    clean_server = (server_url or "https://github.com").rstrip("/")
+    oci_source = f"{clean_server}/{repository}"
+    oci_labels = (
+        f"org.opencontainers.image.source={oci_source}\n"
+        f"org.opencontainers.image.revision={sha}"
+    )
+
+    outputs = {
+        "repository": repository,
+        "source_repo": source_repo,
+        "repo_name": repo_name,
+        "sha": sha,
+        "short_sha": short_sha,
+        "ref_type": ref_type,
+        "ref_name": ref_name,
+        "branch": branch,
+        "tag": tag,
+        "oci_source": oci_source,
+        "oci_labels": oci_labels,
+        "ghcr_image": "",
+        "ghcr_sha": "",
+        "ghcr_sha_run": "",
+        "ghcr_staging": "",
+        "ghcr_tag": "",
+        "ghcr_latest": "",
+        "ghcr_tags": "",
+        "ali_image": "",
+        "ali_sha": "",
+        "ali_staging": "",
+        "ali_latest": "",
+    }
+
+    image = (image_name or "").strip()
+    if image:
+        if not IMAGE_NAME.fullmatch(image):
+            raise ValueError(f"invalid image_name: {image!r}")
+        clean_ghcr = (ghcr_registry or "ghcr.io").strip().rstrip("/")
+        ghcr_image = f"{clean_ghcr}/{source_repo}/{image}"
+        ghcr_sha = f"{ghcr_image}:sha-{short_sha}"
+        run_num = str(run_number or "").strip()
+        if run_num and not run_num.isdigit():
+            raise ValueError(f"invalid run_number: {run_num!r}")
+        ghcr_sha_run = f"{ghcr_image}:sha-{short_sha}-{run_num}" if run_num else ""
+        ghcr_staging = f"{ghcr_image}:staging"
+        ghcr_tag = f"{ghcr_image}:{tag}" if tag else ""
+        ghcr_latest = f"{ghcr_image}:latest"
+
+        if ref_type == "tag":
+            tag_list = [ghcr_tag, ghcr_sha, ghcr_latest]
+        else:
+            tag_list = ([ghcr_sha_run] if ghcr_sha_run else []) + [ghcr_sha, ghcr_staging]
+
+        outputs.update({
+            "ghcr_image": ghcr_image,
+            "ghcr_sha": ghcr_sha,
+            "ghcr_sha_run": ghcr_sha_run,
+            "ghcr_staging": ghcr_staging,
+            "ghcr_tag": ghcr_tag,
+            "ghcr_latest": ghcr_latest,
+            "ghcr_tags": "\n".join(tag_list),
+        })
+
+        clean_acr = (acr_registry or "").strip().rstrip("/")
+        if clean_acr:
+            clean_ns = (acr_namespace or "xoohub").strip().strip("/")
+            ali_image = f"{clean_acr}/{clean_ns}/{repo_name}_{image}"
+            outputs.update({
+                "ali_image": ali_image,
+                "ali_sha": f"{ali_image}:sha-{short_sha}",
+                "ali_staging": f"{ali_image}:staging",
+                "ali_latest": f"{ali_image}:latest",
+            })
+
+    env_vars = {
+        "SOURCE_REPOSITORY": repository,
+        "SOURCE_REPO": source_repo,
+        "REPO_NAME": repo_name,
+        "SOURCE_SHA": sha,
+        "SHORT_SHA": short_sha,
+        "SHA": short_sha,
+        "SOURCE_REF_TYPE": ref_type,
+        "SOURCE_REF_NAME": ref_name,
+        "SOURCE_BRANCH": branch,
+        "SOURCE_TAG": tag,
+        "OCI_IMAGE_SOURCE": oci_source,
+        "OCI_IMAGE_LABELS": oci_labels,
+    }
+    return outputs, env_vars

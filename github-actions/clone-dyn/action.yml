@@ -22,6 +22,97 @@ inputs:
     description: "Whether to checkout submodules: `true` to checkout submodules or `recursive` to recursively checkout submodules"
     required: false
     default: "false"
+  source_context:
+    description: "Opt-in flag to export source repository context, environment variables, OCI labels, and image tags (default false)"
+    required: false
+    default: "false"
+  image_name:
+    description: "Optional container image name under the source repository namespace"
+    required: false
+    default: ""
+  ghcr_registry:
+    description: "Optional GHCR registry override (defaults to DOCKER_REGISTRY or ghcr.io)"
+    required: false
+    default: ""
+  acr_registry:
+    description: "Optional ACR registry override (defaults to DOCKER_REGISTRY_ALI)"
+    required: false
+    default: ""
+  acr_namespace:
+    description: "Optional ACR namespace override (defaults to xoohub)"
+    required: false
+    default: "xoohub"
+
+outputs:
+  git_ref:
+    description: "Resolved checkout git ref"
+    value: ${{ steps.prepare_options.outputs.GIT_REF }}
+  sha:
+    description: "Full immutable source SHA (populated when source_context is enabled)"
+    value: ${{ steps.prepare_options.outputs.sha }}
+  short_sha:
+    description: "7-character short source SHA (populated when source_context is enabled)"
+    value: ${{ steps.prepare_options.outputs.short_sha }}
+  repository:
+    description: "Validated source repository (populated when source_context is enabled)"
+    value: ${{ steps.prepare_options.outputs.repository }}
+  source_repo:
+    description: "Lowercase source repository path (populated when source_context is enabled)"
+    value: ${{ steps.prepare_options.outputs.source_repo }}
+  repo_name:
+    description: "Underscore-escaped source repository name (populated when source_context is enabled)"
+    value: ${{ steps.prepare_options.outputs.repo_name }}
+  ref_type:
+    description: "Source ref type, branch or tag (populated when source_context is enabled)"
+    value: ${{ steps.prepare_options.outputs.ref_type }}
+  ref_name:
+    description: "Source branch or tag name (populated when source_context is enabled)"
+    value: ${{ steps.prepare_options.outputs.ref_name }}
+  branch:
+    description: "Source branch name (populated when source_context is enabled)"
+    value: ${{ steps.prepare_options.outputs.branch }}
+  tag:
+    description: "Source tag name (populated when source_context is enabled)"
+    value: ${{ steps.prepare_options.outputs.tag }}
+  oci_source:
+    description: "Canonical source repository URL for OCI image labels"
+    value: ${{ steps.prepare_options.outputs.oci_source }}
+  oci_labels:
+    description: "Newline-separated OCI image source and revision labels"
+    value: ${{ steps.prepare_options.outputs.oci_labels }}
+  ghcr_image:
+    description: "Base GHCR image repository under the source repository namespace"
+    value: ${{ steps.prepare_options.outputs.ghcr_image }}
+  ghcr_sha:
+    description: "GHCR sha-<short_sha> tag"
+    value: ${{ steps.prepare_options.outputs.ghcr_sha }}
+  ghcr_sha_run:
+    description: "GHCR sha-<short_sha>-<run_number> tag for Flux staging image automation"
+    value: ${{ steps.prepare_options.outputs.ghcr_sha_run }}
+  ghcr_staging:
+    description: "GHCR staging tag"
+    value: ${{ steps.prepare_options.outputs.ghcr_staging }}
+  ghcr_tag:
+    description: "GHCR release tag"
+    value: ${{ steps.prepare_options.outputs.ghcr_tag }}
+  ghcr_latest:
+    description: "GHCR latest tag"
+    value: ${{ steps.prepare_options.outputs.ghcr_latest }}
+  ghcr_tags:
+    description: "Newline-separated GHCR tags appropriate for branch or tag builds"
+    value: ${{ steps.prepare_options.outputs.ghcr_tags }}
+  ali_image:
+    description: "Base ACR image repository"
+    value: ${{ steps.prepare_options.outputs.ali_image }}
+  ali_sha:
+    description: "ACR sha-<short_sha> tag"
+    value: ${{ steps.prepare_options.outputs.ali_sha }}
+  ali_staging:
+    description: "ACR staging tag"
+    value: ${{ steps.prepare_options.outputs.ali_staging }}
+  ali_latest:
+    description: "ACR latest tag"
+    value: ${{ steps.prepare_options.outputs.ali_latest }}
 
 runs:
   using: "composite"
@@ -33,6 +124,12 @@ runs:
         SOURCE_REPOSITORY: ${{ inputs.repository }}
         SOURCE_REF: ${{ inputs.ref }}
         SOURCE_REF_FILE: ${{ inputs.ref_file }}
+        SOURCE_READ_TOKEN: ${{ inputs.token }}
+        SOURCE_CONTEXT_ENABLED: ${{ inputs.source_context }}
+        SOURCE_IMAGE_NAME: ${{ inputs.image_name }}
+        SOURCE_GHCR_REGISTRY: ${{ inputs.ghcr_registry }}
+        SOURCE_ACR_REGISTRY: ${{ inputs.acr_registry }}
+        SOURCE_ACR_NAMESPACE: ${{ inputs.acr_namespace }}
       run: python3 "$GITHUB_ACTION_PATH/resolve.py"
 
     - name: Prepare Git Repository
@@ -63,32 +160,6 @@ runs:
         path: "."
         fetch-depth: 0
         submodules: ${{ inputs.submodules }}
-
-    # - name: Verify and initialize submodules
-    #   if: inputs.submodules != 'false'
-    #   shell: bash
-    #   run: |
-    #     set -x
-
-    #     echo "Checking submodules status..."
-    #     if [ -f ".gitmodules" ]; then
-    #       cat .gitmodules
-
-    #       echo "Current submodule status:"
-    #       git submodule status || true
-
-    #       echo "Initializing and updating submodules..."
-    #       git submodule sync --recursive
-    #       git submodule update --init --recursive --force
-
-    #       echo "Final submodule status:"
-    #       git submodule status
-
-    #       echo "Listing submodule directories:"
-    #       git submodule foreach --recursive 'echo "Submodule: $name at $sm_path" && ls -la'
-    #     else
-    #       echo "No .gitmodules file found"
-    #     fi
 
     - name: Restore backup directory
       shell: bash

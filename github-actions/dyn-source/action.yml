@@ -15,10 +15,33 @@ inputs:
     description: Optional newline-separated exact source tag names or case-sensitive * and ? glob patterns.
     required: false
     default: ''
+  source_context:
+    description: Opt-in flag to export source repository context, environment variables, OCI labels, and image tags (default false).
+    required: false
+    default: 'false'
+  image_name:
+    description: Optional container image name under the source repository namespace.
+    required: false
+    default: ''
+  ghcr_registry:
+    description: Optional GHCR registry override (defaults to DOCKER_REGISTRY or ghcr.io).
+    required: false
+    default: ''
+  acr_registry:
+    description: Optional ACR registry override (defaults to DOCKER_REGISTRY_ALI).
+    required: false
+    default: ''
+  acr_namespace:
+    description: Optional ACR namespace override (defaults to xoohub).
+    required: false
+    default: 'xoohub'
 outputs:
   sha:
     description: Full immutable source SHA.
     value: ${{ steps.source.outputs.sha }}
+  short_sha:
+    description: 7-character short source SHA (populated when source_context is enabled).
+    value: ${{ steps.source.outputs.short_sha }}
   branch:
     description: Source branch name (empty for a tag).
     value: ${{ steps.source.outputs.branch }}
@@ -37,6 +60,51 @@ outputs:
   repository:
     description: Validated source repository.
     value: ${{ steps.source.outputs.repository }}
+  source_repo:
+    description: Lowercase source repository path (populated when source_context is enabled).
+    value: ${{ steps.source.outputs.source_repo }}
+  repo_name:
+    description: Underscore-escaped source repository name (populated when source_context is enabled).
+    value: ${{ steps.source.outputs.repo_name }}
+  oci_source:
+    description: Canonical source repository URL for OCI image labels (populated when source_context is enabled).
+    value: ${{ steps.source.outputs.oci_source }}
+  oci_labels:
+    description: Newline-separated OCI image source and revision labels (populated when source_context is enabled).
+    value: ${{ steps.source.outputs.oci_labels }}
+  ghcr_image:
+    description: Base GHCR image repository under the source repository namespace.
+    value: ${{ steps.source.outputs.ghcr_image }}
+  ghcr_sha:
+    description: GHCR sha-<short_sha> tag.
+    value: ${{ steps.source.outputs.ghcr_sha }}
+  ghcr_sha_run:
+    description: GHCR sha-<short_sha>-<run_number> tag for Flux staging image automation.
+    value: ${{ steps.source.outputs.ghcr_sha_run }}
+  ghcr_staging:
+    description: GHCR staging tag.
+    value: ${{ steps.source.outputs.ghcr_staging }}
+  ghcr_tag:
+    description: GHCR release tag.
+    value: ${{ steps.source.outputs.ghcr_tag }}
+  ghcr_latest:
+    description: GHCR latest tag.
+    value: ${{ steps.source.outputs.ghcr_latest }}
+  ghcr_tags:
+    description: Newline-separated GHCR tags appropriate for branch or tag builds.
+    value: ${{ steps.source.outputs.ghcr_tags }}
+  ali_image:
+    description: Base ACR image repository.
+    value: ${{ steps.source.outputs.ali_image }}
+  ali_sha:
+    description: ACR sha-<short_sha> tag.
+    value: ${{ steps.source.outputs.ali_sha }}
+  ali_staging:
+    description: ACR staging tag.
+    value: ${{ steps.source.outputs.ali_staging }}
+  ali_latest:
+    description: ACR latest tag.
+    value: ${{ steps.source.outputs.ali_latest }}
 runs:
   using: composite
   steps:
@@ -47,4 +115,9 @@ runs:
         SOURCE_READ_TOKEN: ${{ inputs.token }}
         SOURCE_BRANCH_PATTERNS: ${{ inputs.branches }}
         SOURCE_TAG_PATTERNS: ${{ inputs.tags }}
+        SOURCE_CONTEXT_ENABLED: ${{ inputs.source_context }}
+        SOURCE_IMAGE_NAME: ${{ inputs.image_name }}
+        SOURCE_GHCR_REGISTRY: ${{ inputs.ghcr_registry }}
+        SOURCE_ACR_REGISTRY: ${{ inputs.acr_registry }}
+        SOURCE_ACR_NAMESPACE: ${{ inputs.acr_namespace }}
       run: python3 "$GITHUB_ACTION_PATH/main.py"
