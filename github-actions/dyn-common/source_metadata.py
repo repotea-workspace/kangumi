@@ -373,7 +373,7 @@ def build_source_context(
         raise ValueError("invalid source ref type")
 
     source_repo = repository.lower()
-    repo_name = repository.replace("/", "_")
+    repo_name = source_repo.replace("/", "_")
     short_sha = sha[:7]
     branch = ref_name if ref_type == "branch" else ""
     tag = ref_name if ref_type == "tag" else ""

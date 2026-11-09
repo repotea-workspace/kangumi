@@ -12,3 +12,4 @@
 
 *.tgz
 /helm-charts/plane-enterprise/.generated/
+.worktrees/
