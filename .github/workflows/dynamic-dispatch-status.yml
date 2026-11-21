@@ -35,8 +35,8 @@ jobs:
   report:
     name: Report dynamic CI status
     if: inputs.execution_repository == '0xfe10/dynamic-actions' || inputs.execution_repository == 'repotea-workflow/dynamic-actions'
-    runs-on: ubuntu-latest
-    timeout-minutes: 65
+    runs-on: ubuntu-slim
+    timeout-minutes: 15
     concurrency:
       group: source-dynamic-status-${{ inputs.execution_repository }}-${{ inputs.execution_sha }}
       cancel-in-progress: false
